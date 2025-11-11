@@ -112,20 +112,43 @@ export default function SignupPage(): JSX.Element {
     }
 
     setOtpLoading(true);
+    setError('');
     try {
       const formattedPhone = formatPhoneNumber(phoneNumber);
       const response = await api.post('/auth/otp/generate/email', {
         email: email.trim(),
         phoneNumber: formattedPhone
+      }, {
+        timeout: 30000 // 30 seconds timeout
       });
       
+      // Check if OTP was returned (development mode or email failed)
       if (response.data.otp) {
         setDevOTP(response.data.otp);
       }
       
-      setStep('email-otp');
+      // Show message if email sending failed but OTP was generated
+      if (response.data.message && response.data.message.includes('failed')) {
+        setError(response.data.message);
+        // Still proceed to OTP entry if OTP was generated
+        if (response.data.otp) {
+          setStep('email-otp');
+        }
+      } else {
+        // Success - proceed to OTP entry
+        setStep('email-otp');
+      }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to send OTP');
+      console.error('Email OTP error:', err);
+      if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+        setError('Request timed out. Please check your connection and try again.');
+      } else if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else if (err.message) {
+        setError(err.message);
+      } else {
+        setError('Failed to send OTP. Please try again.');
+      }
     } finally {
       setOtpLoading(false);
     }
