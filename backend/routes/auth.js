@@ -6,6 +6,7 @@ const User = require('../models/User');
 const Host = require('../models/Host'); // Backward compatibility alias
 const Provider = require('../models/Provider');
 const OTP = require('../models/OTP');
+const { sendOTPViaSMS, sendOTPViaEmail } = require('../services/otpService');
 
 const router = express.Router();
 
@@ -54,14 +55,16 @@ router.post('/otp/generate/phone', async (req, res) => {
 
     await otp.save();
 
-    // In production, send SMS here using Twilio or similar service
-    // For now, we'll return it in development mode
-    console.log(`OTP for ${normalizedPhone}: ${otpCode}`);
+    // Send OTP via SMS
+    const smsResult = await sendOTPViaSMS(normalizedPhone, otpCode);
+    
+    // In development, always return OTP for testing
+    // In production, only return if SMS service is not configured (fallback)
+    const shouldReturnOTP = process.env.NODE_ENV === 'development' || !smsResult.success;
 
     res.json({
-      message: 'OTP sent successfully',
-      // Only return OTP in development for testing
-      otp: process.env.NODE_ENV === 'development' ? otpCode : undefined
+      message: smsResult.success ? 'OTP sent successfully via SMS' : 'OTP generated (SMS service not configured - check console/logs)',
+      otp: shouldReturnOTP ? otpCode : undefined
     });
   } catch (error) {
     console.error('OTP generation error:', error);
@@ -104,14 +107,16 @@ router.post('/otp/generate/email', async (req, res) => {
 
     await otp.save();
 
-    // In production, send email here using SendGrid or similar service
-    // For now, we'll return it in development mode
-    console.log(`OTP for ${normalizedEmail}: ${otpCode}`);
+    // Send OTP via Email
+    const emailResult = await sendOTPViaEmail(normalizedEmail, otpCode, normalizedPhone);
+    
+    // In development, always return OTP for testing
+    // In production, only return if email service is not configured (fallback)
+    const shouldReturnOTP = process.env.NODE_ENV === 'development' || !emailResult.success;
 
     res.json({
-      message: 'OTP sent successfully',
-      // Only return OTP in development for testing
-      otp: process.env.NODE_ENV === 'development' ? otpCode : undefined
+      message: emailResult.success ? 'OTP sent successfully via Email' : 'OTP generated (Email service not configured - check console/logs)',
+      otp: shouldReturnOTP ? otpCode : undefined
     });
   } catch (error) {
     console.error('OTP generation error:', error);
