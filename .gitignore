@@ -60,6 +60,8 @@ frontend/public/uploads/
 logs/
 *.log
 
-# Documentation files
+# Documentation files (except README.md and TEST_USERS.md)
 *.md
+!README.md
+!TEST_USERS.md
 
