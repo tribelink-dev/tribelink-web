@@ -34,11 +34,18 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
-      callback(null, true);
+    // In production, check allowed origins; in development, allow all
+    if (process.env.NODE_ENV === 'production') {
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        console.log('CORS blocked origin:', origin);
+        console.log('Allowed origins:', allowedOrigins);
+        callback(new Error('Not allowed by CORS'));
+      }
     } else {
-      console.log('CORS blocked origin:', origin);
-      callback(new Error('Not allowed by CORS'));
+      // Development: allow all origins
+      callback(null, true);
     }
   },
   credentials: true
