@@ -1201,6 +1201,51 @@ kill -9 <PID>
 - Check file permissions
 - Ensure Multer is properly configured
 
+#### Email OTP Not Sending
+
+**Problem**: Email OTP not received or connection timeout
+
+**Solutions**:
+1. **Check SMTP Configuration**:
+   - Verify `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` are set in environment variables
+   - For Gmail: Use App Password (not regular password)
+   - Check `SMTP_PORT` (587 for TLS, 465 for SSL)
+
+2. **Connection Timeout**:
+   - Some cloud providers (like Render) may block outbound SMTP
+   - Consider using SendGrid instead of Gmail for production
+   - Check firewall/network settings
+
+3. **Test Email Configuration**:
+   ```bash
+   curl -X POST http://localhost:5000/api/test/email \
+     -H "Content-Type: application/json" \
+     -d '{"email": "your-email@example.com"}'
+   ```
+
+4. **Check Backend Logs**:
+   - Look for `[Email]` messages in logs
+   - Verify SMTP connection is established
+   - Check for timeout or authentication errors
+
+#### SMS OTP Not Sending
+
+**Problem**: SMS OTP not received
+
+**Solutions**:
+1. **Check Twilio Configuration**:
+   - Verify `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER` are set
+   - Check Twilio Console for message delivery status
+
+2. **Trial Account Limitations**:
+   - Twilio trial accounts can only send to verified numbers
+   - Verify your phone number in Twilio Console
+   - Or upgrade to paid account
+
+3. **Check Backend Logs**:
+   - Look for `[SMS]` messages in logs
+   - Verify Twilio credentials are correct
+
 ---
 
 ## 🤝 Contributing
