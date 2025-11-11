@@ -1,8 +1,8 @@
 {
   "components/TripMap.tsx -> react-leaflet": {
-    "id": "components/TripMap.tsx -> react-leaflet",
+    "id": 3382,
     "files": [
-      "static/chunks/_app-pages-browser_node_modules_react-leaflet_lib_index_js.js"
+      "static/chunks/3382.ac97c7f61830bd18.js"
     ]
   }
 }

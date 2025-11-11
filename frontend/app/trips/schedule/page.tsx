@@ -27,9 +27,12 @@ interface Activity {
 interface Hotel {
   _id: string;
   name: string;
+  description?: string;
+  amenities?: string[];
   pricePerNight: number;
   rating: number;
   roomsAvailable: number;
+  images?: Array<{ url: string; isMain?: boolean } | string>;
   location?: {
     district: string;
     state: string;
@@ -1045,13 +1048,13 @@ export default function SchedulePage() {
                           {day.activities && Array.isArray(day.activities) && day.activities.length > 0 ? day.activities.map((activity, actIdx) => {
                             console.log(`Rendering activity ${actIdx} for day:`, activity);
                             // Handle both populated and unpopulated activity formats
-                            const activityTitle = activity.title || (activity.experienceId && typeof activity.experienceId === 'object' ? activity.experienceId.title : null) || 'Activity';
-                            const activityPrice = activity.price || (activity.experienceId && typeof activity.experienceId === 'object' ? activity.experienceId.price : 0) || 0;
+                            const activityTitle = activity.title || (activity.experienceId && typeof activity.experienceId === 'object' && activity.experienceId !== null ? (activity.experienceId as any).title : null) || 'Activity';
+                            const activityPrice = activity.price || (activity.experienceId && typeof activity.experienceId === 'object' && activity.experienceId !== null ? (activity.experienceId as any).price : 0) || 0;
                             const activityStartTime = activity.startTime || '09:00';
                             const activityEndTime = activity.endTime || '17:00';
                             const activityDuration = activity.duration || 2;
-                            const activityLocation = activity.location || (activity.experienceId && typeof activity.experienceId === 'object' ? activity.experienceId.location : null);
-                            const activityProvider = activity.provider || (activity.experienceId && typeof activity.experienceId === 'object' && activity.experienceId.provider ? activity.experienceId.provider : { name: 'Unknown' });
+                            const activityLocation = activity.location || (activity.experienceId && typeof activity.experienceId === 'object' && activity.experienceId !== null ? (activity.experienceId as any).location : null);
+                            const activityProvider = activity.provider || (activity.experienceId && typeof activity.experienceId === 'object' && activity.experienceId !== null && (activity.experienceId as any).provider ? (activity.experienceId as any).provider : { name: 'Unknown' });
                             
                             return (
                               <li key={actIdx} className="bg-white p-4 rounded-lg border-2 border-gray-200 shadow-soft hover:border-primary-300 transition-all">
@@ -1129,10 +1132,12 @@ export default function SchedulePage() {
                                 <div className="bg-white p-4 rounded-lg border-2 border-blue-200 shadow-soft mt-3">
                                   <div className="flex items-start gap-3">
                                     {selectedHotel.images && selectedHotel.images.length > 0 && (() => {
-                                      const mainImage = selectedHotel.images.find(img => img.isMain) || selectedHotel.images[0];
-                                      const imageUrl = mainImage.url.startsWith('http') 
-                                        ? mainImage.url 
-                                        : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000'}${mainImage.url}`;
+                                      const imagesArray = Array.isArray(selectedHotel.images) ? selectedHotel.images : [];
+                                      const mainImageObj = imagesArray.find((img: any) => typeof img === 'object' && img?.isMain) || imagesArray[0];
+                                      const mainImage = typeof mainImageObj === 'string' ? mainImageObj : mainImageObj?.url || '';
+                                      const imageUrl = mainImage.startsWith('http') 
+                                        ? mainImage 
+                                        : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000'}${mainImage}`;
                                       return (
                                         <img 
                                           src={imageUrl} 

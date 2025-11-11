@@ -9,7 +9,7 @@ import api from '@/lib/api';
 
 type SignupStep = 'phone' | 'phone-otp' | 'email' | 'email-otp' | 'password';
 
-export default function SignupPage() {
+export default function SignupPage(): JSX.Element {
   const [step, setStep] = useState<SignupStep>('phone');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [phoneOTP, setPhoneOTP] = useState('');
@@ -192,7 +192,7 @@ export default function SignupPage() {
     }
   };
 
-  const renderStep = () => {
+  const renderStep = (): JSX.Element => {
     switch (step) {
       case 'phone':
         return (
@@ -471,10 +471,12 @@ export default function SignupPage() {
             </div>
           </form>
         );
+      default:
+        return <div></div>;
     }
   };
 
-  const getStepTitle = () => {
+  const getStepTitle = (): string => {
     switch (step) {
       case 'phone':
         return 'Enter Your Phone Number';
@@ -486,6 +488,8 @@ export default function SignupPage() {
         return 'Verify Email Address';
       case 'password':
         return 'Create Your Account';
+      default:
+        return 'Sign Up';
     }
   };
 
@@ -507,11 +511,16 @@ export default function SignupPage() {
               {getStepTitle()}
             </h1>
             <p className="text-subtitle text-gray-600 mb-0">
-              {step === 'phone' && 'We'll verify your phone number'}
-              {step === 'phone-otp' && 'Check your messages for the code'}
-              {step === 'email' && 'We'll verify your email address'}
-              {step === 'email-otp' && 'Check your inbox for the code'}
-              {step === 'password' && 'Set up your account password'}
+              {(() => {
+                switch (step) {
+                  case 'phone': return "We'll verify your phone number";
+                  case 'phone-otp': return 'Check your messages for the code';
+                  case 'email': return "We'll verify your email address";
+                  case 'email-otp': return 'Check your inbox for the code';
+                  case 'password': return 'Set up your account password';
+                  default: return '';
+                }
+              })()}
             </p>
           </div>
           

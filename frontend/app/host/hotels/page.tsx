@@ -66,7 +66,7 @@ export default function HostHotelsPage() {
       const allHotels = response.data.hotels || [];
       // Filter hotels created by current host (or show all if admin)
       const host = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('host') || '{}') : null;
-      const filteredHotels = allHotels.filter((hotel: Hotel) => 
+      const filteredHotels = allHotels.filter((hotel: any) => 
         !hotel.createdBy || hotel.createdBy === host?._id || !host?._id
       );
       setHotels(filteredHotels);

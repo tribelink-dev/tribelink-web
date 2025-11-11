@@ -49,7 +49,7 @@ export default function WalletPage() {
   };
 
   const handleTopUp = async (quickAmount?: number) => {
-    const topUpAmount = quickAmount || amount;
+    const topUpAmount = Number(quickAmount || amount);
     
     if (!topUpAmount || topUpAmount <= 0) {
       setError('Please enter a valid amount');

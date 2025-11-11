@@ -90,7 +90,7 @@ export default function EditExperiencePage() {
           }) || [];
           
           // Initialize selectedDates for calendar highlighting
-          const dateObjects = dates.map(d => new Date(d)).sort((a, b) => a.getTime() - b.getTime());
+          const dateObjects = dates.map((d: string | Date) => new Date(d)).sort((a: Date, b: Date) => a.getTime() - b.getTime());
           setSelectedDates(dateObjects);
           
           return dates;

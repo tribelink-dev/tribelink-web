@@ -41,12 +41,9 @@ export default function GoogleAuthSuccess() {
           });
         } else if (type === 'host') {
           // Fetch provider data to get providerType
-          try {
-            // First try to get provider info from token
-            const providerResponse = await api.get('/hosts/experiences', {
-              headers: { Authorization: `Bearer ${token}` }
-            });
-            
+          api.get('/hosts/experiences', {
+            headers: { Authorization: `Bearer ${token}` }
+          }).then(() => {
             // If we have a valid token, fetch full provider data
             // For now, store basic info and redirect - providerType will be in localStorage from login response
             const hostData = { email, name };
@@ -68,7 +65,7 @@ export default function GoogleAuthSuccess() {
                 router.push('/host/dashboard');
               }
             }, 1500);
-          } catch (err) {
+          }).catch(() => {
             // Fallback: store basic info and redirect to default dashboard
             localStorage.setItem('host', JSON.stringify({ email, name }));
             localStorage.setItem('userType', 'host');
@@ -76,7 +73,7 @@ export default function GoogleAuthSuccess() {
             setTimeout(() => {
               router.push('/host/dashboard');
             }, 1500);
-          }
+          });
         }
       }
     } else {
