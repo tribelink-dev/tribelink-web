@@ -85,14 +85,25 @@ async function sendEmail(email, otpCode, phoneNumber) {
       text: `Your Tribelink verification code is: ${otpCode}. Valid for 10 minutes.`
     };
 
+    // Verify SMTP connection first
+    try {
+      await transporter.verify();
+      console.log(`[Email] SMTP connection verified for ${process.env.SMTP_HOST}`);
+    } catch (verifyError) {
+      console.error('[Email] SMTP verification failed:', verifyError.message);
+      return { success: false, error: `SMTP connection failed: ${verifyError.message}` };
+    }
+
     // Send email with timeout
+    console.log(`[Email] Attempting to send OTP to ${email} via ${process.env.SMTP_HOST}`);
     const sendPromise = transporter.sendMail(mailOptions);
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => reject(new Error('Email sending timeout after 15 seconds')), 15000);
     });
 
     const info = await Promise.race([sendPromise, timeoutPromise]);
-    console.log(`[Email] OTP sent to ${email}. Message ID: ${info.messageId}`);
+    console.log(`[Email] ✅ OTP sent successfully to ${email}. Message ID: ${info.messageId}`);
+    console.log(`[Email] Response:`, JSON.stringify(info, null, 2));
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('[Email] Error sending OTP:', error.message);

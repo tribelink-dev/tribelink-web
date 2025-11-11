@@ -126,6 +126,15 @@ router.post('/otp/generate/email', async (req, res) => {
     // In production, only return if email service is not configured (fallback)
     const shouldReturnOTP = process.env.NODE_ENV === 'development' || !emailResult.success;
 
+    // Log the result for debugging
+    console.log('[Auth] Email OTP result:', {
+      success: emailResult.success,
+      message: emailResult.message,
+      error: emailResult.error,
+      email: normalizedEmail,
+      otpReturned: shouldReturnOTP
+    });
+
     // Always respond, even if email sending failed or timed out
     res.json({
       message: emailResult.success 
@@ -133,7 +142,13 @@ router.post('/otp/generate/email', async (req, res) => {
         : emailResult.error 
           ? `OTP generated. Email sending failed: ${emailResult.error}` 
           : 'OTP generated (Email service not configured - check console/logs)',
-      otp: shouldReturnOTP ? otpCode : undefined
+      otp: shouldReturnOTP ? otpCode : undefined,
+      emailSent: emailResult.success,
+      debug: process.env.NODE_ENV === 'development' ? {
+        smtpConfigured: !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS),
+        smtpHost: process.env.SMTP_HOST,
+        emailResult: emailResult
+      } : undefined
     });
   } catch (error) {
     console.error('OTP generation error:', error);

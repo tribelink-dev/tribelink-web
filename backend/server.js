@@ -98,6 +98,12 @@ app.use('/api/hotels', hotelRoutes);
 app.use('/api/safety', safetyRoutes);
 app.use('/api/drivers', driverRoutes);
 
+// Test routes (development only)
+if (process.env.NODE_ENV === 'development') {
+  const testEmailRoutes = require('./routes/test-email');
+  app.use('/api/test/email', testEmailRoutes);
+}
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err);
