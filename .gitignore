@@ -60,3 +60,6 @@ frontend/public/uploads/
 logs/
 *.log
 
+# Documentation files
+*.md
+
