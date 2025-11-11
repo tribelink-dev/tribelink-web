@@ -46,21 +46,28 @@ async function sendEmail(email, otpCode, phoneNumber) {
     const nodemailer = require('nodemailer');
 
     // Create transporter with timeout settings
+    const smtpPort = parseInt(process.env.SMTP_PORT || '587');
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
+      port: smtpPort,
+      secure: smtpPort === 465, // true for 465, false for other ports
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS
       },
-      connectionTimeout: 10000, // 10 seconds connection timeout
-      socketTimeout: 10000, // 10 seconds socket timeout
+      connectionTimeout: 15000, // 15 seconds connection timeout
+      socketTimeout: 15000, // 15 seconds socket timeout
       greetingTimeout: 10000, // 10 seconds greeting timeout
       // Retry configuration
       pool: false,
       maxConnections: 1,
-      maxMessages: 1
+      maxMessages: 1,
+      // Additional options for better connection handling
+      tls: {
+        rejectUnauthorized: false // Allow self-signed certificates (for some SMTP servers)
+      },
+      debug: process.env.NODE_ENV === 'development', // Enable debug logging in dev
+      logger: process.env.NODE_ENV === 'development' // Enable logger in dev
     });
 
     // Email content
@@ -85,25 +92,50 @@ async function sendEmail(email, otpCode, phoneNumber) {
       text: `Your Tribelink verification code is: ${otpCode}. Valid for 10 minutes.`
     };
 
-    // Verify SMTP connection first
+    // Verify SMTP connection first with timeout
+    console.log(`[Email] Verifying SMTP connection to ${process.env.SMTP_HOST}:${process.env.SMTP_PORT || '587'}...`);
     try {
-      await transporter.verify();
-      console.log(`[Email] SMTP connection verified for ${process.env.SMTP_HOST}`);
+      const verifyPromise = transporter.verify();
+      const verifyTimeout = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('SMTP verification timeout after 15 seconds')), 15000);
+      });
+      
+      await Promise.race([verifyPromise, verifyTimeout]);
+      console.log(`[Email] ✅ SMTP connection verified for ${process.env.SMTP_HOST}`);
     } catch (verifyError) {
-      console.error('[Email] SMTP verification failed:', verifyError.message);
-      return { success: false, error: `SMTP connection failed: ${verifyError.message}` };
+      console.error('[Email] ❌ SMTP verification failed:', verifyError.message);
+      console.error('[Email] SMTP Config:', {
+        host: process.env.SMTP_HOST,
+        port: process.env.SMTP_PORT || '587',
+        user: process.env.SMTP_USER ? 'Set' : 'Not set',
+        pass: process.env.SMTP_PASS ? 'Set' : 'Not set'
+      });
+      
+      // Provide more helpful error messages
+      let errorMessage = verifyError.message;
+      if (verifyError.message.includes('timeout') || verifyError.message.includes('ETIMEDOUT')) {
+        errorMessage = `Connection timeout to ${process.env.SMTP_HOST}:${process.env.SMTP_PORT || '587'}. Check: 1) SMTP host/port is correct, 2) Firewall allows connection, 3) SMTP server is accessible from this network.`;
+      } else if (verifyError.message.includes('ECONNREFUSED')) {
+        errorMessage = `Connection refused by ${process.env.SMTP_HOST}. Check: 1) SMTP host is correct, 2) Port ${process.env.SMTP_PORT || '587'} is open, 3) SMTP server is running.`;
+      } else if (verifyError.message.includes('authentication')) {
+        errorMessage = `Authentication failed. Check: 1) SMTP_USER is correct, 2) SMTP_PASS is correct (use App Password for Gmail), 3) Account allows less secure apps (if applicable).`;
+      }
+      
+      return { success: false, error: errorMessage };
     }
 
     // Send email with timeout
-    console.log(`[Email] Attempting to send OTP to ${email} via ${process.env.SMTP_HOST}`);
+    console.log(`[Email] Attempting to send OTP to ${email} via ${process.env.SMTP_HOST}:${process.env.SMTP_PORT || '587'}`);
     const sendPromise = transporter.sendMail(mailOptions);
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Email sending timeout after 15 seconds')), 15000);
+      setTimeout(() => reject(new Error('Email sending timeout after 20 seconds')), 20000);
     });
 
     const info = await Promise.race([sendPromise, timeoutPromise]);
     console.log(`[Email] ✅ OTP sent successfully to ${email}. Message ID: ${info.messageId}`);
-    console.log(`[Email] Response:`, JSON.stringify(info, null, 2));
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[Email] Response:`, JSON.stringify(info, null, 2));
+    }
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('[Email] Error sending OTP:', error.message);

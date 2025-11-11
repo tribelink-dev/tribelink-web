@@ -12,10 +12,11 @@ router.post('/test', async (req, res) => {
     }
 
     console.log('[Test Email] Testing email configuration...');
-    console.log('[Test Email] SMTP_HOST:', process.env.SMTP_HOST ? 'Set' : 'Not set');
-    console.log('[Test Email] SMTP_USER:', process.env.SMTP_USER ? 'Set' : 'Not set');
-    console.log('[Test Email] SMTP_PASS:', process.env.SMTP_PASS ? 'Set' : 'Not set');
+    console.log('[Test Email] SMTP_HOST:', process.env.SMTP_HOST || 'NOT SET');
+    console.log('[Test Email] SMTP_USER:', process.env.SMTP_USER || 'NOT SET');
+    console.log('[Test Email] SMTP_PASS:', process.env.SMTP_PASS ? '***SET***' : 'NOT SET');
     console.log('[Test Email] SMTP_PORT:', process.env.SMTP_PORT || '587 (default)');
+    console.log('[Test Email] NODE_ENV:', process.env.NODE_ENV || 'not set');
 
     const testOTP = '123456';
     const result = await sendOTPViaEmail(email, testOTP, '+1234567890');
