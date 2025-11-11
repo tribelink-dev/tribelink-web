@@ -107,15 +107,32 @@ router.post('/otp/generate/email', async (req, res) => {
 
     await otp.save();
 
-    // Send OTP via Email
-    const emailResult = await sendOTPViaEmail(normalizedEmail, otpCode, normalizedPhone);
+    // Send OTP via Email (don't wait if it takes too long)
+    let emailResult = { success: false, message: 'Email sending in progress...' };
+    try {
+      // Set a timeout for the entire email sending process
+      const emailPromise = sendOTPViaEmail(normalizedEmail, otpCode, normalizedPhone);
+      const timeoutPromise = new Promise((resolve) => {
+        setTimeout(() => resolve({ success: false, message: 'Email sending timeout' }), 20000);
+      });
+      
+      emailResult = await Promise.race([emailPromise, timeoutPromise]);
+    } catch (err) {
+      console.error('[Auth] Error in email sending:', err);
+      emailResult = { success: false, error: err.message };
+    }
     
     // In development, always return OTP for testing
     // In production, only return if email service is not configured (fallback)
     const shouldReturnOTP = process.env.NODE_ENV === 'development' || !emailResult.success;
 
+    // Always respond, even if email sending failed or timed out
     res.json({
-      message: emailResult.success ? 'OTP sent successfully via Email' : 'OTP generated (Email service not configured - check console/logs)',
+      message: emailResult.success 
+        ? 'OTP sent successfully via Email' 
+        : emailResult.error 
+          ? `OTP generated. Email sending failed: ${emailResult.error}` 
+          : 'OTP generated (Email service not configured - check console/logs)',
       otp: shouldReturnOTP ? otpCode : undefined
     });
   } catch (error) {

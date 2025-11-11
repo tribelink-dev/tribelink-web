@@ -45,7 +45,7 @@ async function sendEmail(email, otpCode, phoneNumber) {
     // Dynamic import to avoid requiring nodemailer if not installed
     const nodemailer = require('nodemailer');
 
-    // Create transporter
+    // Create transporter with timeout settings
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: parseInt(process.env.SMTP_PORT || '587'),
@@ -53,7 +53,14 @@ async function sendEmail(email, otpCode, phoneNumber) {
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS
-      }
+      },
+      connectionTimeout: 10000, // 10 seconds connection timeout
+      socketTimeout: 10000, // 10 seconds socket timeout
+      greetingTimeout: 10000, // 10 seconds greeting timeout
+      // Retry configuration
+      pool: false,
+      maxConnections: 1,
+      maxMessages: 1
     });
 
     // Email content
@@ -78,11 +85,18 @@ async function sendEmail(email, otpCode, phoneNumber) {
       text: `Your Tribelink verification code is: ${otpCode}. Valid for 10 minutes.`
     };
 
-    const info = await transporter.sendMail(mailOptions);
+    // Send email with timeout
+    const sendPromise = transporter.sendMail(mailOptions);
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Email sending timeout after 15 seconds')), 15000);
+    });
+
+    const info = await Promise.race([sendPromise, timeoutPromise]);
     console.log(`[Email] OTP sent to ${email}. Message ID: ${info.messageId}`);
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('[Email] Error sending OTP:', error.message);
+    console.error('[Email] Full error:', error);
     // Don't throw - allow fallback to console log
     return { success: false, error: error.message };
   }
