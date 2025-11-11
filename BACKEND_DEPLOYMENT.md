@@ -39,10 +39,13 @@
 2. **Create New Web Service**:
    - Connect GitHub repository
    - Select `dev` branch
-   - Root Directory: `backend`
-   - Build Command: `npm install`
-   - Start Command: `npm start`
+   - **Root Directory**: `backend` ⚠️ **IMPORTANT: Must set this!**
+   - **Build Command**: `npm install` (or leave empty - Render will auto-install)
+   - **Start Command**: `npm start`
    - Environment: Node
+   - Instance Type: Free (or paid for better performance)
+
+   **⚠️ Critical**: If you don't set Root Directory to `backend`, Render will look for `package.json` in the root and fail. Make sure "Root Directory" is set to `backend` in your Render service settings.
 
 3. **Set Environment Variables**:
    - Same as Railway (see above)
