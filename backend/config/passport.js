@@ -4,6 +4,10 @@ const User = require('../models/User');
 const Host = require('../models/Host');
 const jwt = require('jsonwebtoken');
 
+// Log OAuth configuration for debugging
+console.log('[OAuth] Environment:', process.env.NODE_ENV || 'development');
+console.log('[OAuth] BACKEND_URL:', process.env.BACKEND_URL || 'not set');
+
 // Configure Google OAuth Strategy for Users
 // Determine callback URL based on environment
 const getUserCallbackURL = () => {
