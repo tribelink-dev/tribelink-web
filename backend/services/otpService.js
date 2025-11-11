@@ -184,8 +184,90 @@ async function sendOTPViaEmail(email, otpCode, phoneNumber = '') {
   return result;
 }
 
+/**
+ * Send Emergency SMS Alert
+ * @param {string} phoneNumber - Phone number in E.164 format
+ * @param {string} message - Emergency message
+ * @returns {Promise<Object>} Result object with success status
+ */
+async function sendEmergencySMS(phoneNumber, message) {
+  try {
+    // Check if Twilio is configured
+    if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_PHONE_NUMBER) {
+      console.log(`[SOS SMS] Twilio not configured. Emergency alert for ${phoneNumber}: ${message.substring(0, 50)}...`);
+      return { success: false, message: 'SMS service not configured' };
+    }
+
+    const twilio = require('twilio');
+    const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+
+    const smsMessage = await client.messages.create({
+      body: message,
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: phoneNumber
+    });
+
+    console.log(`[SOS SMS] Emergency alert sent to ${phoneNumber}. Message SID: ${smsMessage.sid}`);
+    return { success: true, messageSid: smsMessage.sid };
+  } catch (error) {
+    console.error('[SOS SMS] Error sending emergency alert:', error.message);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Send Emergency Email Alert
+ * @param {string} email - Email address
+ * @param {string} subject - Email subject
+ * @param {string} message - Emergency message (plain text)
+ * @param {string} htmlMessage - Emergency message (HTML format)
+ * @returns {Promise<Object>} Result object with success status
+ */
+async function sendEmergencyEmail(email, subject, message, htmlMessage = null) {
+  try {
+    // Check if email service is configured
+    if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+      console.log(`[SOS Email] SMTP not configured. Emergency alert for ${email}: ${message.substring(0, 50)}...`);
+      return { success: false, message: 'Email service not configured' };
+    }
+
+    const nodemailer = require('nodemailer');
+    const smtpPort = parseInt(process.env.SMTP_PORT || '587');
+
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: smtpPort,
+      secure: smtpPort === 465,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+      },
+      connectionTimeout: 10000,
+      socketTimeout: 10000,
+      greetingTimeout: 10000
+    });
+
+    const mailOptions = {
+      from: `"Tribelink Emergency" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject: subject,
+      text: message,
+      html: htmlMessage || message.replace(/\n/g, '<br>')
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`[SOS Email] Emergency alert sent to ${email}. Message ID: ${info.messageId}`);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('[SOS Email] Error sending emergency alert:', error.message);
+    return { success: false, error: error.message };
+  }
+}
+
 module.exports = {
   sendOTPViaSMS,
-  sendOTPViaEmail
+  sendOTPViaEmail,
+  sendEmergencySMS,
+  sendEmergencyEmail
 };
 

@@ -3,6 +3,7 @@ const User = require('../models/User');
 const EmergencyEvent = require('../models/EmergencyEvent');
 const EmergencyNumbers = require('../models/EmergencyNumbers');
 const { authenticate, requireUser } = require('../middleware/auth');
+const { sendEmergencySMS, sendEmergencyEmail } = require('../services/otpService');
 
 const router = express.Router();
 
@@ -237,20 +238,97 @@ router.post('/sos', authenticate, requireUser, async (req, res) => {
       (message ? `Message: ${message}\n` : '') +
       `\nPlease contact the user immediately or local emergency services.`;
 
-    // TODO: Send notifications to contacts (email/SMS service integration)
-    // For now, we'll just log and store the event
+    // Format HTML message for email
+    const htmlEmergencyMessage = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #fee2e2; border-left: 4px solid #dc2626;">
+        <h2 style="color: #dc2626; margin-top: 0;">🚨 EMERGENCY SOS ALERT 🚨</h2>
+        <div style="background-color: white; padding: 15px; border-radius: 8px; margin: 15px 0;">
+          <p><strong>User:</strong> ${user.name}</p>
+          <p><strong>Phone:</strong> ${user.phoneNumber}</p>
+          <p><strong>Email:</strong> ${user.email}</p>
+          <p><strong>Location:</strong> ${address || `${latitude}, ${longitude}`}</p>
+          <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
+          ${activeTrip ? `<p><strong>Trip:</strong> ${activeTrip.district || 'Unknown location'}</p>` : ''}
+          ${message ? `<p><strong>Message:</strong> ${message}</p>` : ''}
+        </div>
+        <p style="color: #dc2626; font-weight: bold;">⚠️ Please contact the user immediately or local emergency services.</p>
+        <p style="color: #6b7280; font-size: 12px; margin-top: 20px;">This is an automated emergency alert from Tribelink.</p>
+      </div>
+    `;
+
+    // Send notifications to emergency contacts
+    const notificationResults = [];
+    for (const contact of contactsToNotify) {
+      let result = { contactId: contact.contactId, status: 'failed', method: contact.notificationMethod };
+      
+      try {
+        if (contact.notificationMethod === 'sms' && contact.phone) {
+          // Send SMS via Twilio
+          const smsResult = await sendEmergencySMS(contact.phone, emergencyMessage);
+          result.status = smsResult.success ? 'sent' : 'failed';
+          result.error = smsResult.error;
+          notificationResults.push(result);
+        } else if (contact.notificationMethod === 'email' && contact.email) {
+          // Send Email via SMTP
+          const emailResult = await sendEmergencyEmail(
+            contact.email,
+            '🚨 EMERGENCY SOS ALERT - Action Required',
+            emergencyMessage,
+            htmlEmergencyMessage
+          );
+          result.status = emailResult.success ? 'sent' : 'failed';
+          result.error = emailResult.error;
+          notificationResults.push(result);
+        } else if (contact.email && contact.phone) {
+          // Send both SMS and Email
+          const smsResult = await sendEmergencySMS(contact.phone, emergencyMessage);
+          const emailResult = await sendEmergencyEmail(
+            contact.email,
+            '🚨 EMERGENCY SOS ALERT - Action Required',
+            emergencyMessage,
+            htmlEmergencyMessage
+          );
+          result.status = (smsResult.success || emailResult.success) ? 'sent' : 'failed';
+          result.error = smsResult.error || emailResult.error;
+          notificationResults.push(result);
+        }
+      } catch (error) {
+        console.error(`[SOS] Error notifying contact ${contact.name}:`, error);
+        result.error = error.message;
+        notificationResults.push(result);
+      }
+    }
+
+    // Update emergency event with notification results
+    emergencyEvent.contactsNotified = emergencyEvent.contactsNotified.map(contact => {
+      const result = notificationResults.find(r => r.contactId === contact.contactId);
+      if (result) {
+        contact.status = result.status;
+        contact.notifiedAt = new Date();
+      }
+      return contact;
+    });
+    await emergencyEvent.save();
+
+    const successfulNotifications = notificationResults.filter(r => r.status === 'sent').length;
+    const failedNotifications = notificationResults.filter(r => r.status === 'failed').length;
+
     console.log('SOS ACTIVATED:', {
       userId: user._id,
       userName: user.name,
       location: { latitude, longitude, address },
       contactsToNotify: contactsToNotify.length,
+      successfulNotifications,
+      failedNotifications,
       message: emergencyMessage
     });
 
     res.json({
-      message: 'SOS activated successfully. Emergency contacts will be notified.',
+      message: `SOS activated successfully. ${successfulNotifications} of ${contactsToNotify.length} emergency contacts notified.`,
       event: emergencyEvent,
-      contactsNotified: contactsToNotify.length
+      contactsNotified: successfulNotifications,
+      contactsFailed: failedNotifications,
+      notificationResults
     });
   } catch (error) {
     console.error('SOS activation error:', error);
