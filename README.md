@@ -665,10 +665,12 @@ PoC/
 │   │   ├── trips.js          # Trip routes (scheduling, payment)
 │   │   ├── reviews.js        # Review routes
 │   │   ├── drivers.js        # Driver routes (onboarding, trips)
-│   │   └── safety.js         # Safety routes (emergency, contacts)
+│   │   ├── safety.js         # Safety routes (emergency, contacts)
+│   │   └── test-email.js     # Email testing endpoint (development)
 │   ├── services/              # Business logic services
 │   │   ├── scheduler.js      # Rule-based trip scheduling (fallback)
 │   │   ├── aiScheduler.js    # AI-powered scheduling (OpenAI)
+│   │   ├── otpService.js     # OTP sending service (SMS & Email)
 │   │   └── currency.js       # Currency conversion
 │   ├── scripts/               # Utility scripts
 │   │   └── createTestUsers.js # Test user creation script
