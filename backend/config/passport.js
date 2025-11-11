@@ -22,10 +22,13 @@ const getUserCallbackURL = () => {
   return `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/auth/google/callback`;
 };
 
+const userCallbackURL = getUserCallbackURL();
+console.log('[OAuth] User callback URL:', userCallbackURL);
+
 passport.use('google-user', new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID || '',
   clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-  callbackURL: getUserCallbackURL()
+  callbackURL: userCallbackURL
 }, async (accessToken, refreshToken, profile, done) => {
   try {
     const email = profile.emails[0].value;
