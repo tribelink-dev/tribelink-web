@@ -26,7 +26,9 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://127.0.0.1:3000',
   'http://172.16.68.100:3000',
-  process.env.FRONTEND_URL
+  process.env.FRONTEND_URL,
+  'https://tribelink-app.vercel.app', // Explicitly allow Vercel frontend
+  'https://*.vercel.app' // Allow all Vercel preview deployments
 ].filter(Boolean);
 
 app.use(cors({
@@ -34,21 +36,33 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    // In production, check allowed origins; in development, allow all
+    // In production, check allowed origins
     if (process.env.NODE_ENV === 'production') {
+      // Check exact match first
       if (allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
-      } else {
-        console.log('CORS blocked origin:', origin);
-        console.log('Allowed origins:', allowedOrigins);
-        callback(new Error('Not allowed by CORS'));
+        return;
       }
+      
+      // Allow Vercel preview deployments (*.vercel.app)
+      if (origin.endsWith('.vercel.app')) {
+        callback(null, true);
+        return;
+      }
+      
+      // Log blocked origin for debugging
+      console.log('CORS blocked origin:', origin);
+      console.log('Allowed origins:', allowedOrigins);
+      console.log('FRONTEND_URL env:', process.env.FRONTEND_URL);
+      callback(new Error('Not allowed by CORS'));
     } else {
       // Development: allow all origins
       callback(null, true);
     }
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -74,26 +88,6 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Tribelink Platform API is running' });
 });
 
-// Root route - API information
-app.get('/', (req, res) => {
-  res.json({ 
-    message: 'Tribelink API', 
-    version: '1.0.0',
-    status: 'running',
-    endpoints: {
-      health: '/health',
-      api: '/api',
-      auth: '/api/auth',
-      user: '/api/user',
-      trips: '/api/trips',
-      hosts: '/api/hosts',
-      hotels: '/api/hotels',
-      safety: '/api/safety',
-      drivers: '/api/drivers'
-    }
-  });
-});
-
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
@@ -113,16 +107,9 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler - improved error message
+// 404 handler
 app.use((req, res) => {
-  console.log(`404 - Route not found: ${req.method} ${req.originalUrl}`);
-  console.log(`Request from: ${req.get('origin') || req.get('referer') || 'unknown'}`);
-  res.status(404).json({ 
-    message: 'Route not found',
-    path: req.originalUrl,
-    method: req.method,
-    hint: 'Check that the route exists and includes /api prefix if needed'
-  });
+  res.status(404).json({ message: 'Route not found' });
 });
 
 const PORT = process.env.PORT || 5000;
