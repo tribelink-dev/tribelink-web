@@ -1,0 +1,459 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800&display=swap');
+@import 'leaflet/dist/leaflet.css';
+@import 'react-day-picker/dist/style.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+* {
+  @apply antialiased;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: 'Inter', 'Poppins', system-ui, -apple-system, sans-serif;
+  @apply text-gray-800 leading-relaxed;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  /* Focus visible for accessibility */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+  }
+
+  /* Animations */
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slide-down {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out;
+  }
+
+  .animate-slide-down {
+    animation: slide-down 0.3s ease-out;
+  }
+}
+
+@layer components {
+  /* Professional gradient backgrounds */
+  .bg-gradient-tourism {
+    background: linear-gradient(135deg, #00a085 0%, #008070 50%, #006055 100%);
+  }
+
+  .bg-gradient-primary {
+    background: linear-gradient(135deg, #00a085 0%, #008070 100%);
+  }
+
+  .bg-gradient-accent {
+    background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
+  }
+  
+  .bg-gradient-hero {
+    background: linear-gradient(135deg, rgba(0, 160, 133, 0.95) 0%, rgba(0, 128, 112, 0.95) 50%, rgba(0, 96, 85, 0.95) 100%);
+  }
+
+  /* Professional card styling */
+  .card-professional {
+    @apply bg-white rounded-2xl shadow-soft border border-gray-100 transition-all duration-300;
+  }
+
+  .card-hover {
+    @apply transition-all duration-300 ease-out cursor-pointer;
+  }
+
+  .card-hover:hover {
+    @apply transform -translate-y-1 shadow-medium;
+  }
+  
+  .card-interactive {
+    @apply card-professional card-hover;
+  }
+
+  /* Professional button styles */
+  .btn-primary {
+    @apply bg-primary-500 text-white font-semibold py-3 px-8 rounded-xl shadow-soft hover:bg-primary-600 hover:shadow-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary-500 disabled:hover:shadow-soft;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-gray-700 border-2 border-gray-300 font-semibold py-3 px-8 rounded-xl shadow-soft hover:bg-gray-50 hover:border-gray-400 transition-all duration-200;
+  }
+
+  .btn-accent {
+    @apply bg-accent-500 text-white font-semibold py-3 px-8 rounded-xl shadow-soft hover:bg-accent-600 hover:shadow-medium transition-all duration-200;
+  }
+  
+  .btn-outline {
+    @apply bg-transparent text-primary-600 border-2 border-primary-500 font-semibold py-3 px-8 rounded-xl hover:bg-primary-50 transition-all duration-200;
+  }
+
+  /* Professional input fields */
+  .input-field {
+    @apply w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all duration-200;
+  }
+
+  .input-field:disabled {
+    @apply bg-gray-50 cursor-not-allowed;
+  }
+  
+  .input-field-error {
+    @apply border-red-400 focus:border-red-500 focus:ring-red-500/20;
+  }
+
+  /* Professional badge/rating styles */
+  .badge-rating {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 bg-accent-50 text-accent-700 rounded-lg font-semibold text-sm;
+  }
+  
+  .badge-primary {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 bg-primary-50 text-primary-700 rounded-lg font-semibold text-sm;
+  }
+  
+  .badge-success {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 bg-green-50 text-green-700 rounded-lg font-semibold text-sm;
+  }
+
+  /* Section container */
+  .section-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Professional page container */
+  .page-container {
+    @apply min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 py-8 sm:py-12 px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Professional content card */
+  .content-card {
+    @apply bg-white rounded-2xl shadow-soft border border-gray-100 p-6 sm:p-8 lg:p-10;
+  }
+  
+  .content-card-elevated {
+    @apply content-card shadow-medium;
+  }
+
+  /* Professional heading styles */
+  .heading-primary {
+    @apply text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 tracking-tight;
+  }
+
+  .heading-secondary {
+    @apply text-2xl sm:text-3xl font-bold text-gray-800 mb-4 tracking-tight;
+  }
+
+  .heading-tertiary {
+    @apply text-xl sm:text-2xl font-semibold text-gray-800 mb-3 tracking-tight;
+  }
+
+  /* Professional text styles */
+  .text-subtitle {
+    @apply text-lg text-gray-600 mb-6 leading-relaxed;
+  }
+
+  .text-body {
+    @apply text-base text-gray-700 leading-relaxed;
+  }
+  
+  .text-muted {
+    @apply text-sm text-gray-500;
+  }
+
+  /* Professional divider */
+  .divider {
+    @apply border-t border-gray-200 my-6;
+  }
+
+  /* Professional alert/notification */
+  .alert-error {
+    @apply bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg flex items-start gap-3;
+  }
+
+  .alert-success {
+    @apply bg-green-50 border-l-4 border-green-500 text-green-700 px-4 py-3 rounded-lg flex items-start gap-3;
+  }
+
+  .alert-warning {
+    @apply bg-yellow-50 border-l-4 border-yellow-500 text-yellow-700 px-4 py-3 rounded-lg flex items-start gap-3;
+  }
+
+  .alert-info {
+    @apply bg-blue-50 border-l-4 border-blue-500 text-blue-700 px-4 py-3 rounded-lg flex items-start gap-3;
+  }
+  
+  /* Professional loading spinner */
+  .spinner {
+    @apply inline-block animate-spin rounded-full border-4 border-primary-500 border-t-transparent;
+  }
+  
+  /* Professional tag/chip */
+  .tag {
+    @apply inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium;
+  }
+  
+  .tag-primary {
+    @apply tag bg-primary-50 text-primary-700;
+  }
+  
+  .tag-accent {
+    @apply tag bg-accent-50 text-accent-700;
+  }
+}
+
+/* Leaflet Map Fixes */
+.leaflet-container {
+  height: 100% !important;
+  width: 100% !important;
+  z-index: 0;
+}
+
+.leaflet-container .leaflet-tile-container img {
+  max-width: none !important;
+}
+
+.leaflet-container .leaflet-control {
+  z-index: 1000;
+}
+
+.leaflet-container .leaflet-pane {
+  z-index: 400;
+}
+
+.leaflet-container .leaflet-map-pane {
+  z-index: 400;
+}
+
+.leaflet-container .leaflet-tile-pane {
+  z-index: 200;
+}
+
+.leaflet-container .leaflet-overlay-pane {
+  z-index: 400;
+}
+
+.leaflet-container .leaflet-shadow-pane {
+  z-index: 500;
+}
+
+.leaflet-container .leaflet-marker-pane {
+  z-index: 600;
+}
+
+.leaflet-container .leaflet-tooltip-pane {
+  z-index: 650;
+}
+
+.leaflet-container .leaflet-popup-pane {
+  z-index: 700;
+}
+
+/* React DatePicker Custom Styling */
+.react-datepicker-wrapper {
+  width: 100%;
+}
+
+.react-datepicker {
+  font-family: 'Inter', 'Poppins', system-ui, -apple-system, sans-serif;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.react-datepicker__header {
+  background-color: #00a085;
+  border-bottom: none;
+  border-radius: 0.75rem 0.75rem 0 0;
+  padding-top: 0.75rem;
+}
+
+.react-datepicker__current-month {
+  color: white;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.react-datepicker__day-name {
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+.react-datepicker__day {
+  border-radius: 0.5rem;
+  margin: 0.125rem;
+  transition: all 0.2s;
+}
+
+.react-datepicker__day:hover {
+  background-color: #00a085;
+  color: white;
+  border-radius: 0.5rem;
+}
+
+.react-datepicker__day--selected,
+.react-datepicker__day--keyboard-selected {
+  background-color: #00a085;
+  color: white;
+  border-radius: 0.5rem;
+}
+
+.react-datepicker__day--highlighted {
+  background-color: #00a085;
+  color: white;
+  border-radius: 0.5rem;
+  font-weight: 600;
+}
+
+.react-datepicker__day--today {
+  font-weight: 600;
+  border: 2px solid #00a085;
+}
+
+.react-datepicker__day--disabled {
+  color: #d1d5db;
+  cursor: not-allowed;
+}
+
+.react-datepicker__navigation {
+  top: 0.75rem;
+}
+
+.react-datepicker__navigation-icon::before {
+  border-color: white;
+}
+
+.react-datepicker__input-container input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background-color: white;
+  border: 1px solid #d1d5db;
+  border-radius: 0.75rem;
+  color: #1f2937;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.react-datepicker__input-container input:focus {
+  outline: none;
+  ring: 2px;
+  ring-color: rgba(0, 160, 133, 0.2);
+  border-color: #00a085;
+}
+
+/* React Day Picker Custom Styles */
+.rdp-calendar {
+  --rdp-cell-size: 40px;
+  --rdp-accent-color: #00a085;
+  --rdp-background-color: #f0fdf4;
+  --rdp-accent-color-dark: #008070;
+  margin: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.rdp-calendar button {
+  border: none !important;
+  background: transparent !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  outline: none;
+}
+
+.rdp-calendar button:not([disabled]):hover {
+  background-color: var(--rdp-background-color) !important;
+}
+
+.rdp-calendar button[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}
+
+.rdp-calendar .rdp-day,
+.rdp-calendar button.rdp-day {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.rdp-calendar .rdp-day:not([disabled]),
+.rdp-calendar button.rdp-day:not([disabled]) {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+.rdp-calendar .rdp-day[disabled],
+.rdp-calendar button.rdp-day[disabled] {
+  pointer-events: none !important;
+  cursor: not-allowed !important;
+}
+
+.rdp-calendar button {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.rdp-calendar .rdp-day_selected,
+.rdp-calendar .rdp-day_selected:focus-visible,
+.rdp-calendar .rdp-day_selected:hover {
+  background-color: var(--rdp-accent-color) !important;
+  color: white !important;
+  font-weight: 600;
+}
+
+.rdp-calendar .rdp-day_range_start,
+.rdp-calendar .rdp-day_range_end {
+  background-color: var(--rdp-accent-color) !important;
+  color: white !important;
+}
+
+.rdp-calendar .rdp-day_range_middle {
+  background-color: var(--rdp-background-color) !important;
+  color: var(--rdp-accent-color-dark) !important;
+}
+
+.rdp-calendar .rdp-nav_button {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+

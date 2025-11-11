@@ -1,0 +1,11 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/host/login/page": "app/host/login/page.js",
+  "/host/experiences/page": "app/host/experiences/page.js",
+  "/host/experiences/edit/[id]/page": "app/host/experiences/edit/[id]/page.js",
+  "/host/experiences/add/page": "app/host/experiences/add/page.js",
+  "/page": "app/page.js",
+  "/login/page": "app/login/page.js",
+  "/provider/drivers/page": "app/provider/drivers/page.js",
+  "/driver/onboarding/page": "app/driver/onboarding/page.js"
+}
