@@ -74,6 +74,26 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Tribelink Platform API is running' });
 });
 
+// Root route - API information
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Tribelink API', 
+    version: '1.0.0',
+    status: 'running',
+    endpoints: {
+      health: '/health',
+      api: '/api',
+      auth: '/api/auth',
+      user: '/api/user',
+      trips: '/api/trips',
+      hosts: '/api/hosts',
+      hotels: '/api/hotels',
+      safety: '/api/safety',
+      drivers: '/api/drivers'
+    }
+  });
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
@@ -93,9 +113,16 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler
+// 404 handler - improved error message
 app.use((req, res) => {
-  res.status(404).json({ message: 'Route not found' });
+  console.log(`404 - Route not found: ${req.method} ${req.originalUrl}`);
+  console.log(`Request from: ${req.get('origin') || req.get('referer') || 'unknown'}`);
+  res.status(404).json({ 
+    message: 'Route not found',
+    path: req.originalUrl,
+    method: req.method,
+    hint: 'Check that the route exists and includes /api prefix if needed'
+  });
 });
 
 const PORT = process.env.PORT || 5000;
