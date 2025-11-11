@@ -5,10 +5,23 @@ const Host = require('../models/Host');
 const jwt = require('jsonwebtoken');
 
 // Configure Google OAuth Strategy for Users
+// Determine callback URL based on environment
+const getUserCallbackURL = () => {
+  if (process.env.GOOGLE_CALLBACK_URL_USER) {
+    return process.env.GOOGLE_CALLBACK_URL_USER;
+  }
+  // Production: Use Render backend URL
+  if (process.env.NODE_ENV === 'production' && process.env.BACKEND_URL) {
+    return `${process.env.BACKEND_URL}/api/auth/google/callback`;
+  }
+  // Development: Use localhost (only works in development)
+  return `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/auth/google/callback`;
+};
+
 passport.use('google-user', new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID || '',
   clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-  callbackURL: process.env.GOOGLE_CALLBACK_URL_USER || `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/auth/google/callback`
+  callbackURL: getUserCallbackURL()
 }, async (accessToken, refreshToken, profile, done) => {
   try {
     const email = profile.emails[0].value;
@@ -41,10 +54,26 @@ passport.use('google-user', new GoogleStrategy({
 }));
 
 // Configure Google OAuth Strategy for Hosts
+// Determine callback URL based on environment
+const getHostCallbackURL = () => {
+  if (process.env.GOOGLE_CALLBACK_URL_HOST) {
+    return process.env.GOOGLE_CALLBACK_URL_HOST;
+  }
+  // Production: Use Render backend URL
+  if (process.env.NODE_ENV === 'production' && process.env.BACKEND_URL) {
+    return `${process.env.BACKEND_URL}/api/auth/google/host/callback`;
+  }
+  // Development: Use localhost (only works in development)
+  return `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/auth/google/host/callback`;
+};
+
+const hostCallbackURL = getHostCallbackURL();
+console.log('[OAuth] Host callback URL:', hostCallbackURL);
+
 passport.use('google-host', new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID || '',
   clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-  callbackURL: process.env.GOOGLE_CALLBACK_URL_HOST || `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/auth/google/host/callback`
+  callbackURL: hostCallbackURL
 }, async (accessToken, refreshToken, profile, done) => {
   try {
     const email = profile.emails[0].value;
