@@ -14,6 +14,7 @@ const reviewRoutes = require('./routes/reviews');
 const hotelRoutes = require('./routes/hotels');
 const safetyRoutes = require('./routes/safety');
 const driverRoutes = require('./routes/drivers');
+const ticketRoutes = require('./routes/tickets');
 
 // Connect to database
 connectDB();
@@ -97,6 +98,8 @@ app.use('/api/experiences', reviewRoutes);
 app.use('/api/hotels', hotelRoutes);
 app.use('/api/safety', safetyRoutes);
 app.use('/api/drivers', driverRoutes);
+app.use('/api/tickets', ticketRoutes);
+app.use('/api/routes', require('./routes/routes'));
 
 // Test routes (development only)
 if (process.env.NODE_ENV === 'development') {

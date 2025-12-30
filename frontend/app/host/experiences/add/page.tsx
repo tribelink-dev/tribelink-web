@@ -7,6 +7,7 @@ import { INDIAN_STATES, DISTRICTS_BY_STATE } from '@/lib/indianStates';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import { format } from 'date-fns';
+import LocationPicker from '@/components/LocationPicker';
 
 interface DateWithTimeSlots {
   date: string; // ISO date string (YYYY-MM-DD)
@@ -24,7 +25,8 @@ export default function AddExperiencePage() {
     location: {
       country: 'India',
       state: '',
-      district: ''
+      district: '',
+      coordinates: { lat: 0, lng: 0 }
     },
     price: '',
     duration: '2',
@@ -449,6 +451,28 @@ export default function AddExperiencePage() {
                     </select>
                   </div>
                 </div>
+
+                {/* Location Picker Map */}
+                {formData.location.district && (
+                  <div className="mt-6">
+                    <LocationPicker
+                      district={formData.location.district}
+                      state={formData.location.state}
+                      initialLat={formData.location.coordinates.lat || undefined}
+                      initialLng={formData.location.coordinates.lng || undefined}
+                      onLocationChange={(lat, lng) => {
+                        setFormData({
+                          ...formData,
+                          location: {
+                            ...formData.location,
+                            coordinates: { lat, lng }
+                          }
+                        });
+                      }}
+                      required={true}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Pricing & Details Section */}

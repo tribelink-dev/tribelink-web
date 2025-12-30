@@ -1,18 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
 import TripMap from '@/components/TripMap';
+import HotelBookingCard from '@/components/HotelBookingCard';
+import ChauffeurSelectionCard from '@/components/ChauffeurSelectionCard';
 import { useAuth } from '@/lib/auth';
 
 interface Activity {
-  experienceId: string;
+  experienceId: string | any;
   title: string;
   price: number;
   startTime: string;
   endTime: string;
   duration: number;
+  imageUrl?: string;
+  contentUrl?: string;
   provider: {
     _id: string;
     name: string;
@@ -104,6 +108,97 @@ interface TripData {
   };
 }
 
+// District coordinates fallback (Kerala districts)
+const districtCoordinates: { [key: string]: { lat: number; lng: number } } = {
+  'Thiruvananthapuram': { lat: 8.5241, lng: 76.9366 },
+  'Kollam': { lat: 8.8932, lng: 76.6141 },
+  'Pathanamthitta': { lat: 9.2648, lng: 76.7870 },
+  'Alappuzha': { lat: 9.4981, lng: 76.3388 },
+  'Kottayam': { lat: 9.5916, lng: 76.5222 },
+  'Idukki': { lat: 9.9189, lng: 76.9444 },
+  'Ernakulam': { lat: 9.9312, lng: 76.2673 },
+  'Thrissur': { lat: 10.5276, lng: 76.2144 },
+  'Palakkad': { lat: 10.7867, lng: 76.6548 },
+  'Malappuram': { lat: 11.0404, lng: 76.0819 },
+  'Kozhikode': { lat: 11.2588, lng: 75.7804 },
+  'Wayanad': { lat: 11.6854, lng: 76.1320 },
+  'Kannur': { lat: 11.8745, lng: 75.3704 },
+  'Kasaragod': { lat: 12.4984, lng: 74.9899 }
+};
+
+// Helper function to get coordinates with fallback
+const getCoordinates = (location: any): { lat: number; lng: number } | null => {
+  if (location?.coordinates?.lat && location?.coordinates?.lng) {
+    return { lat: location.coordinates.lat, lng: location.coordinates.lng };
+  }
+  if (location?.district && districtCoordinates[location.district]) {
+    return districtCoordinates[location.district];
+  }
+  return null;
+};
+
+// Build mapData from schedule
+const buildMapDataFromSchedule = (schedule: ScheduleDay[], hotels: Hotel[]): MapData => {
+  const waypoints: MapData['waypoints'] = [];
+  
+  schedule.forEach((day, dayIdx) => {
+    // Add activity waypoints
+    day.activities.forEach((activity, actIdx) => {
+      const coordinates = getCoordinates(activity.location);
+      if (coordinates) {
+        waypoints.push({
+          type: 'activity',
+          day: dayIdx + 1,
+          index: actIdx,
+          title: activity.title,
+          coordinates: coordinates,
+          location: `${activity.location?.district || 'Unknown'}, ${activity.location?.state || 'Unknown'}`,
+          time: activity.startTime
+        });
+      }
+    });
+    
+    // Add hotel waypoint if available
+    if (day.hotel) {
+      const hotel = hotels.find(h => h._id === day.hotel);
+      if (hotel) {
+        const coordinates = getCoordinates(hotel.location);
+        if (coordinates) {
+          waypoints.push({
+            type: 'hotel',
+            day: dayIdx + 1,
+            name: hotel.name,
+            coordinates: coordinates,
+            location: `${hotel.location?.district || 'Unknown'}, ${hotel.location?.state || 'Unknown'}`
+          });
+        }
+      }
+    }
+  });
+  
+  // Calculate bounds
+  let bounds: MapData['bounds'] = null;
+  if (waypoints.length > 0) {
+    const lats = waypoints.map(w => w.coordinates.lat).filter(lat => lat !== null && lat !== undefined);
+    const lngs = waypoints.map(w => w.coordinates.lng).filter(lng => lng !== null && lng !== undefined);
+    
+    if (lats.length > 0 && lngs.length > 0) {
+      bounds = {
+        north: Math.max(...lats),
+        south: Math.min(...lats),
+        east: Math.max(...lngs),
+        west: Math.min(...lngs)
+      };
+    }
+  }
+  
+  return {
+    waypoints,
+    route: [],
+    bounds
+  };
+};
+
 export default function SchedulePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -116,6 +211,11 @@ export default function SchedulePage() {
   const [creatingSchedule, setCreatingSchedule] = useState(false);
   const [selectedHotels, setSelectedHotels] = useState<{ [key: number]: string }>({});
   const [chauffeurDays, setChauffeurDays] = useState<{ [key: number]: boolean }>({});
+  const [selectedDrivers, setSelectedDrivers] = useState<{ [key: number]: string }>({});
+  const [availableDrivers, setAvailableDrivers] = useState<any[]>([]);
+  const [loadingDrivers, setLoadingDrivers] = useState(false);
+  const [showHotelSelection, setShowHotelSelection] = useState<{ [key: number]: boolean }>({});
+  const [showDriverSelection, setShowDriverSelection] = useState<{ [key: number]: boolean }>({});
   const [savingHotels, setSavingHotels] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [recommendations, setRecommendations] = useState<{ [dayIndex: number]: any[] }>({});
@@ -143,16 +243,19 @@ export default function SchedulePage() {
       const transformedSchedule = (trip.schedule || []).map((day: any) => {
         // Transform activities - handle populated experienceId
         const transformedActivities = (day.activities || []).map((activity: any) => {
-          // If experienceId is populated (object), extract data from it
+          // If experienceId is populated (object), preserve the full object for image access
           if (activity.experienceId && typeof activity.experienceId === 'object') {
             const experience = activity.experienceId;
             return {
-              experienceId: experience._id || experience,
+              experienceId: experience, // Keep the full object, not just the ID
+              experienceIdString: experience._id || experience, // Also keep ID as string for reference
               title: activity.title || experience.title || 'Untitled Experience',
               price: activity.price || experience.price || 0,
               startTime: activity.startTime || '09:00',
               endTime: activity.endTime || '17:00',
               duration: activity.duration || experience.duration || 2,
+              imageUrl: activity.imageUrl || experience.imageUrl || null,
+              contentUrl: activity.contentUrl || experience.contentUrl || null,
               provider: activity.provider || (experience.provider ? {
                 _id: experience.provider._id || experience.provider,
                 name: experience.provider.name || 'Unknown'
@@ -163,11 +266,14 @@ export default function SchedulePage() {
           // If experienceId is just an ID, use activity data as-is
           return {
             experienceId: activity.experienceId,
+            experienceIdString: activity.experienceId,
             title: activity.title || 'Untitled Experience',
             price: activity.price || 0,
             startTime: activity.startTime || '09:00',
             endTime: activity.endTime || '17:00',
             duration: activity.duration || 2,
+            imageUrl: activity.imageUrl || null,
+            contentUrl: activity.contentUrl || null,
             provider: activity.provider || { _id: '', name: 'Unknown' },
             location: activity.location || null
           };
@@ -221,13 +327,78 @@ export default function SchedulePage() {
         // Continue without hotels
       }
       
+      // Build mapData from schedule if not provided
+      let mapData = trip.mapData;
+      if (!mapData && transformedSchedule.length > 0) {
+        mapData = buildMapDataFromSchedule(transformedSchedule, availableHotels);
+      }
+
+      // Calculate price breakdown from schedule
+      const priceBreakdown = {
+        activities: 0,
+        hotels: 0,
+        chauffeur: 0,
+        guide: 0
+      };
+      
+      transformedSchedule.forEach(day => {
+        // Calculate activities cost
+        day.activities.forEach(activity => {
+          priceBreakdown.activities += activity.price || 0;
+        });
+        
+        // Calculate hotel cost
+        if (day.hotel && availableHotels) {
+          const hotel = availableHotels.find((h: Hotel) => h._id === day.hotel);
+          if (hotel) {
+            priceBreakdown.hotels += hotel.pricePerNight || 0;
+          }
+        }
+        
+        // Calculate chauffeur cost ($50 per day)
+        if (day.chauffeur) {
+          priceBreakdown.chauffeur += 50;
+        }
+      });
+      
+      // Calculate cab cost ($30 per day for luxury transport) - based on preferences, not day.cab
+      if (trip.preferences?.transport === 'luxury' && transformedSchedule.length > 0) {
+        priceBreakdown.chauffeur += 30 * transformedSchedule.length;
+      }
+      
+      // Calculate guide cost ($50 per day if guide exists)
+      const hasGuide = transformedSchedule.some(day => day.guide);
+      if (hasGuide && transformedSchedule.length > 0) {
+        priceBreakdown.guide = 50 * transformedSchedule.length;
+      }
+      
+      // Calculate statistics from schedule
+      const statistics = {
+        duration: transformedSchedule.length,
+        totalActivities: transformedSchedule.reduce((sum, day) => sum + (day.activities?.length || 0), 0),
+        selectedExperiencesCount: transformedSchedule.reduce((sum, day) => sum + (day.activities?.length || 0), 0),
+        totalHotels: transformedSchedule.filter(day => day.hotel).length,
+        totalChauffeurDays: transformedSchedule.filter(day => day.chauffeur).length,
+        totalCabDays: transformedSchedule.filter(day => day.cab).length,
+        hasGuide: hasGuide
+      };
+
       // Convert trip data to TripData format
       setTripData({
         tripId: trip._id,
         schedule: transformedSchedule,
         totalPrice: trip.totalPrice || 0,
         availableHotels: availableHotels,
-        mapData: trip.mapData || null
+        mapData: mapData,
+        fromDate: trip.fromDate,
+        toDate: trip.toDate,
+        country: trip.country,
+        state: trip.state,
+        district: trip.district,
+        locations: trip.locations || [],
+        preferences: trip.preferences || {},
+        priceBreakdown: priceBreakdown,
+        statistics: statistics
       });
       
       // Set guide if exists
@@ -247,12 +418,34 @@ export default function SchedulePage() {
       
       // Initialize chauffeur selections
       const chauffeurs: { [key: number]: boolean } = {};
+      const drivers: { [key: number]: string } = {};
       trip.schedule?.forEach((day: any, idx: number) => {
         if (day.chauffeur) {
           chauffeurs[idx] = true;
         }
+        // If trip has assigned driver, set it for all chauffeur days
+        if (trip.assignedDriver && day.chauffeur) {
+          drivers[idx] = trip.assignedDriver._id || trip.assignedDriver;
+        }
       });
       setChauffeurDays(chauffeurs);
+      setSelectedDrivers(drivers);
+      
+      // Fetch available drivers for the trip dates
+      if (trip.fromDate && trip.toDate) {
+        try {
+          const driversResponse = await api.get('/drivers/available', {
+            params: {
+              fromDate: new Date(trip.fromDate).toISOString().split('T')[0],
+              toDate: new Date(trip.toDate).toISOString().split('T')[0]
+            }
+          });
+          setAvailableDrivers(driversResponse.data.drivers || []);
+        } catch (err) {
+          // No drivers available or error - continue without drivers
+          console.error('Error fetching drivers:', err);
+        }
+      }
       
       // Fetch available guides for the trip dates
       if (trip.fromDate && trip.toDate) {
@@ -348,16 +541,18 @@ export default function SchedulePage() {
         // Transform activities - handle both populated and unpopulated formats
         const transformedActivities = dayActivities.map((activity: any, actIdx: number) => {
           console.log(`Day ${dayIdx}, Activity ${actIdx}:`, activity);
-          // If experienceId is populated (object), extract data from it
+          // If experienceId is populated (object), preserve the full object for image access
           if (activity.experienceId && typeof activity.experienceId === 'object') {
             const experience = activity.experienceId;
             return {
-              experienceId: experience._id || experience,
+              experienceId: experience, // Keep full object for image access
               title: activity.title || experience.title || 'Untitled Experience',
               price: activity.price || experience.price || 0,
               startTime: activity.startTime || '09:00',
               endTime: activity.endTime || '17:00',
               duration: activity.duration || experience.duration || 2,
+              imageUrl: activity.imageUrl || experience.imageUrl || null,
+              contentUrl: activity.contentUrl || experience.contentUrl || null,
               provider: activity.provider || (experience.provider ? {
                 _id: experience.provider._id || experience.provider,
                 name: experience.provider.name || 'Unknown'
@@ -373,6 +568,8 @@ export default function SchedulePage() {
             startTime: activity.startTime || '09:00',
             endTime: activity.endTime || '17:00',
             duration: activity.duration || 2,
+            imageUrl: activity.imageUrl || null,
+            contentUrl: activity.contentUrl || null,
             provider: activity.provider || { _id: '', name: 'Unknown' },
             location: activity.location || null
           };
@@ -390,12 +587,67 @@ export default function SchedulePage() {
         };
       });
 
+      // Build mapData from schedule if not provided
+      let mapData = response.data.mapData;
+      if (!mapData && transformedSchedule.length > 0) {
+        mapData = buildMapDataFromSchedule(transformedSchedule, response.data.availableHotels || []);
+      }
+
+      // Calculate price breakdown from schedule
+      const priceBreakdown = {
+        activities: 0,
+        hotels: 0,
+        chauffeur: 0,
+        guide: 0
+      };
+      
+      transformedSchedule.forEach(day => {
+        // Calculate activities cost
+        day.activities.forEach(activity => {
+          priceBreakdown.activities += activity.price || 0;
+        });
+        
+        // Calculate hotel cost
+        if (day.hotel && response.data.availableHotels) {
+          const hotel = response.data.availableHotels.find((h: Hotel) => h._id === day.hotel);
+          if (hotel) {
+            priceBreakdown.hotels += hotel.pricePerNight || 0;
+          }
+        }
+        
+        // Calculate chauffeur cost ($50 per day)
+        if (day.chauffeur) {
+          priceBreakdown.chauffeur += 50;
+        }
+      });
+      
+      // Calculate cab cost ($30 per day for luxury transport) - based on preferences
+      if (response.data.preferences?.transport === 'luxury' && transformedSchedule.length > 0) {
+        priceBreakdown.chauffeur += 30 * transformedSchedule.length;
+      }
+      
+      // Calculate guide cost ($50 per day if guide exists)
+      if (guideId && transformedSchedule.length > 0) {
+        priceBreakdown.guide = 50 * transformedSchedule.length;
+      }
+      
+      // Calculate statistics from schedule
+      const statistics = {
+        duration: transformedSchedule.length,
+        totalActivities: transformedSchedule.reduce((sum, day) => sum + (day.activities?.length || 0), 0),
+        selectedExperiencesCount: response.data.selectedExperiencesCount || transformedSchedule.reduce((sum, day) => sum + (day.activities?.length || 0), 0),
+        totalHotels: transformedSchedule.filter(day => day.hotel).length,
+        totalChauffeurDays: transformedSchedule.filter(day => day.chauffeur).length,
+        totalCabDays: transformedSchedule.filter(day => day.cab).length,
+        hasGuide: !!guideId || transformedSchedule.some(day => day.guide)
+      };
+
       setTripData({
         tripId: response.data.tripId,
         schedule: transformedSchedule,
         totalPrice: response.data.totalPrice,
         availableHotels: response.data.availableHotels || [],
-        mapData: response.data.mapData || null,
+        mapData: mapData,
         fromDate: response.data.fromDate,
         toDate: response.data.toDate,
         country: response.data.country,
@@ -403,8 +655,8 @@ export default function SchedulePage() {
         district: response.data.district,
         locations: response.data.locations || [],
         preferences: response.data.preferences || {},
-        priceBreakdown: response.data.priceBreakdown,
-        statistics: response.data.statistics
+        priceBreakdown: priceBreakdown,
+        statistics: statistics
       });
       sessionStorage.setItem('tripId', response.data.tripId);
       
@@ -452,10 +704,51 @@ export default function SchedulePage() {
   };
 
   const handleChauffeurToggle = (dayIndex: number) => {
+    const newValue = !chauffeurDays[dayIndex];
     setChauffeurDays({
       ...chauffeurDays,
-      [dayIndex]: !chauffeurDays[dayIndex]
+      [dayIndex]: newValue
     });
+    
+    // If enabling chauffeur, show driver selection
+    if (newValue && !selectedDrivers[dayIndex]) {
+      setShowDriverSelection({ ...showDriverSelection, [dayIndex]: true });
+      fetchAvailableDrivers(dayIndex);
+    } else if (!newValue) {
+      // If disabling, clear driver selection
+      const newSelectedDrivers = { ...selectedDrivers };
+      delete newSelectedDrivers[dayIndex];
+      setSelectedDrivers(newSelectedDrivers);
+    }
+  };
+
+  const fetchAvailableDrivers = async (dayIndex: number) => {
+    if (!tripData) return;
+    
+    try {
+      setLoadingDrivers(true);
+      const day = tripData.schedule[dayIndex];
+      const response = await api.get('/drivers/available', {
+        params: {
+          fromDate: day.date,
+          toDate: day.date
+        }
+      });
+      setAvailableDrivers(response.data.drivers || []);
+    } catch (err: any) {
+      console.error('Error fetching drivers:', err);
+      setAvailableDrivers([]);
+    } finally {
+      setLoadingDrivers(false);
+    }
+  };
+
+  const handleDriverSelect = (dayIndex: number, driverId: string) => {
+    setSelectedDrivers({
+      ...selectedDrivers,
+      [dayIndex]: driverId
+    });
+    setShowDriverSelection({ ...showDriverSelection, [dayIndex]: false });
   };
 
   const handleSaveHotels = async () => {
@@ -463,9 +756,27 @@ export default function SchedulePage() {
       setSavingHotels(true);
       if (!tripData) return;
 
+      // Assign drivers for days with chauffeur service
+      const driverAssignments: { [key: number]: string } = {};
+      Object.keys(chauffeurDays).forEach((dayIdx) => {
+        if (chauffeurDays[parseInt(dayIdx)] && selectedDrivers[parseInt(dayIdx)]) {
+          driverAssignments[parseInt(dayIdx)] = selectedDrivers[parseInt(dayIdx)];
+        }
+      });
+
+      // First, assign drivers if any
+      for (const [dayIdx, driverId] of Object.entries(driverAssignments)) {
+        try {
+          await api.post(`/drivers/assign/${tripData.tripId}`, { driverId });
+        } catch (err) {
+          console.error(`Error assigning driver for day ${dayIdx}:`, err);
+        }
+      }
+
       const response = await api.put(`/trips/${tripData.tripId}/hotels`, {
         hotels: selectedHotels,
-        chauffeur: chauffeurDays
+        chauffeur: chauffeurDays,
+        assignedDriverId: driverAssignments[0] || null // For now, assign first day's driver to trip
       });
 
       // Update trip data with new schedule and total price
@@ -488,7 +799,60 @@ export default function SchedulePage() {
     router.push('/trips/payment');
   };
 
-  const fetchRecommendations = async (dayIndex: number, date: string) => {
+  const handleModifyTrip = () => {
+    if (!tripData) return;
+    
+    // Save current trip state to sessionStorage so it can be restored in the select page
+    const tripState = {
+      fromDate: tripData.fromDate,
+      toDate: tripData.toDate,
+      country: tripData.country || 'India',
+      locations: tripData.locations || (tripData.state && tripData.district ? [{ state: tripData.state, district: tripData.district }] : [])
+    };
+    
+    sessionStorage.setItem('tripData', JSON.stringify(tripState));
+    router.push('/trips/select');
+  };
+
+  const handleClearAllActivities = async () => {
+    if (!tripData) return;
+    
+    if (!confirm('Are you sure you want to delete all activities from this trip? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await api.put(`/trips/${tripData.tripId}/clear-activities`);
+      
+      // Update trip data with cleared activities
+      const updatedSchedule = response.data.trip.schedule.map((day: any) => ({
+        date: day.date,
+        activities: [],
+        hotel: day.hotel?._id || day.hotel || null,
+        hotelSelected: day.hotelSelected || false,
+        guide: day.guide?._id || day.guide || null,
+        cab: day.cab || false,
+        chauffeur: day.chauffeur || false,
+        foodOrders: day.foodOrders || []
+      }));
+
+      setTripData({
+        ...tripData,
+        schedule: updatedSchedule,
+        totalPrice: response.data.totalPrice
+      });
+      
+      setError('');
+      alert('All activities cleared successfully!');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to clear activities');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchRecommendations = useCallback(async (dayIndex: number, date: string) => {
     if (!tripData) return;
     
     try {
@@ -529,7 +893,7 @@ export default function SchedulePage() {
     } finally {
       setLoadingRecommendations(prev => ({ ...prev, [dayIndex]: false }));
     }
-  };
+  }, [tripData]);
 
   // Auto-fetch recommendations for free days when schedule loads
   useEffect(() => {
@@ -541,7 +905,7 @@ export default function SchedulePage() {
         }
       });
     }
-  }, [tripData]);
+  }, [tripData, fetchRecommendations]);
 
   if (loading) {
     return (
@@ -574,390 +938,386 @@ export default function SchedulePage() {
   }
 
   return (
-    <div className="page-container">
-      <div className="section-container max-w-6xl">
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-primary-500 rounded-2xl mb-6 shadow-medium">
-            <span className="text-4xl">📅</span>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+        {/* Modern Hero Header with Glassmorphism */}
+        <div className="relative mb-12">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary-500/10 via-accent-500/10 to-primary-500/10 rounded-3xl blur-3xl"></div>
+          <div className="relative bg-white/80 backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl p-8 lg:p-12">
+            <div className="flex flex-col items-center text-center">
+              <div className="relative mb-6">
+                <div className="absolute inset-0 bg-gradient-to-r from-primary-500 to-accent-500 rounded-2xl blur-lg opacity-50"></div>
+                <div className="relative inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-primary-500 to-accent-500 rounded-2xl shadow-xl transform hover:scale-105 transition-transform duration-300">
+                  <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+              </div>
+              <h1 className="text-4xl lg:text-5xl font-extrabold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 bg-clip-text text-transparent mb-4 tracking-tight">
+                Your Perfect Itinerary
+              </h1>
+              <p className="text-lg text-gray-600 max-w-2xl leading-relaxed">
+                Intelligently scheduled experiences, optimized routes, and personalized recommendations
+              </p>
+            </div>
           </div>
-          <h1 className="heading-primary text-gray-900">
-            Your Perfect Itinerary
-          </h1>
-          <p className="text-subtitle text-gray-600 mb-0">
-            Intelligently scheduled based on availability and timings
-          </p>
         </div>
 
+        {/* Modern Error Alert */}
         {error && (
-          <div className="alert-error mb-6">
-            <span className="text-lg">⚠️</span>
-            <span className="flex-1">{error}</span>
-          </div>
-        )}
-
-        {/* Token Display - Small and Compact */}
-        {user && typeof user.tokens !== 'undefined' && (
-          <div className="flex justify-center mb-6">
-            <div className="flex items-center gap-2 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <span className="text-lg">🪙</span>
-              <span className="text-sm font-semibold text-yellow-700">
-                {user.tokens} {user.tokens === 1 ? 'token' : 'tokens'} available
-              </span>
-              {user.tokens === 0 && (
-                <span className="text-xs text-yellow-600 ml-2">(Complete a trip to earn more)</span>
-              )}
+          <div className="mb-8 animate-in slide-in-from-top-4 duration-500">
+            <div className="bg-red-50 border-l-4 border-red-500 rounded-xl p-4 shadow-lg backdrop-blur-sm">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0">
+                  <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <p className="text-red-800 font-medium flex-1">{error}</p>
+              </div>
             </div>
           </div>
         )}
 
+        {/* Modern Token Display */}
+        {user && typeof user.tokens !== 'undefined' && (
+          <div className="flex justify-center mb-8 animate-in fade-in duration-700">
+            <div className="group relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-amber-400 to-yellow-500 rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity"></div>
+              <div className="relative flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-200 rounded-2xl shadow-lg backdrop-blur-sm">
+                <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-xl flex items-center justify-center shadow-md">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-amber-900">
+                    {user.tokens} {user.tokens === 1 ? 'token' : 'tokens'} available
+                  </div>
+                  {user.tokens === 0 && (
+                    <div className="text-xs text-amber-700 mt-0.5">Complete a trip to earn more</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modern Guide Selection */}
         {availableGuides.length > 0 && (
-          <div className="content-card mb-8">
-            <h2 className="heading-tertiary mb-4">
-              Optional: Select a Travel Guide
-            </h2>
-            <select
-              value={guideId}
-              onChange={(e) => handleGuideChange(e.target.value)}
-              disabled={creatingSchedule}
-              className="input-field"
-            >
-              <option value="">No guide</option>
-              {availableGuides.map(guide => (
-                <option key={guide._id} value={guide._id}>
-                  {guide.name} ⭐ {guide.rating.toFixed(1)} Rating
-                </option>
-              ))}
-            </select>
+          <div className="mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
+            <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-200/50 shadow-xl p-6 lg:p-8 hover:shadow-2xl transition-all duration-300">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Optional: Select a Travel Guide</h2>
+                  <p className="text-sm text-gray-600">Enhance your journey with local expertise</p>
+                </div>
+              </div>
+              <select
+                value={guideId}
+                onChange={(e) => handleGuideChange(e.target.value)}
+                disabled={creatingSchedule}
+                className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+              >
+                <option value="">No guide</option>
+                {availableGuides.map(guide => (
+                  <option key={guide._id} value={guide._id}>
+                    {guide.name} ⭐ {guide.rating.toFixed(1)} Rating
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         )}
 
         {tripData && (
-          <>
-            {/* Comprehensive Trip Summary - Professional Design */}
-            <div className="content-card mb-8 overflow-hidden">
-              {/* Header with gradient accent */}
-              <div className="bg-gradient-primary -m-6 sm:-m-8 lg:-m-10 mb-6 sm:mb-8 lg:mb-10 px-6 sm:px-8 lg:px-10 pt-6 sm:pt-8 lg:pt-10 pb-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                    <span className="text-2xl">📋</span>
+          <React.Fragment>
+            {/* Neat Trip Summary */}
+            <div className="mb-8 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-200 w-full">
+              <div className="relative overflow-hidden rounded-2xl shadow-lg bg-white border border-gray-200/50 w-full">
+                {/* Clean Header */}
+                <div className="relative px-6 py-4 bg-gradient-to-r from-primary-600 to-accent-500">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <h2 className="text-lg font-bold text-white">Trip Summary</h2>
                   </div>
-                  <h2 className="heading-secondary text-white mb-0">
-                    Trip Summary
-                  </h2>
                 </div>
-                <p className="text-white/90 text-sm">Complete overview of your personalized itinerary</p>
-              </div>
               
-              <div className="grid lg:grid-cols-3 gap-6">
-                {/* Trip Details - Left Column */}
-                <div className="lg:col-span-2 space-y-4">
-                  {/* Destination Card */}
-                  <div className="bg-gradient-to-br from-primary-50 to-primary-100/50 p-6 rounded-xl border border-primary-200 shadow-soft">
-                    <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0 w-12 h-12 bg-primary-500 rounded-xl flex items-center justify-center shadow-medium">
-                        <span className="text-2xl">🌍</span>
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-bold text-gray-800 mb-3 text-lg">Destination</h3>
-                        {tripData.locations && tripData.locations.length > 0 ? (
-                          <div className="space-y-2">
-                            {tripData.locations.map((loc, idx) => (
-                              <div key={idx} className="flex items-center gap-2 bg-white/80 px-4 py-2.5 rounded-lg border border-primary-200">
-                                <span className="text-primary-600 font-semibold text-sm">📍</span>
-                                <span className="text-gray-900 font-semibold">{loc.district}, {loc.state}</span>
-                              </div>
-                            ))}
+                {/* Content Section */}
+                <div className="relative bg-white px-6 py-6">
+                  <div className="grid lg:grid-cols-3 gap-6 w-full">
+                    {/* Trip Details - Left Column */}
+                    <div className="lg:col-span-2 min-w-0">
+                      {/* Info Grid - All in one row */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Destination */}
+                        <div className="bg-gradient-to-br from-blue-50/80 to-indigo-50/80 p-4 rounded-lg border border-blue-100/60 hover:border-blue-200 transition-colors">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="w-7 h-7 bg-blue-500/10 rounded-lg flex items-center justify-center">
+                              <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                              </svg>
+                            </div>
+                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Destination</span>
                           </div>
-                        ) : (
-                          <div className="bg-white/80 px-4 py-2.5 rounded-lg border border-primary-200">
-                            <p className="text-gray-900 font-semibold">
-                              {tripData.district}, {tripData.state}, {tripData.country}
+                          {tripData.locations && tripData.locations.length > 0 ? (
+                            <div className="space-y-1.5">
+                              {tripData.locations.map((loc, idx) => (
+                                <p key={idx} className="text-sm font-semibold text-gray-900 leading-tight">{loc.district}, {loc.state}</p>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm font-semibold text-gray-900 leading-tight">
+                              {tripData.district && tripData.state ? (
+                                <>
+                                  {tripData.district}, {tripData.state}
+                                  {tripData.country && tripData.country !== 'India' && `, ${tripData.country}`}
+                                </>
+                              ) : (
+                                tripData.country || 'Location not specified'
+                              )}
                             </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                          )}
+                        </div>
 
-                  {/* Travel Dates Card */}
-                  <div className="bg-gradient-to-br from-accent-50 to-accent-100/50 p-6 rounded-xl border border-accent-200 shadow-soft">
-                    <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0 w-12 h-12 bg-accent-500 rounded-xl flex items-center justify-center shadow-medium">
-                        <span className="text-2xl">📅</span>
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-bold text-gray-800 mb-4 text-lg">Travel Dates</h3>
+                        {/* Travel Dates */}
                         {tripData.fromDate && tripData.toDate && (
-                          <div className="space-y-3">
-                            <div className="bg-white/80 p-4 rounded-lg border border-accent-200">
-                              <p className="text-xs text-gray-600 uppercase font-semibold mb-1.5 tracking-wide">Start Date</p>
-                              <p className="text-gray-900 font-bold text-lg">
-                                {new Date(tripData.fromDate).toLocaleDateString('en-US', { 
-                                  weekday: 'short', 
-                                  year: 'numeric', 
-                                  month: 'short', 
-                                  day: 'numeric' 
-                                })}
-                              </p>
-                            </div>
-                            <div className="bg-white/80 p-4 rounded-lg border border-accent-200">
-                              <p className="text-xs text-gray-600 uppercase font-semibold mb-1.5 tracking-wide">End Date</p>
-                              <p className="text-gray-900 font-bold text-lg">
-                                {new Date(tripData.toDate).toLocaleDateString('en-US', { 
-                                  weekday: 'short', 
-                                  year: 'numeric', 
-                                  month: 'short', 
-                                  day: 'numeric' 
-                                })}
-                              </p>
-                            </div>
-                            {tripData.statistics && (
-                              <div className="bg-white/80 px-4 py-3 rounded-lg border border-accent-200 flex items-center justify-between">
-                                <span className="text-sm text-gray-600 font-medium">Trip Duration</span>
-                                <span className="badge-primary text-base font-bold">
-                                  {tripData.statistics.duration} {tripData.statistics.duration === 1 ? 'Day' : 'Days'}
-                                </span>
+                          <div className="bg-gradient-to-br from-emerald-50/80 to-teal-50/80 p-4 rounded-lg border border-emerald-100/60 hover:border-emerald-200 transition-colors">
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="w-7 h-7 bg-emerald-500/10 rounded-lg flex items-center justify-center">
+                                <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
                               </div>
+                              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Dates</span>
+                            </div>
+                            <p className="text-sm font-semibold text-gray-900 mb-2 leading-tight">
+                              {new Date(tripData.fromDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - {new Date(tripData.toDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </p>
+                            {tripData.statistics && (
+                              <p className="text-xs text-emerald-600 font-semibold">
+                                {tripData.statistics.duration} {tripData.statistics.duration === 1 ? 'Day' : 'Days'}
+                              </p>
                             )}
+                          </div>
+                        )}
+
+                        {/* Travel Preferences - In same row */}
+                        {tripData.preferences && (tripData.preferences.travelStyle || tripData.preferences.pace || tripData.preferences.transport) && (
+                          <div className="bg-gradient-to-br from-slate-50/80 to-gray-50/80 p-4 rounded-lg border border-gray-100/60 hover:border-gray-200 transition-colors">
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="w-7 h-7 bg-gray-500/10 rounded-lg flex items-center justify-center">
+                                <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                              </div>
+                              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Preferences</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {tripData.preferences.travelStyle && (
+                                <span className="text-xs font-medium text-gray-700 bg-white/90 px-2.5 py-1 rounded-md border border-gray-200/80 shadow-sm">
+                                  {tripData.preferences.travelStyle === 'flexible' ? 'Flexible' : 'Fixed Package'}
+                                </span>
+                              )}
+                              {tripData.preferences.pace && (
+                                <span className="text-xs font-medium text-gray-700 bg-white/90 px-2.5 py-1 rounded-md border border-gray-200/80 shadow-sm">
+                                  {tripData.preferences.pace === 'fast' ? 'Fast Paced' : 'Slow Paced'}
+                                </span>
+                              )}
+                              {tripData.preferences.transport && (
+                                <span className="text-xs font-medium text-gray-700 bg-white/90 px-2.5 py-1 rounded-md border border-gray-200/80 shadow-sm">
+                                  {tripData.preferences.transport === 'native' ? 'Native' : 'Luxury'}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
                     </div>
-                  </div>
 
-                  {/* Travel Preferences Card */}
-                  {tripData.preferences && (
-                    <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-soft">
-                      <div className="flex items-start gap-4">
-                        <div className="flex-shrink-0 w-12 h-12 bg-gray-700 rounded-xl flex items-center justify-center shadow-medium">
-                          <span className="text-2xl">⚙️</span>
+                    {/* Statistics & Price - Right Column */}
+                    <div className="space-y-4 min-w-0">
+                  {/* Statistics */}
+                  {tripData.statistics && (
+                    <div className="bg-gradient-to-br from-indigo-50/80 to-purple-50/80 p-4 rounded-lg border border-indigo-100/60">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-7 h-7 bg-indigo-500/10 rounded-lg flex items-center justify-center">
+                          <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                          </svg>
                         </div>
-                        <div className="flex-1">
-                          <h3 className="font-bold text-gray-800 mb-4 text-lg">Travel Preferences</h3>
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            {tripData.preferences.travelStyle && (
-                              <div className="bg-white p-3 rounded-lg border border-gray-200">
-                                <p className="text-xs text-gray-600 uppercase font-semibold mb-1">Style</p>
-                                <p className="text-gray-900 font-semibold text-sm capitalize">
-                                  {tripData.preferences.travelStyle === 'flexible' ? 'Flexible' : 'Fixed Package'}
-                                </p>
-                              </div>
-                            )}
-                            {tripData.preferences.pace && (
-                              <div className="bg-white p-3 rounded-lg border border-gray-200">
-                                <p className="text-xs text-gray-600 uppercase font-semibold mb-1">Pace</p>
-                                <p className="text-gray-900 font-semibold text-sm capitalize">
-                                  {tripData.preferences.pace === 'fast' ? 'Fast Paced' : 'Slow Paced'}
-                                </p>
-                              </div>
-                            )}
-                            {tripData.preferences.transport && (
-                              <div className="bg-white p-3 rounded-lg border border-gray-200">
-                                <p className="text-xs text-gray-600 uppercase font-semibold mb-1">Transport</p>
-                                <p className="text-gray-900 font-semibold text-sm capitalize">
-                                  {tripData.preferences.transport === 'native' ? 'Native' : 'Luxury'}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Statistics</span>
                       </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Statistics & Price - Right Column */}
-                <div className="space-y-4">
-                  {/* Trip Statistics Card */}
-                  <div className="bg-gradient-to-br from-gray-50 to-white p-6 rounded-xl border-2 border-gray-200 shadow-medium">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 bg-primary-500 rounded-lg flex items-center justify-center">
-                        <span className="text-xl">📊</span>
-                      </div>
-                      <h3 className="font-bold text-gray-800 text-lg">Trip Statistics</h3>
-                    </div>
-                    {tripData.statistics && (
                       <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-soft text-center">
-                          <p className="text-xs text-gray-600 uppercase font-semibold mb-1.5 tracking-wide">Activities</p>
-                          <p className="text-3xl font-bold text-primary-600">{tripData.statistics.totalActivities}</p>
+                        <div className="text-center bg-white/60 rounded-lg py-2.5">
+                          <p className="text-2xl font-bold text-indigo-600 leading-none">{tripData.statistics.totalActivities}</p>
+                          <p className="text-xs text-gray-600 mt-1.5 font-medium">Activities</p>
                         </div>
-                        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-soft text-center">
-                          <p className="text-xs text-gray-600 uppercase font-semibold mb-1.5 tracking-wide">Hotels</p>
-                          <p className="text-3xl font-bold text-primary-600">{tripData.statistics.totalHotels}</p>
+                        <div className="text-center bg-white/60 rounded-lg py-2.5">
+                          <p className="text-2xl font-bold text-indigo-600 leading-none">{tripData.statistics.totalHotels}</p>
+                          <p className="text-xs text-gray-600 mt-1.5 font-medium">Hotels</p>
                         </div>
                         {tripData.statistics.totalChauffeurDays > 0 && (
-                          <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-soft text-center">
-                            <p className="text-xs text-gray-600 uppercase font-semibold mb-1.5 tracking-wide">Chauffeur</p>
-                            <p className="text-3xl font-bold text-primary-600">{tripData.statistics.totalChauffeurDays}</p>
-                          </div>
-                        )}
-                        {tripData.statistics.totalCabDays > 0 && (
-                          <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-soft text-center">
-                            <p className="text-xs text-gray-600 uppercase font-semibold mb-1.5 tracking-wide">Cab Days</p>
-                            <p className="text-3xl font-bold text-primary-600">{tripData.statistics.totalCabDays}</p>
+                          <div className="text-center bg-white/60 rounded-lg py-2.5">
+                            <p className="text-2xl font-bold text-indigo-600 leading-none">{tripData.statistics.totalChauffeurDays}</p>
+                            <p className="text-xs text-gray-600 mt-1.5 font-medium">Chauffeur</p>
                           </div>
                         )}
                         {tripData.statistics.hasGuide && (
-                          <div className="bg-gradient-to-br from-primary-50 to-primary-100 p-4 rounded-lg border-2 border-primary-300 shadow-soft text-center col-span-2">
-                            <p className="text-xs text-primary-700 uppercase font-semibold mb-1.5 tracking-wide">Travel Guide</p>
-                            <p className="text-lg font-bold text-primary-700 flex items-center justify-center gap-2">
-                              <span>✓</span> Included
-                            </p>
+                          <div className="text-center bg-indigo-100/50 rounded-lg py-2.5">
+                            <p className="text-lg font-bold text-indigo-600 leading-none">✓</p>
+                            <p className="text-xs text-gray-600 mt-1.5 font-medium">Guide</p>
                           </div>
                         )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Price Breakdown Card */}
-                  {tripData.priceBreakdown && (
-                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl border-2 border-green-200 shadow-medium">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
-                          <span className="text-xl">💰</span>
-                        </div>
-                        <h3 className="font-bold text-gray-800 text-lg">Price Breakdown</h3>
-                      </div>
-                      <div className="space-y-2.5">
-                        <div className="flex justify-between items-center bg-white/80 px-3 py-2 rounded-lg">
-                          <span className="text-gray-700 text-sm font-medium">Activities</span>
-                          <span className="font-bold text-gray-900">${tripData.priceBreakdown.activities.toFixed(2)}</span>
-                        </div>
-                        {tripData.priceBreakdown.hotels > 0 && (
-                          <div className="flex justify-between items-center bg-white/80 px-3 py-2 rounded-lg">
-                            <span className="text-gray-700 text-sm font-medium">Hotels</span>
-                            <span className="font-bold text-gray-900">${tripData.priceBreakdown.hotels.toFixed(2)}</span>
-                          </div>
-                        )}
-                        {tripData.priceBreakdown.chauffeur > 0 && (
-                          <div className="flex justify-between items-center bg-white/80 px-3 py-2 rounded-lg">
-                            <span className="text-gray-700 text-sm font-medium">Chauffeur</span>
-                            <span className="font-bold text-gray-900">${tripData.priceBreakdown.chauffeur.toFixed(2)}</span>
-                          </div>
-                        )}
-                        {tripData.priceBreakdown.guide > 0 && (
-                          <div className="flex justify-between items-center bg-white/80 px-3 py-2 rounded-lg">
-                            <span className="text-gray-700 text-sm font-medium">Guide</span>
-                            <span className="font-bold text-gray-900">${tripData.priceBreakdown.guide.toFixed(2)}</span>
-                          </div>
-                        )}
-                        <div className="pt-3 mt-3 border-t-2 border-green-300 flex justify-between items-center bg-white px-4 py-3 rounded-lg shadow-soft">
-                          <span className="font-bold text-gray-900 text-base">Total</span>
-                          <span className="font-bold text-green-600 text-2xl">${tripData.totalPrice.toFixed(2)}</span>
-                        </div>
                       </div>
                     </div>
                   )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* View Toggle and Interactive Map */}
-            <div className="content-card mb-8">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-                <div>
-                  <h2 className="heading-secondary mb-2 flex items-center gap-2">
-                    <span>🗺️</span> Your Trip Schedule
-                  </h2>
-                  <p className="text-gray-600">
-                    View your itinerary as a list or on an interactive map
-                  </p>
+            {/* Modern View Toggle and Interactive Map */}
+            <div className="mb-10 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-300">
+              <div className="bg-white/80 backdrop-blur-xl rounded-3xl border border-gray-200/50 shadow-xl p-6 lg:p-8">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6">
+                  <div>
+                    <h2 className="text-2xl lg:text-3xl font-extrabold text-gray-900 mb-2">Your Trip Schedule</h2>
+                    <p className="text-gray-600 text-sm font-medium">
+                      Review your itinerary and make final adjustments
+                    </p>
+                  </div>
+                  <div className="inline-flex rounded-2xl border-2 border-gray-200 bg-gray-50/50 backdrop-blur-sm p-1.5 shadow-lg">
+                    <button
+                      onClick={() => setViewMode('list')}
+                      className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 flex items-center gap-2 ${
+                        viewMode === 'list'
+                          ? 'bg-gradient-to-r from-primary-500 to-accent-500 text-white shadow-lg transform scale-105'
+                          : 'text-gray-700 hover:text-gray-900 hover:bg-white/50'
+                      }`}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                      </svg>
+                      List View
+                    </button>
+                    <button
+                      onClick={() => setViewMode('map')}
+                      className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 flex items-center gap-2 ${
+                        viewMode === 'map'
+                          ? 'bg-gradient-to-r from-primary-500 to-accent-500 text-white shadow-lg transform scale-105'
+                          : 'text-gray-700 hover:text-gray-900 hover:bg-white/50'
+                      }`}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                      </svg>
+                      Map View
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setViewMode('list')}
-                    className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                      viewMode === 'list'
-                        ? 'bg-primary-500 text-white shadow-soft'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    📋 List View
-                  </button>
-                  <button
-                    onClick={() => setViewMode('map')}
-                    className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                      viewMode === 'map'
-                        ? 'bg-primary-500 text-white shadow-soft'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    🗺️ Map View
-                  </button>
-                </div>
-              </div>
 
-              {viewMode === 'map' && tripData.mapData && (
-                <div className="mt-4">
-                  <TripMap mapData={tripData.mapData} />
-                </div>
-              )}
+                {viewMode === 'map' && (
+                  <div className="mt-4">
+                    <TripMap 
+                      mapData={tripData.mapData || { waypoints: [], route: [], bounds: null }} 
+                      schedule={tripData.schedule}
+                      availableHotels={tripData.availableHotels || []}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
             {viewMode === 'list' && (
-              <div className="space-y-6 mb-8">
-              {tripData.schedule.map((day, idx) => (
-                <div key={idx} className="card-professional overflow-hidden">
-                  {/* Day Header with Gradient */}
-                  <div className="bg-gradient-to-r from-primary-500 to-primary-600 p-6 md:p-8">
-                    <div className="flex items-center gap-4">
-                      <div className="flex-shrink-0 w-16 h-16 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-large border-2 border-white/30">
-                        {idx + 1}
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="heading-tertiary text-white mb-1">
-                          Day {idx + 1}
-                        </h3>
-                        <div className="space-y-1">
-                          <p className="text-white/90 flex items-center gap-2 font-medium">
-                            <span className="text-lg">📅</span> 
-                            {new Date(day.date).toLocaleDateString('en-US', { 
-                              weekday: 'long', 
-                              year: 'numeric', 
-                              month: 'long', 
-                              day: 'numeric' 
-                            })}
-                          </p>
-                          {day.activities && day.activities.length > 0 && (
-                            <div className="flex items-center gap-2 text-white/80 text-sm">
-                              <span className="text-xs">⏰</span>
-                              <span className="text-xs">
-                                {day.activities.map((act: Activity) => act.startTime).filter((time: string, idx: number, arr: string[]) => arr.indexOf(time) === idx).join(', ')}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      {day.activities && Array.isArray(day.activities) && day.activities.length > 0 && (
-                        <div className="hidden sm:flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/30">
-                          <span className="text-white font-semibold">{day.activities.length}</span>
-                          <span className="text-white/90 text-sm">Activities</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+              <div className="relative mb-12">
+                {/* Modern Animated Vertical Timeline */}
+                <div className="absolute left-12 top-0 bottom-0 w-1 bg-gradient-to-b from-primary-200 via-primary-300 to-primary-200 hidden lg:block rounded-full shadow-lg"></div>
+                
+                <div className="space-y-20">
+                {tripData.schedule.map((day, idx) => {
+                  const dayDate = new Date(day.date);
+                  const isToday = dayDate.toDateString() === new Date().toDateString();
                   
-                  <div className="p-6 md:p-8">
-                  
-                  <div className="grid md:grid-cols-2 gap-6">
-                    {/* Activities Section - Enhanced */}
-                    <div className="bg-gradient-to-br from-gray-50 to-white p-6 rounded-xl border-2 border-gray-200 shadow-soft">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 bg-primary-500 rounded-lg flex items-center justify-center shadow-medium">
-                          <span className="text-xl">🎯</span>
-                        </div>
-                        <h4 className="font-bold text-gray-800 text-lg">Activities</h4>
-                        {day.activities && day.activities.length > 0 && (
-                          <span className="badge-primary ml-auto">{day.activities.length}</span>
+                  return (
+                  <div key={idx} className="relative animate-in fade-in slide-in-from-left-6 duration-700" style={{ animationDelay: `${idx * 100}ms` }}>
+                    {/* Modern Timeline Node with Pulse Animation */}
+                    <div className="absolute left-0 top-8 hidden lg:flex items-center justify-center z-10" style={{ left: 'calc(3rem - 0.5rem)' }}>
+                      <div className="relative">
+                        {isToday && (
+                          <div className="absolute inset-0 bg-primary-400 rounded-full animate-ping opacity-75"></div>
                         )}
+                        <div className={`relative w-4 h-4 rounded-full ${isToday ? 'bg-gradient-to-br from-primary-500 to-accent-500 ring-4 ring-primary-100 shadow-lg' : 'bg-gray-400 ring-2 ring-gray-200'} transition-all duration-300`}></div>
                       </div>
-                      {(!day.activities || day.activities.length === 0) ? (
-                        <div className="space-y-4">
-                          <div className="text-center py-6">
-                            <div className="text-4xl mb-2">🌴</div>
-                            <p className="text-gray-500 font-medium">Free day - explore at your own pace!</p>
-                            <p className="text-xs text-gray-400 mt-2">No activities scheduled for this day</p>
+                    </div>
+
+                    {/* Day Content */}
+                    <div className="lg:ml-24">
+                      {/* Ultra Modern Day Header */}
+                      <div className="mb-10">
+                        <div className="relative overflow-hidden bg-gradient-to-br from-white to-gray-50/50 rounded-2xl border-2 border-gray-200/50 shadow-xl p-6 lg:p-8 mb-8 hover:shadow-2xl transition-all duration-300">
+                          <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-primary-100/30 to-accent-100/30 rounded-full blur-3xl"></div>
+                          <div className="relative flex items-start justify-between gap-6">
+                            <div className="flex-1">
+                              <div className="flex items-baseline gap-4 mb-4">
+                                <h2 className="text-4xl lg:text-5xl font-extrabold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent tracking-tight">
+                                  Day {idx + 1}
+                                </h2>
+                                {isToday && (
+                                  <span className="px-4 py-1.5 bg-gradient-to-r from-primary-500 to-accent-500 text-white text-xs font-bold rounded-full shadow-lg animate-pulse">
+                                    Today
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex flex-wrap items-center gap-6 text-sm">
+                                <div className="flex items-center gap-2.5 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
+                                  <svg className="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                  <span className="font-semibold text-gray-900">
+                                    {dayDate.toLocaleDateString('en-US', { 
+                                      weekday: 'long', 
+                                      month: 'long', 
+                                      day: 'numeric'
+                                    })}
+                                  </span>
+                                </div>
+                                {day.activities && day.activities.length > 0 && (
+                                  <div className="flex items-center gap-2.5 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
+                                    <div className="w-2 h-2 bg-gradient-to-r from-primary-500 to-accent-500 rounded-full"></div>
+                                    <span className="font-semibold text-gray-700">{day.activities.length} {day.activities.length === 1 ? 'experience' : 'experiences'}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Activities Timeline */}
+                      <div className="mb-10">
+                        {(!day.activities || day.activities.length === 0) ? (
+                          <div className="space-y-4">
+                          <div className="text-center py-8">
+                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </div>
+                            <p className="text-gray-700 font-medium mb-1">Free Day</p>
+                            <p className="text-sm text-gray-500">No activities scheduled - explore at your own pace</p>
                           </div>
                           
                           {/* Intelligent Recommendations for Free Days */}
@@ -967,11 +1327,13 @@ export default function SchedulePage() {
                               <p className="text-sm text-gray-500 mt-2">Finding perfect experiences for you...</p>
                             </div>
                           ) : recommendations[idx] && recommendations[idx].length > 0 ? (
-                            <div className="border-t-2 border-gray-200 pt-4">
+                            <div className="border-t border-gray-200 pt-5 mt-5">
                               <div className="flex items-center gap-2 mb-4">
-                                <span className="text-xl">💡</span>
-                                <h4 className="font-bold text-gray-800">Recommended for You</h4>
-                                <span className="badge-primary text-xs ml-auto">{recommendations[idx].length} suggestions</span>
+                                <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                                </svg>
+                                <h4 className="font-semibold text-gray-900 text-sm">Recommended Experiences</h4>
+                                <span className="ml-auto text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-md">{recommendations[idx].length}</span>
                               </div>
                               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                 {recommendations[idx].map((rec: any, recIdx: number) => {
@@ -982,9 +1344,9 @@ export default function SchedulePage() {
                                       : null;
                                   
                                   return (
-                                    <div key={recIdx} className="bg-white border-2 border-gray-200 rounded-lg p-3 hover:border-primary-300 transition-all shadow-soft">
+                                    <div key={recIdx} className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-gray-300 hover:shadow-sm transition-all">
                                       {imageUrl && (
-                                        <div className="w-full h-32 bg-gray-100 rounded-lg mb-2 overflow-hidden">
+                                        <div className="w-full h-32 bg-gray-100 overflow-hidden">
                                           <img 
                                             src={imageUrl} 
                                             alt={rec.title}
@@ -992,19 +1354,23 @@ export default function SchedulePage() {
                                           />
                                         </div>
                                       )}
-                                      <h5 className="font-bold text-gray-900 text-sm mb-1 line-clamp-1">{rec.title}</h5>
+                                      <div className="p-3">
+                                        <h5 className="font-semibold text-gray-900 text-sm mb-2 line-clamp-2 min-h-[2.5rem]">{rec.title}</h5>
                                       <div className="flex items-center justify-between mb-2">
-                                        <span className="text-primary-600 font-bold text-sm">${rec.price}</span>
+                                          <span className="text-gray-900 font-semibold text-sm">${rec.price}</span>
                                         {rec.provider?.rating > 0 && (
-                                          <span className="badge-rating text-xs">
-                                            ⭐ {rec.provider.rating.toFixed(1)}
-                                          </span>
+                                            <div className="flex items-center gap-1 text-xs text-gray-600">
+                                              <svg className="w-3.5 h-3.5 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+                                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                              </svg>
+                                              <span className="font-medium">{rec.provider.rating.toFixed(1)}</span>
+                                            </div>
                                         )}
                                       </div>
                                       {rec.reasons && rec.reasons.length > 0 && (
-                                        <div className="flex flex-wrap gap-1 mb-2">
-                                          {rec.reasons.map((reason: string, rIdx: number) => (
-                                            <span key={rIdx} className="text-xs px-2 py-0.5 bg-primary-50 text-primary-700 rounded-md">
+                                          <div className="flex flex-wrap gap-1 mb-3">
+                                            {rec.reasons.slice(0, 2).map((reason: string, rIdx: number) => (
+                                              <span key={rIdx} className="text-xs px-2 py-0.5 bg-gray-100 text-gray-700 rounded border border-gray-200">
                                               {reason}
                                             </span>
                                           ))}
@@ -1022,10 +1388,11 @@ export default function SchedulePage() {
                                               console.error('Error adding to bucketlist:', err);
                                             });
                                         }}
-                                        className="w-full btn-primary text-sm py-2 mt-2"
+                                          className="w-full bg-primary-500 hover:bg-primary-600 text-white text-xs font-medium py-2 px-3 rounded-lg transition-colors"
                                       >
                                         Add to Trip
                                       </button>
+                                      </div>
                                     </div>
                                   );
                                 })}
@@ -1044,192 +1411,525 @@ export default function SchedulePage() {
                           )}
                         </div>
                       ) : (
-                        <ul className="space-y-3">
+                        <div className="space-y-4">
                           {day.activities && Array.isArray(day.activities) && day.activities.length > 0 ? day.activities.map((activity, actIdx) => {
-                            console.log(`Rendering activity ${actIdx} for day:`, activity);
                             // Handle both populated and unpopulated activity formats
-                            const activityTitle = activity.title || (activity.experienceId && typeof activity.experienceId === 'object' && activity.experienceId !== null ? (activity.experienceId as any).title : null) || 'Activity';
-                            const activityPrice = activity.price || (activity.experienceId && typeof activity.experienceId === 'object' && activity.experienceId !== null ? (activity.experienceId as any).price : 0) || 0;
+                            const experienceData = activity.experienceId && typeof activity.experienceId === 'object' && activity.experienceId !== null ? activity.experienceId : null;
+                            const activityTitle = activity.title || experienceData?.title || 'Activity';
+                            const activityPrice = activity.price || experienceData?.price || 0;
                             const activityStartTime = activity.startTime || '09:00';
                             const activityEndTime = activity.endTime || '17:00';
                             const activityDuration = activity.duration || 2;
-                            const activityLocation = activity.location || (activity.experienceId && typeof activity.experienceId === 'object' && activity.experienceId !== null ? (activity.experienceId as any).location : null);
-                            const activityProvider = activity.provider || (activity.experienceId && typeof activity.experienceId === 'object' && activity.experienceId !== null && (activity.experienceId as any).provider ? (activity.experienceId as any).provider : { name: 'Unknown' });
+                            const activityLocation = activity.location || experienceData?.location || null;
+                            const activityProvider = activity.provider || experienceData?.provider || { name: 'Unknown' };
+                            
+                            // Get image URL helper - handles various formats
+                            const getImageUrl = (imageUrl: string | string[] | undefined | null) => {
+                              if (!imageUrl) return null;
+                              
+                              // Handle array format
+                              if (Array.isArray(imageUrl)) {
+                                const firstImage = imageUrl.find(img => img) || imageUrl[0];
+                                if (!firstImage) return null;
+                                imageUrl = typeof firstImage === 'string' ? firstImage : (firstImage as any).url || firstImage;
+                              }
+                              
+                              if (typeof imageUrl !== 'string') return null;
+                              
+                              // Already a full URL
+                              if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+                                return imageUrl;
+                              }
+                              
+                              // Handle relative paths
+                              const cleanUrl = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
+                              const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+                              
+                              // Remove double slashes
+                              const finalUrl = `${apiBase}${cleanUrl}`.replace(/([^:]\/)\/+/g, '$1');
+                              return finalUrl;
+                            };
+                            
+                            // Get image URL - check multiple sources
+                            // Priority: activity.imageUrl > activity.contentUrl > experienceData.imageUrl > experienceData.contentUrl
+                            const getImageFromActivity = () => {
+                              // Check activity.imageUrl (already extracted in transformation)
+                              if (activity.imageUrl) {
+                                if (Array.isArray(activity.imageUrl)) {
+                                  return activity.imageUrl[0] || null;
+                                }
+                                if (typeof activity.imageUrl === 'string') {
+                                  return activity.imageUrl;
+                                }
+                                if (typeof activity.imageUrl === 'object' && activity.imageUrl !== null) {
+                                  return (activity.imageUrl as any).url || activity.imageUrl;
+                                }
+                              }
+                              
+                              // Check activity.contentUrl
+                              if (activity.contentUrl) {
+                                if (Array.isArray(activity.contentUrl)) {
+                                  return activity.contentUrl[0] || null;
+                                }
+                                if (typeof activity.contentUrl === 'string') {
+                                  return activity.contentUrl;
+                                }
+                                if (typeof activity.contentUrl === 'object' && activity.contentUrl !== null) {
+                                  return (activity.contentUrl as any).url || activity.contentUrl;
+                                }
+                              }
+                              
+                              return null;
+                            };
+                            
+                            const getImageFromExperience = () => {
+                              if (!experienceData) return null;
+                              
+                              // Try imageUrl first
+                              if (experienceData.imageUrl) {
+                                if (Array.isArray(experienceData.imageUrl)) {
+                                  const firstImg = experienceData.imageUrl[0];
+                                  if (typeof firstImg === 'string') return firstImg;
+                                  if (typeof firstImg === 'object' && firstImg !== null) {
+                                    return (firstImg as any).url || firstImg;
+                                  }
+                                  return firstImg;
+                                }
+                                if (typeof experienceData.imageUrl === 'string') {
+                                  return experienceData.imageUrl;
+                                }
+                                if (typeof experienceData.imageUrl === 'object' && experienceData.imageUrl !== null) {
+                                  return (experienceData.imageUrl as any).url || experienceData.imageUrl;
+                                }
+                              }
+                              
+                              // Fallback to contentUrl
+                              if (experienceData.contentUrl) {
+                                if (Array.isArray(experienceData.contentUrl)) {
+                                  const firstContent = experienceData.contentUrl[0];
+                                  if (typeof firstContent === 'string') return firstContent;
+                                  if (typeof firstContent === 'object' && firstContent !== null) {
+                                    return (firstContent as any).url || firstContent;
+                                  }
+                                  return firstContent;
+                                }
+                                if (typeof experienceData.contentUrl === 'string') {
+                                  return experienceData.contentUrl;
+                                }
+                                if (typeof experienceData.contentUrl === 'object' && experienceData.contentUrl !== null) {
+                                  return (experienceData.contentUrl as any).url || experienceData.contentUrl;
+                                }
+                              }
+                              
+                              return null;
+                            };
+                            
+                            // Get raw image URL (can be string, array, or object)
+                            const rawImageUrl = getImageFromActivity() || getImageFromExperience();
+                            const activityImageUrl = rawImageUrl ? getImageUrl(rawImageUrl) : null;
+                            
+                            // Debug logging - log first activity to troubleshoot
+                            if (actIdx === 0) {
+                              console.log('=== Image Debug Info ===');
+                              console.log('Activity object:', activity);
+                              console.log('Activity imageUrl:', activity.imageUrl);
+                              console.log('Activity contentUrl:', activity.contentUrl);
+                              console.log('Experience Data:', experienceData);
+                              console.log('Experience imageUrl:', experienceData?.imageUrl);
+                              console.log('Experience contentUrl:', experienceData?.contentUrl);
+                              console.log('Raw Image URL:', rawImageUrl);
+                              console.log('Final Image URL:', activityImageUrl);
+                              console.log('API Base:', process.env.NEXT_PUBLIC_API_URL);
+                              console.log('=======================');
+                            }
                             
                             return (
-                              <li key={actIdx} className="bg-white p-4 rounded-lg border-2 border-gray-200 shadow-soft hover:border-primary-300 transition-all">
-                                <div className="flex justify-between items-start mb-3">
-                                  <div className="flex-1 pr-2">
-                                    <h5 className="font-bold text-gray-900 text-base mb-1">{activityTitle}</h5>
-                                    {/* Prominent Time Slot Display */}
-                                    <div className="flex items-center gap-2 bg-primary-50 px-3 py-1.5 rounded-lg border border-primary-200 w-fit">
-                                      <span className="text-primary-600 font-semibold text-sm">⏰</span>
-                                      <span className="font-bold text-primary-700 text-sm">
-                                        {activityStartTime} - {activityEndTime}
-                                      </span>
-                                      <span className="text-primary-600 text-xs">({activityDuration}h)</span>
+                              <div key={actIdx} className="group relative overflow-hidden bg-white rounded-3xl border-2 border-gray-200/50 hover:border-primary-300/50 hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-1">
+                                {/* Animated background gradient */}
+                                <div className="absolute inset-0 bg-gradient-to-br from-primary-50/0 via-accent-50/0 to-primary-50/0 group-hover:from-primary-50/30 group-hover:via-accent-50/20 group-hover:to-primary-50/30 transition-all duration-500"></div>
+                                
+                                <div className="relative flex flex-col md:flex-row">
+                                  {/* Ultra Modern Experience Image */}
+                                  {activityImageUrl ? (
+                                    <div className="relative w-full md:w-80 h-64 md:h-auto bg-gradient-to-br from-gray-100 to-gray-200 flex-shrink-0 overflow-hidden">
+                                      <img
+                                        src={activityImageUrl}
+                                        alt={activityTitle}
+                                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+                                        loading="lazy"
+                                        crossOrigin="anonymous"
+                                        onError={(e) => {
+                                          console.error(`Failed to load image for activity ${actIdx}:`, activityImageUrl);
+                                          console.error('Image URL that failed:', activityImageUrl);
+                                          console.error('Raw image URL:', rawImageUrl);
+                                          const target = e.target as HTMLImageElement;
+                                          target.style.display = 'none';
+                                          const parent = target.parentElement;
+                                          if (parent) {
+                                            parent.innerHTML = `
+                                              <div class="w-full h-full bg-gradient-to-br from-primary-50 via-accent-50 to-primary-50 flex items-center justify-center">
+                                                <div class="text-center p-6">
+                                                  <div class="w-20 h-20 bg-gradient-to-br from-primary-400 to-accent-500 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                                                    <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                    </svg>
+                                                  </div>
+                                                  <p class="text-sm text-gray-600 font-semibold">Experience Image</p>
+                                                </div>
+                                              </div>
+                                            `;
+                                          }
+                                        }}
+                                      />
+                                      {/* Enhanced gradient overlay */}
+                                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent pointer-events-none"></div>
+                                      {/* Modern Time Badge */}
+                                      <div className="absolute top-4 left-4">
+                                        <div className="bg-white/95 backdrop-blur-md px-4 py-2 rounded-xl shadow-xl border border-white/50">
+                                          <div className="flex items-center gap-2">
+                                            <svg className="w-4 h-4 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            <div className="text-sm font-bold text-gray-900">{activityStartTime}</div>
+                                          </div>
+                                        </div>
+                                      </div>
                                     </div>
-                                  </div>
-                                  <div className="flex-shrink-0 bg-primary-50 px-3 py-1 rounded-lg border border-primary-200">
-                                    <span className="text-primary-700 font-bold text-sm">${activityPrice}</span>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-3 text-sm text-gray-600 flex-wrap mb-2">
-                                  <div className="flex items-center gap-1.5 bg-gray-50 px-2.5 py-1 rounded-md">
-                                    <span className="text-primary-600">📅</span>
-                                    <span className="font-medium">{new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                                  </div>
-                                  {activityLocation && (
-                                    <div className="badge-primary text-xs">
-                                      📍 {activityLocation.district || activityLocation}
+                                  ) : (
+                                    <div className="w-full md:w-80 h-64 md:h-auto bg-gradient-to-br from-primary-50 via-accent-50 to-primary-50 border-r-2 border-gray-200/50 flex items-center justify-center flex-shrink-0">
+                                      <div className="text-center p-8">
+                                        <div className="w-20 h-20 bg-gradient-to-br from-primary-400 to-accent-500 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                                          <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                          </svg>
+                                        </div>
+                                        <p className="text-sm text-gray-600 font-semibold">Experience Image</p>
+                                      </div>
                                     </div>
                                   )}
-                                </div>
-                                <div className="pt-2 border-t border-gray-100">
-                                  <p className="text-xs text-gray-500 flex items-center gap-1.5">
-                                    <span className="font-semibold">Host:</span>
-                                    <span>{typeof activityProvider === 'object' ? activityProvider.name : activityProvider}</span>
-                                  </p>
-                                </div>
-                              </li>
-                            );
-                          }) : (
-                            <li className="text-center py-4 text-gray-500 text-sm">
-                              No activities scheduled for this day
-                            </li>
-                          )}
-                        </ul>
-                      )}
-                    </div>
 
-                    <div className="space-y-4">
-                      {/* Hotel Booking - Enhanced */}
-                      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border-2 border-blue-200 shadow-soft">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center shadow-medium">
-                            <span className="text-xl">🏨</span>
-                          </div>
-                          <h4 className="font-bold text-gray-800 text-lg">Accommodation</h4>
-                        </div>
-                        {tripData.availableHotels && tripData.availableHotels.length > 0 ? (
-                          <div className="space-y-3">
-                            <select
-                              value={selectedHotels[idx] || ''}
-                              onChange={(e) => handleHotelChange(idx, e.target.value)}
-                              className="input-field w-full"
-                            >
-                              <option value="">Select a hotel</option>
-                              {tripData.availableHotels.map(hotel => (
-                                <option key={hotel._id} value={hotel._id}>
-                                  {hotel.name} - ${hotel.pricePerNight}/night {hotel.rating > 0 && `⭐ ${hotel.rating.toFixed(1)}`}
-                                </option>
-                              ))}
-                            </select>
-                            {selectedHotels[idx] && (() => {
-                              const selectedHotel = tripData.availableHotels.find(h => h._id === selectedHotels[idx]);
-                              if (!selectedHotel) return null;
-                              return (
-                                <div className="bg-white p-4 rounded-lg border-2 border-blue-200 shadow-soft mt-3">
-                                  <div className="flex items-start gap-3">
-                                    {selectedHotel.images && selectedHotel.images.length > 0 && (() => {
-                                      const imagesArray = Array.isArray(selectedHotel.images) ? selectedHotel.images : [];
-                                      const mainImageObj = imagesArray.find((img: any) => typeof img === 'object' && img?.isMain) || imagesArray[0];
-                                      const mainImage = typeof mainImageObj === 'string' ? mainImageObj : mainImageObj?.url || '';
-                                      const imageUrl = mainImage.startsWith('http') 
-                                        ? mainImage 
-                                        : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000'}${mainImage}`;
-                                      return (
-                                        <img 
-                                          src={imageUrl} 
-                                          alt={selectedHotel.name}
-                                          className="w-20 h-20 object-cover rounded-lg border-2 border-gray-200"
-                                        />
-                                      );
-                                    })()}
-                                    <div className="flex-1">
-                                      <div className="flex items-start justify-between gap-2 mb-1">
-                                        <p className="font-bold text-gray-900 text-sm">{selectedHotel.name}</p>
-                                        {selectedHotel.rating > 0 && (
-                                          <div className="badge-rating flex-shrink-0">
-                                            ⭐ {selectedHotel.rating.toFixed(1)}
+                                  {/* Ultra Modern Content Section */}
+                                  <div className="relative flex-1 p-6 lg:p-8 flex flex-col">
+                                    {/* Time Badge - Only show if image exists */}
+                                    {activityImageUrl && (
+                                      <div className="flex-shrink-0 mb-6">
+                                        <div className="flex items-center gap-4">
+                                          <div className="w-16 h-16 bg-gradient-to-br from-primary-500 via-primary-600 to-accent-500 rounded-2xl flex items-center justify-center shadow-xl transform group-hover:scale-110 transition-transform duration-300">
+                                            <div className="text-center">
+                                              <div className="text-white text-sm font-bold leading-tight">{activityStartTime.split(':')[0]}</div>
+                                              <div className="text-white/90 text-xs font-semibold">{activityStartTime.split(':')[1]}</div>
+                                            </div>
+                                          </div>
+                                          <div className="bg-gradient-to-r from-primary-50 to-accent-50 px-4 py-2 rounded-xl border border-primary-200/50">
+                                            <div className="text-xs text-gray-600 font-semibold mb-0.5">Duration</div>
+                                            <div className="text-base font-bold text-gray-900">{activityDuration}h</div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+                                    
+                                    <div className="flex gap-6 flex-1">
+                                      {/* Time Badge - Show when no image */}
+                                      {!activityImageUrl && (
+                                        <div className="flex-shrink-0">
+                                          <div className="flex flex-col items-center">
+                                            <div className="w-16 h-16 bg-gradient-to-br from-primary-500 via-primary-600 to-accent-500 rounded-2xl flex items-center justify-center shadow-xl shadow-primary-500/30 transform group-hover:scale-110 transition-transform duration-300">
+                                              <div className="text-center">
+                                                <div className="text-white text-sm font-bold leading-tight">{activityStartTime.split(':')[0]}</div>
+                                                <div className="text-white/90 text-xs font-semibold">{activityStartTime.split(':')[1]}</div>
+                                              </div>
+                                            </div>
+                                            <div className="mt-2 bg-gradient-to-r from-primary-50 to-accent-50 px-3 py-1 rounded-lg border border-primary-200/50">
+                                              <div className="text-xs font-bold text-gray-700">{activityDuration}h</div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* Enhanced Content */}
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-start justify-between gap-6 mb-6">
+                                          <div className="flex-1 min-w-0">
+                                            <h3 className="text-2xl lg:text-3xl font-extrabold text-gray-900 mb-4 leading-tight group-hover:bg-gradient-to-r group-hover:from-primary-600 group-hover:to-accent-600 group-hover:bg-clip-text group-hover:text-transparent transition-all duration-300">
+                                              {activityTitle}
+                                            </h3>
+                                            
+                                            <div className="flex flex-wrap items-center gap-3 mb-4">
+                                              {activityLocation && (
+                                                <div className="flex items-center gap-2 text-sm text-gray-700 bg-gradient-to-r from-gray-50 to-gray-100/50 backdrop-blur-sm px-4 py-2 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all">
+                                                  <svg className="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                  </svg>
+                                                  <span className="font-semibold">{activityLocation.district || activityLocation}</span>
+                                                </div>
+                                              )}
+                                              {!activityImageUrl && (
+                                                <div className="flex items-center gap-2 text-sm text-gray-700 bg-gradient-to-r from-gray-50 to-gray-100/50 backdrop-blur-sm px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
+                                                  <svg className="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                  </svg>
+                                                  <span className="font-semibold">Until {activityEndTime}</span>
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+
+                                          {/* Modern Price Display */}
+                                          <div className="flex-shrink-0 text-right">
+                                            <div className="inline-flex flex-col items-end bg-gradient-to-br from-green-50 to-emerald-50 px-5 py-3 rounded-2xl border-2 border-green-200/50 shadow-lg">
+                                              <span className="text-3xl font-extrabold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">${activityPrice}</span>
+                                              <span className="text-xs text-gray-600 font-semibold mt-1">per person</span>
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        {/* Enhanced Provider Info */}
+                                        {typeof activityProvider === 'object' ? activityProvider.name : activityProvider !== 'Unknown' && (
+                                          <div className="pt-5 border-t-2 border-gray-100">
+                                            <div className="flex items-center gap-4 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200">
+                                              <div className="w-10 h-10 bg-gradient-to-br from-primary-400 to-accent-500 rounded-xl flex items-center justify-center shadow-md">
+                                                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                </svg>
+                                              </div>
+                                              <div>
+                                                <div className="text-xs text-gray-500 font-bold uppercase tracking-wide mb-0.5">Hosted by</div>
+                                                <div className="text-base font-bold text-gray-900">{typeof activityProvider === 'object' ? activityProvider.name : activityProvider}</div>
+                                              </div>
+                                            </div>
                                           </div>
                                         )}
                                       </div>
-                                      {selectedHotel.description && (
-                                        <p className="text-xs text-gray-600 mt-1 line-clamp-2">{selectedHotel.description}</p>
-                                      )}
-                                      {selectedHotel.amenities && selectedHotel.amenities.length > 0 && (
-                                        <div className="flex flex-wrap gap-1 mt-2">
-                                          {selectedHotel.amenities.slice(0, 3).map((amenity, aIdx) => (
-                                            <span key={aIdx} className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 rounded-md border border-blue-200 font-medium">
-                                              {amenity}
-                                            </span>
-                                          ))}
-                                          {selectedHotel.amenities.length > 3 && (
-                                            <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-700 rounded-md">
-                                              +{selectedHotel.amenities.length - 3} more
-                                            </span>
-                                          )}
-                                        </div>
-                                      )}
                                     </div>
                                   </div>
                                 </div>
-                              );
-                            })()}
+                              </div>
+                            );
+                          }) : (
+                            <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
+                              <p className="text-gray-500 text-sm">No activities scheduled for this day</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      </div>
+
+                      {/* Services Section - Sidebar Style */}
+                      <div className="grid md:grid-cols-2 gap-6">
+                        {/* Hotel Booking */}
+                        <div className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
+                          <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-ocean-50 rounded-xl flex items-center justify-center">
+                                <svg className="w-5 h-5 text-ocean-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                </svg>
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-gray-900">Accommodation</h4>
+                                <p className="text-xs text-gray-500 mt-0.5">Hotel for the night</p>
+                              </div>
+                            </div>
+                            {selectedHotels[idx] && (
+                              <span className="px-2.5 py-1 bg-green-50 text-green-700 text-xs font-semibold rounded-lg border border-green-200">Selected</span>
+                            )}
+                          </div>
+                        {tripData.availableHotels && tripData.availableHotels.length > 0 ? (
+                          <div>
+                            {!showHotelSelection[idx] ? (
+                              <div>
+                                {selectedHotels[idx] ? (
+                                  <div className="mb-4">
+                                    <HotelBookingCard
+                                      hotel={tripData.availableHotels.find(h => h._id === selectedHotels[idx])!}
+                                      isSelected={true}
+                                      onSelect={() => {}}
+                                      date={day.date}
+                                    />
+                                  </div>
+                                ) : null}
+                                <button
+                                  onClick={() => setShowHotelSelection({ ...showHotelSelection, [idx]: true })}
+                                  className="w-full btn-primary py-3"
+                                >
+                                  {selectedHotels[idx] ? 'Change Hotel' : 'Select Hotel'}
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto p-2">
+                                  {tripData.availableHotels.map(hotel => (
+                                    <HotelBookingCard
+                                      key={hotel._id}
+                                      hotel={hotel}
+                                      isSelected={selectedHotels[idx] === hotel._id}
+                                      onSelect={() => {
+                                        handleHotelChange(idx, hotel._id);
+                                        setShowHotelSelection({ ...showHotelSelection, [idx]: false });
+                                      }}
+                                      date={day.date}
+                                    />
+                                  ))}
+                                </div>
+                                <button
+                                  onClick={() => setShowHotelSelection({ ...showHotelSelection, [idx]: false })}
+                                  className="w-full btn-secondary py-2"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            )}
                           </div>
                         ) : (
-                          <p className="text-sm text-gray-500">No hotels available</p>
+                          <p className="text-sm text-gray-500 text-center py-4">No hotels available for this location</p>
                         )}
-                      </div>
+                        </div>
 
-                      {/* Chauffeur Option - Enhanced */}
-                      <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-5 rounded-xl border-2 border-purple-200 shadow-soft">
-                        <label className="flex items-center gap-4 cursor-pointer group">
-                          <input
-                            type="checkbox"
-                            checked={chauffeurDays[idx] || false}
-                            onChange={() => handleChauffeurToggle(idx)}
-                            className="w-6 h-6 text-primary-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 cursor-pointer"
-                          />
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-xl">🚗</span>
-                              <p className="font-bold text-gray-900">Chauffeur Service</p>
+                        {/* Chauffeur/Driver Selection */}
+                        <div className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
+                          <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+                                <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                </svg>
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-gray-900">Chauffeur Service</h4>
+                                <p className="text-xs text-gray-500 mt-0.5">Personal driver</p>
+                              </div>
                             </div>
-                            <p className="text-sm text-gray-600">Personal driver for the day</p>
-                            <p className="text-xs text-primary-600 font-semibold mt-1">+$50 per day</p>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={chauffeurDays[idx] || false}
+                                onChange={() => handleChauffeurToggle(idx)}
+                                className="sr-only peer"
+                              />
+                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 peer-focus:ring-offset-2 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                            </label>
                           </div>
-                        </label>
+
+                        {chauffeurDays[idx] && (
+                          <div className="mt-4 pt-4 border-t border-purple-200">
+                            {!showDriverSelection[idx] ? (
+                              <div>
+                                {selectedDrivers[idx] ? (
+                                  <div className="mb-4">
+                                    {(() => {
+                                      const selectedDriver = availableDrivers.find(d => d._id === selectedDrivers[idx]);
+                                      if (!selectedDriver) return null;
+                                      return (
+                                        <ChauffeurSelectionCard
+                                          driver={selectedDriver}
+                                          isSelected={true}
+                                          onSelect={() => {}}
+                                          date={day.date}
+                                        />
+                                      );
+                                    })()}
+                                  </div>
+                                ) : (
+                                  <p className="text-sm text-gray-600 mb-4 text-center">No driver selected yet</p>
+                                )}
+                                <button
+                                  onClick={() => {
+                                    setShowDriverSelection({ ...showDriverSelection, [idx]: true });
+                                    fetchAvailableDrivers(idx);
+                                  }}
+                                  className="w-full btn-primary py-3"
+                                  disabled={loadingDrivers}
+                                >
+                                  {loadingDrivers ? 'Loading Drivers...' : selectedDrivers[idx] ? 'Change Driver' : 'Select Driver'}
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="space-y-4">
+                                {loadingDrivers ? (
+                                  <div className="text-center py-8">
+                                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-500 border-t-transparent mb-4"></div>
+                                    <p className="text-sm text-gray-600">Loading available drivers...</p>
+                                  </div>
+                                ) : availableDrivers.length > 0 ? (
+                                  <>
+                                    <div className="grid grid-cols-1 gap-4 max-h-96 overflow-y-auto p-2">
+                                      {availableDrivers.map(driver => (
+                                        <ChauffeurSelectionCard
+                                          key={driver._id}
+                                          driver={driver}
+                                          isSelected={selectedDrivers[idx] === driver._id}
+                                          onSelect={() => handleDriverSelect(idx, driver._id)}
+                                          date={day.date}
+                                        />
+                                      ))}
+                                    </div>
+                                    <button
+                                      onClick={() => setShowDriverSelection({ ...showDriverSelection, [idx]: false })}
+                                      className="w-full btn-secondary py-2"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </>
+                                ) : (
+                                  <div className="text-center py-8">
+                                    <p className="text-sm text-gray-600 mb-4">No drivers available for this date</p>
+                                    <button
+                                      onClick={() => setShowDriverSelection({ ...showDriverSelection, [idx]: false })}
+                                      className="btn-secondary"
+                                    >
+                                      Close
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        </div>
                       </div>
 
+                      {/* Additional Services */}
                       {day.guide && (
-                        <div className="bg-gradient-to-br from-amber-50 to-yellow-50 p-5 rounded-xl border-2 border-amber-200 shadow-soft">
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="text-xl">👤</span>
-                            <h4 className="font-bold text-gray-800">Travel Guide</h4>
+                        <div className="bg-white rounded-2xl border border-gray-200 p-5 mt-6">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
+                              <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                            </div>
+                            <div className="flex-1">
+                              <div className="text-xs text-gray-500 font-medium mb-0.5">Travel Guide</div>
+                              <div className="text-sm font-semibold text-gray-900">{day.guide.name || 'Local Guide'}</div>
+                            </div>
                           </div>
-                          <p className="font-semibold text-gray-900 bg-white/80 px-3 py-2 rounded-lg border border-amber-200">
-                            {day.guide.name || 'Local Guide'}
-                          </p>
                         </div>
                       )}
 
                       {day.cab && (
-                        <div className="bg-gradient-to-br from-teal-50 to-cyan-50 p-5 rounded-xl border-2 border-teal-200 shadow-soft">
-                          <div className="flex items-center gap-3">
-                            <span className="text-xl">🚕</span>
-                            <p className="font-bold text-gray-900">Cab Transfers</p>
-                            <span className="badge-success ml-auto">Included</span>
+                        <div className="bg-white rounded-2xl border border-gray-200 p-5 mt-6">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 bg-ocean-50 rounded-xl flex items-center justify-center">
+                                <svg className="w-5 h-5 text-ocean-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                </svg>
+                              </div>
+                              <div>
+                                <div className="text-xs text-gray-500 font-medium mb-0.5">Transfers</div>
+                                <div className="text-sm font-semibold text-gray-900">Cab Service</div>
+                              </div>
+                            </div>
+                            <span className="px-2.5 py-1 bg-green-50 text-green-700 text-xs font-semibold rounded-lg border border-green-200">Included</span>
                           </div>
                         </div>
                       )}
                     </div>
                   </div>
-                  </div>
+                  );
+                })}
                 </div>
-              ))}
-            </div>
+              </div>
             )}
 
             <div className="content-card mb-8">
@@ -1248,36 +1948,75 @@ export default function SchedulePage() {
               </div>
             </div>
 
-            <div className="bg-gradient-primary rounded-2xl shadow-large p-8 mb-8 text-white">
-              <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                <div>
-                  <h2 className="text-2xl font-bold mb-2">Total Trip Cost</h2>
-                  <p className="text-white/90">Including all activities, hotels & services</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-5xl font-bold">${tripData.totalPrice.toFixed(2)}</p>
-                  <p className="text-white/90 text-sm">All inclusive</p>
+            {/* Ultra Modern Total Cost Display */}
+            <div className="relative mb-10 overflow-hidden rounded-3xl shadow-2xl animate-in fade-in slide-in-from-bottom-8 duration-700 delay-500">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary-600 via-accent-500 to-primary-600"></div>
+              <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.1%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-30"></div>
+              <div className="relative p-8 lg:p-12 text-white">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+                  <div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/30">
+                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h2 className="text-3xl lg:text-4xl font-extrabold mb-2">Total Trip Cost</h2>
+                        <p className="text-white/90 text-base font-medium">Including all activities, hotels & services</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-5xl lg:text-6xl font-extrabold mb-2 drop-shadow-lg">${tripData.totalPrice.toFixed(2)}</p>
+                    <p className="text-white/90 text-sm font-semibold bg-white/10 backdrop-blur-sm px-4 py-1.5 rounded-full inline-block border border-white/20">All inclusive</p>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-col md:flex-row gap-4">
+            {/* Modern Action Buttons */}
+            <div className="flex flex-col md:flex-row gap-4 mb-8 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-600">
               <button
-                onClick={() => router.push('/trips/select')}
-                className="btn-secondary flex-1 py-4"
+                onClick={handleClearAllActivities}
+                disabled={loading || !tripData || tripData.schedule.every(day => !day.activities || day.activities.length === 0)}
+                className="group relative flex-1 py-4 px-6 bg-white border-2 border-gray-300 rounded-2xl font-bold text-gray-700 hover:border-red-300 hover:bg-red-50 hover:text-red-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:hover:translate-y-0"
               >
-                Modify Trip
+                <div className="flex items-center justify-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  {loading ? 'Clearing...' : 'Clear All Activities'}
+                </div>
+              </button>
+              <button
+                onClick={handleModifyTrip}
+                className="group relative flex-1 py-4 px-6 bg-white border-2 border-gray-300 rounded-2xl font-bold text-gray-700 hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Modify Trip
+                </div>
               </button>
               <button
                 onClick={handleProceedToPayment}
-                className="btn-primary flex-1 text-lg py-4"
+                className="group relative flex-1 py-4 px-6 bg-gradient-to-r from-primary-500 to-accent-500 rounded-2xl font-bold text-white hover:from-primary-600 hover:to-accent-600 transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 hover:scale-105"
               >
-                Proceed to Payment
+                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div className="relative flex items-center justify-center gap-2 text-lg">
+                  <span>Proceed to Payment</span>
+                  <svg className="w-5 h-5 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </div>
               </button>
             </div>
-          </>
+          </React.Fragment>
         )}
       </div>
     </div>
   );
 }
+

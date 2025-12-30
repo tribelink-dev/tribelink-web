@@ -127,7 +127,10 @@ export default function ExperienceHostDashboard() {
               <h3 className="heading-tertiary mb-0">Analytics</h3>
             </div>
             <p className="text-gray-600 mb-4">View your performance metrics</p>
-            <button className="btn-secondary w-full">
+            <button 
+              onClick={() => router.push('/provider/experiences/analytics')}
+              className="btn-secondary w-full"
+            >
               View Analytics
             </button>
           </div>
@@ -140,7 +143,10 @@ export default function ExperienceHostDashboard() {
               <h3 className="heading-tertiary mb-0">Bookings</h3>
             </div>
             <p className="text-gray-600 mb-4">Manage your bookings</p>
-            <button className="btn-secondary w-full">
+            <button 
+              onClick={() => router.push('/provider/experiences/bookings')}
+              className="btn-secondary w-full"
+            >
               View Bookings
             </button>
           </div>

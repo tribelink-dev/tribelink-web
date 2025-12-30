@@ -30,7 +30,23 @@ interface Experience {
     rating: number;
   };
   recentReviews?: Review[];
-  location?: { state: string; district: string }; // Added location info
+  location?: { state: string; district: string };
+  culturalMetadata?: {
+    heritage?: string;
+    traditions?: string[];
+    culturalSignificance?: string;
+    authenticityScore?: number;
+    experienceType?: string;
+    regionalTags?: string[];
+  };
+  tags?: string[];
+  aiFiltered?: boolean;
+  matchScore?: number;
+  aiReasons?: string[];
+  availabilityStatus?: {
+    available: boolean;
+    reason: string | null;
+  };
 }
 
 export default function ExperiencesPage() {
@@ -44,6 +60,9 @@ export default function ExperiencesPage() {
   const [selectedExperience, setSelectedExperience] = useState<Experience | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [hasNoTokens, setHasNoTokens] = useState(false);
+  const [useAIFiltering, setUseAIFiltering] = useState(false); // Show all experiences by default, user can enable Pathfinder
+  const [aiInsights, setAiInsights] = useState<string>('');
+  const [totalAvailable, setTotalAvailable] = useState<number>(0);
 
   const country = searchParams.get('country') || '';
   const from = searchParams.get('from') || '';
@@ -113,7 +132,7 @@ export default function ExperiencesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locationsKey, country, user]); // Use stable key instead of array
 
-  const fetchExperiences = async () => {
+  const fetchExperiences = async (forceAIFiltering?: boolean) => {
     try {
       setLoading(true);
       setError('');
@@ -124,32 +143,104 @@ export default function ExperiencesPage() {
         return;
       }
       
-      // Fetch experiences from all locations
+      // Use the provided value or fall back to state
+      const shouldUseAI = forceAIFiltering !== undefined ? forceAIFiltering : useAIFiltering;
+      
+      // Revolutionary AI-Powered Filtering
+      if (shouldUseAI && user) {
+        try {
+          // Use AI filtering endpoint for each location
+          const aiPromises = locations.map(loc =>
+            api.get('/trips/experiences/' + encodeURIComponent(loc.district) + '/ai-filtered', {
+              params: { country, state: loc.state, from, to }
+            })
+          );
+          
+          const aiResponses = await Promise.all(aiPromises);
+          
+          // Process all responses and collect data
+          let totalAvailableCount = 0;
+          let firstInsight = '';
+          
+          const allExperiences = aiResponses.flatMap((response, idx) => {
+            const data = response.data;
+            // Sum up totalAvailable from all locations
+            totalAvailableCount += data.totalAvailable || 0;
+            // Use first non-empty insight
+            if (data.insights && !firstInsight) {
+              firstInsight = data.insights;
+            }
+            return (data.experiences || []).map((exp: Experience) => ({
+              ...exp,
+              location: locations[idx],
+              aiFiltered: true,
+              matchScore: exp.matchScore,
+              aiReasons: exp.aiReasons
+            }));
+          });
+          
+          // Remove duplicates
+          const uniqueExperiences = allExperiences.filter((exp, index, self) =>
+            index === self.findIndex(e => e._id === exp._id)
+          );
+          
+          // Set state once after all processing
+          setExperiences(uniqueExperiences);
+          setTotalAvailable(totalAvailableCount || uniqueExperiences.length);
+          if (firstInsight) {
+            setAiInsights(firstInsight);
+          }
+          
+          console.log(`[Pathfinder Enabled] Showing ${uniqueExperiences.length} curated experiences from ${totalAvailableCount} available`);
+          return;
+        } catch (aiErr: any) {
+          console.warn('AI filtering failed, falling back to regular:', aiErr);
+          // Fall through to regular fetching
+        }
+      }
+      
+      // Regular experience fetching - Show ALL available experiences
+      // Include date parameters for intelligent scheduling filtering
       const experiencePromises = locations.map(loc =>
         api.get('/trips/experiences/' + encodeURIComponent(loc.district), {
-          params: { country, state: loc.state }
+          params: { country, state: loc.state, from, to }
         })
       );
       
       const responses = await Promise.all(experiencePromises);
-      const allExperiences = responses.flatMap((response, idx) => 
-        (response.data.experiences || []).map((exp: Experience) => ({
-          ...exp,
-          location: locations[idx] // Add location info to each experience
-        }))
-      );
       
-      // Remove duplicates based on experience ID
+      // Process all responses and calculate total
+      let totalAvailableCount = 0;
+      const allExperiences = responses.flatMap((response, idx) => {
+        const experiences = response.data.experiences || [];
+        // Sum up totalAvailable from all location responses
+        totalAvailableCount += response.data.totalAvailable || experiences.length;
+        return experiences.map((exp: Experience) => ({
+          ...exp,
+          location: locations[idx],
+          aiFiltered: false // Mark as not AI filtered
+        }));
+      });
+      
+      // Remove duplicates
       const uniqueExperiences = allExperiences.filter((exp, index, self) =>
         index === self.findIndex(e => e._id === exp._id)
       );
       
+      // Set state once after all processing
       setExperiences(uniqueExperiences);
+      // Use the sum of all location totals, or fallback to unique count
+      setTotalAvailable(totalAvailableCount || uniqueExperiences.length);
+      setAiInsights(''); // Clear AI insights when Pathfinder is disabled
+      
+      console.log(`[Pathfinder Disabled] Showing all ${uniqueExperiences.length} available experiences from ${locations.length} location(s) (total available: ${totalAvailableCount})`);
     } catch (err: any) {
       console.error('Error fetching experiences:', err);
       const errorMessage = err.response?.data?.message || err.response?.data?.error || 'Failed to load experiences';
       setError(errorMessage);
       setExperiences([]);
+      setTotalAvailable(0);
+      setAiInsights('');
     } finally {
       setLoading(false);
     }
@@ -240,7 +331,7 @@ export default function ExperiencesPage() {
   }
 
   return (
-    <div className="page-container">
+    <div className="page-container pb-24 md:pb-8">
       <div className="section-container max-w-7xl">
         {/* Token Warning - Show prominently if no tokens */}
         {hasNoTokens || (user && (!user.tokens || user.tokens === 0)) ? (
@@ -274,26 +365,238 @@ export default function ExperiencesPage() {
 
         <div className="content-card mb-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-              <h1 className="heading-secondary text-gray-900 mb-2">
-                {locations.length === 1 
-                  ? `Experiences in ${locations[0].district}`
-                  : `Experiences across ${locations.length} destinations`}
-              </h1>
-              <p className="text-gray-600 flex items-center gap-2 flex-wrap">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="heading-secondary text-gray-900">
+                  {locations.length === 1 
+                    ? `Experiences in ${locations[0].district}`
+                    : `Experiences across ${locations.length} destinations`}
+                </h1>
+                {useAIFiltering && user && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-semibold rounded-lg shadow-sm">
+                    <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                    <span>Pathfinder Active</span>
+                  </span>
+                )}
+              </div>
+              <p className="text-gray-600 flex items-center gap-2 flex-wrap mb-4">
                 <span>📍</span> 
                 {locations.length === 1 
                   ? `${country}, ${locations[0].state}`
                   : locations.map(loc => `${loc.district}, ${loc.state}`).join(' • ')}
               </p>
+              
+              {/* Pathfinder Toggle - Prominent Card with Best UX Practices */}
+              {user && (
+                <div className="mb-6">
+                  <div className={`border-2 rounded-xl p-5 transition-all duration-300 ${
+                    useAIFiltering 
+                      ? 'bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 border-indigo-300 shadow-md' 
+                      : 'bg-white border-gray-200 hover:border-indigo-300 hover:shadow-sm'
+                  }`}>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="flex items-start gap-4 flex-1">
+                        {/* Icon */}
+                        <div className={`flex-shrink-0 transition-all duration-300 ${
+                          useAIFiltering ? 'scale-110' : 'scale-100'
+                        }`}>
+                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-lg transition-all duration-300 ${
+                            useAIFiltering 
+                              ? 'bg-gradient-to-br from-indigo-500 to-purple-600 ring-2 ring-indigo-200' 
+                              : 'bg-gradient-to-br from-gray-400 to-gray-500'
+                          }`}>
+                            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                            </svg>
+                          </div>
+                        </div>
+                        
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className={`font-bold text-lg ${
+                              useAIFiltering ? 'text-indigo-900' : 'text-gray-900'
+                            }`}>
+                              {useAIFiltering ? 'Pathfinder AI Active' : 'Pathfinder AI Curation'}
+                            </span>
+                            {useAIFiltering && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
+                                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                                Active
+                              </span>
+                            )}
+                          </div>
+                          <p className={`text-sm leading-relaxed mb-2 ${
+                            useAIFiltering ? 'text-indigo-800' : 'text-gray-600'
+                          }`}>
+                            {useAIFiltering 
+                              ? `I've curated ${experiences.length} ${experiences.length === 1 ? 'perfect match' : 'perfect matches'} from ${totalAvailable} available options, personalized to your travel profile, booking history, and cultural interests.`
+                              : ''
+                            }
+                          </p>
+                          {useAIFiltering && aiInsights && (
+                            <div className="mt-3 pt-3 border-t border-indigo-200/60">
+                              <p className="text-xs text-indigo-700 leading-relaxed italic">
+                                "{aiInsights}"
+                              </p>
+                            </div>
+                          )}
+                          {!useAIFiltering && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-md border border-indigo-200">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Personalized
+                              </span>
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-purple-50 text-purple-700 text-xs font-medium rounded-md border border-purple-200">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                                Quick
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Toggle Switch - Large and Clear */}
+                      <label className="relative flex-shrink-0 cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={useAIFiltering}
+                          onChange={(e) => {
+                            const newValue = e.target.checked;
+                            setUseAIFiltering(newValue);
+                            // Clear previous state when toggling
+                            setExperiences([]);
+                            setAiInsights('');
+                            setTotalAvailable(0);
+                            // Fetch fresh experiences with the new value
+                            setTimeout(() => {
+                              fetchExperiences(newValue);
+                            }, 100);
+                          }}
+                          className="sr-only peer"
+                          aria-label={useAIFiltering ? 'Disable Pathfinder AI' : 'Enable Pathfinder AI'}
+                        />
+                        <div className={`w-16 h-9 rounded-full transition-all duration-300 shadow-inner relative ${
+                          useAIFiltering 
+                            ? 'bg-gradient-to-r from-indigo-600 to-purple-600' 
+                            : 'bg-gray-300 group-hover:bg-gray-400'
+                        } peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 peer-focus:ring-offset-2`}>
+                          <div className={`absolute top-1 w-7 h-7 bg-white rounded-full shadow-lg transform transition-transform duration-300 flex items-center justify-center ${
+                            useAIFiltering ? 'translate-x-7' : 'translate-x-1'
+                          }`}>
+                            {useAIFiltering && (
+                              <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                        </div>
+                        <span className={`sr-only ${useAIFiltering ? 'text-indigo-600' : 'text-gray-600'}`}>
+                          {useAIFiltering ? 'On' : 'Off'}
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Status Messages */}
+              {!useAIFiltering && experiences.length > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 mt-0.5">
+                      <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center shadow-sm">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="font-semibold text-gray-900 text-sm">All Experiences</span>
+                      </div>
+                      {from && to ? (() => {
+                        const availableCount = experiences.filter(e => e.availabilityStatus?.available !== false).length;
+                        const unavailableCount = experiences.length - availableCount;
+                        return (
+                          <div className="space-y-2">
+                            <p className="text-sm text-gray-700 leading-relaxed">
+                              {experiences.length} {experiences.length === 1 ? 'experience' : 'experiences'} found for your selected dates.
+                            </p>
+                            {unavailableCount > 0 && (
+                              <div className="flex items-center gap-2 text-xs text-gray-600">
+                                <span className="text-gray-700">{availableCount} available</span>
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 text-gray-600 rounded-md border border-gray-200">
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                  {unavailableCount} unavailable
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })() : (
+                        <p className="text-sm text-gray-700 leading-relaxed">
+                          {experiences.length} {experiences.length === 1 ? 'experience' : 'experiences'} available for your selected {locations.length === 1 ? 'location' : 'locations'}.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-            <button
-              onClick={handleProceed}
-              disabled={bucketlist.length === 0 || hasNoTokens || (user ? (!user.tokens || user.tokens === 0) : false)}
-              className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-            >
-              {bucketlist.length > 0 ? `Proceed with ${bucketlist.length} item${bucketlist.length !== 1 ? 's' : ''}` : 'Add items to continue'}
-            </button>
+            <div className="hidden md:flex flex-col items-end gap-2">
+              {bucketlist.length > 0 ? (
+                <button
+                  onClick={handleProceed}
+                  disabled={hasNoTokens || (user ? (!user.tokens || user.tokens === 0) : false)}
+                  className="group relative inline-flex items-center justify-center gap-2.5 px-6 py-3.5 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white font-semibold text-sm rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:shadow-lg overflow-hidden min-w-[200px]"
+                >
+                  {/* Animated background gradient */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  
+                  {/* Content */}
+                  <div className="relative flex items-center gap-2.5">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                    <div className="flex flex-col items-start">
+                      <span className="leading-tight">Continue to Schedule</span>
+                      <span className="text-xs font-normal opacity-90">{bucketlist.length} {bucketlist.length === 1 ? 'experience' : 'experiences'} selected</span>
+                    </div>
+                  </div>
+                </button>
+              ) : (
+                <div className="flex flex-col items-end gap-2">
+                  <button
+                    disabled
+                    className="group relative inline-flex items-center justify-center gap-2.5 px-6 py-3.5 bg-gray-100 text-gray-500 font-semibold text-sm rounded-xl border-2 border-dashed border-gray-300 cursor-not-allowed min-w-[200px]"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      <span>Add Experiences</span>
+                    </div>
+                  </button>
+                  <p className="text-xs text-gray-500 text-right max-w-[200px]">
+                    Select experiences from below to continue
+                  </p>
+                </div>
+              )}
+              {hasNoTokens || (user && (!user.tokens || user.tokens === 0)) ? (
+                <div className="mt-1 text-right">
+                  <p className="text-xs text-amber-600 font-medium">
+                    ⚠️ Tokens required to schedule
+                  </p>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
 
@@ -312,10 +615,29 @@ export default function ExperiencesPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {experiences.map((experience) => {
+            {experiences
+              .sort((a, b) => {
+                // Sort: available experiences first, then unavailable
+                const aAvailable = a.availabilityStatus?.available !== false;
+                const bAvailable = b.availabilityStatus?.available !== false;
+                if (aAvailable === bAvailable) return 0;
+                return aAvailable ? -1 : 1;
+              })
+              .map((experience) => {
               const imageUrl = getImageUrl(experience.imageUrl);
+              const isAvailable = experience.availabilityStatus?.available !== false;
+              const hasDateFilter = from && to;
               return (
-                <div key={experience._id} className="card-professional card-hover overflow-hidden">
+                <div 
+                  key={experience._id} 
+                  className={`card-professional overflow-hidden transition-all duration-300 relative ${
+                    isAvailable 
+                      ? 'card-hover' 
+                      : hasDateFilter 
+                        ? 'opacity-60' 
+                        : 'card-hover'
+                  }`}
+                >
                   {imageUrl ? (
                     <div className="w-full h-48 bg-gray-100 flex items-center justify-center overflow-hidden">
                       <img 
@@ -337,8 +659,78 @@ export default function ExperiencesPage() {
                     </div>
                   )}
                   <div className="p-6">
-                    <h3 className="text-xl font-bold mb-2 text-gray-900">{experience.title}</h3>
+                    <div className="flex items-start justify-between mb-2 gap-2">
+                      <h3 className="text-xl font-bold text-gray-900 flex-1">
+                        {experience.title}
+                      </h3>
+                      <div className="flex flex-col items-end gap-1.5">
+                        {experience.aiFiltered && experience.matchScore && (
+                          <div className="flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/60 text-emerald-700 text-xs font-semibold rounded-lg shadow-sm">
+                            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                            {Math.round(experience.matchScore * 100)}% Match
+                          </div>
+                        )}
+                        {hasDateFilter && experience.availabilityStatus && !isAvailable && (
+                          <div 
+                            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md bg-gray-100 text-gray-600 border border-gray-200"
+                            title="This experience is not available for your selected trip dates"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span>Unavailable</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {experience.culturalMetadata && (
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {experience.culturalMetadata.heritage && (
+                          <span className="px-2 py-1 bg-amber-100 text-amber-800 text-xs font-medium rounded">
+                            🏛️ {experience.culturalMetadata.heritage}
+                          </span>
+                        )}
+                        {experience.culturalMetadata.traditions && experience.culturalMetadata.traditions.length > 0 && (
+                          experience.culturalMetadata.traditions.slice(0, 2).map((trad, idx) => (
+                            <span key={idx} className="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded">
+                              🎭 {trad}
+                            </span>
+                          ))
+                        )}
+                        {experience.culturalMetadata.authenticityScore && experience.culturalMetadata.authenticityScore >= 8 && (
+                          <span className="px-2 py-1 bg-emerald-100 text-emerald-800 text-xs font-medium rounded">
+                            ✨ Authentic
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <p className="text-gray-600 text-sm mb-4 line-clamp-2 h-10">{experience.description}</p>
+                    {experience.aiFiltered && experience.aiReasons && experience.aiReasons.length > 0 && (
+                      <div className="mb-3 p-3 bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200/60 rounded-lg text-xs shadow-sm">
+                        <div className="flex items-start gap-2">
+                          <div className="flex-shrink-0 mt-0.5">
+                            <div className="w-6 h-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center shadow-sm">
+                              <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                              </svg>
+                            </div>
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-semibold text-indigo-900 mb-1.5">Why I recommend this:</p>
+                            <ul className="space-y-1.5 text-indigo-800">
+                              {experience.aiReasons.slice(0, 2).map((reason, idx) => (
+                                <li key={idx} className="flex items-start gap-1.5">
+                                  <span className="text-indigo-500 mt-0.5">•</span>
+                                  <span>{reason}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
                       <div>
                         <p className="text-xs text-gray-500 mb-1">{experience.provider.name}</p>
@@ -368,11 +760,15 @@ export default function ExperiencesPage() {
                     <div className="space-y-2">
                       <button
                         onClick={() => toggleBucketlist(experience._id)}
+                        disabled={!isAvailable && hasDateFilter}
                         className={`w-full py-3 rounded-xl font-semibold transition-all ${
-                          bucketlist.includes(experience._id.toString())
+                          !isAvailable && hasDateFilter
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                            : bucketlist.includes(experience._id.toString())
                             ? 'bg-red-500 text-white hover:bg-red-600 shadow-medium'
                             : 'btn-primary'
                         }`}
+                        title={!isAvailable && hasDateFilter ? 'Not available for selected dates' : ''}
                       >
                         {bucketlist.includes(experience._id.toString()) ? 'Remove from Bucketlist' : 'Add to Bucketlist'}
                       </button>
@@ -402,6 +798,36 @@ export default function ExperiencesPage() {
             fetchExperiences();
           }}
         />
+      )}
+
+      {/* Sticky Mobile Action Button */}
+      {bucketlist.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white border-t border-gray-200 shadow-2xl p-4">
+          <button
+            onClick={handleProceed}
+            disabled={hasNoTokens || (user ? (!user.tokens || user.tokens === 0) : false)}
+            className="w-full group relative inline-flex items-center justify-center gap-2.5 px-6 py-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white font-semibold text-base rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:shadow-lg overflow-hidden"
+          >
+            {/* Animated background gradient */}
+            <div className="absolute inset-0 bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            
+            {/* Content */}
+            <div className="relative flex items-center gap-3">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+              <div className="flex flex-col items-start">
+                <span className="leading-tight">Continue to Schedule</span>
+                <span className="text-xs font-normal opacity-90">{bucketlist.length} {bucketlist.length === 1 ? 'experience' : 'experiences'}</span>
+              </div>
+            </div>
+          </button>
+          {hasNoTokens || (user && (!user.tokens || user.tokens === 0)) ? (
+            <p className="mt-2 text-xs text-amber-600 font-medium text-center">
+              ⚠️ Tokens required to schedule
+            </p>
+          ) : null}
+        </div>
       )}
     </div>
   );

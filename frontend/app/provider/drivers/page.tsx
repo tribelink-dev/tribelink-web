@@ -131,6 +131,22 @@ export default function DriverPartnerDashboard() {
 
           <div className="card-professional card-hover p-6">
             <div className="flex items-center gap-4 mb-4">
+              <div className="flex items-center justify-center w-12 h-12 bg-indigo-100 rounded-xl">
+                <span className="text-2xl">📊</span>
+              </div>
+              <h3 className="heading-tertiary mb-0">Dashboard</h3>
+            </div>
+            <p className="text-gray-600 mb-4">View your complete driver dashboard</p>
+            <button 
+              onClick={() => router.push('/driver/dashboard')}
+              className="btn-primary w-full"
+            >
+              Go to Dashboard
+            </button>
+          </div>
+
+          <div className="card-professional card-hover p-6">
+            <div className="flex items-center gap-4 mb-4">
               <div className="flex items-center justify-center w-12 h-12 bg-yellow-100 rounded-xl">
                 <span className="text-2xl">📄</span>
               </div>
@@ -153,8 +169,27 @@ export default function DriverPartnerDashboard() {
               <h3 className="heading-tertiary mb-0">Earnings</h3>
             </div>
             <p className="text-gray-600 mb-4">Track your earnings</p>
-            <button className="btn-secondary w-full">
+            <button 
+              onClick={() => router.push('/driver/earnings')}
+              className="btn-secondary w-full"
+            >
               View Earnings
+            </button>
+          </div>
+
+          <div className="card-professional card-hover p-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="flex items-center justify-center w-12 h-12 bg-teal-100 rounded-xl">
+                <span className="text-2xl">📅</span>
+              </div>
+              <h3 className="heading-tertiary mb-0">Availability</h3>
+            </div>
+            <p className="text-gray-600 mb-4">Set your available dates</p>
+            <button 
+              onClick={() => router.push('/driver/availability')}
+              className="btn-secondary w-full"
+            >
+              Set Availability
             </button>
           </div>
         </div>

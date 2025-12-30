@@ -3,6 +3,7 @@
 import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { getProviderDashboard } from '@/lib/providerUtils';
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -10,6 +11,28 @@ export default function Home() {
 
   useEffect(() => {
     if (!loading) {
+      // Check if user is a host
+      if (typeof window !== 'undefined') {
+        const userType = localStorage.getItem('userType');
+        const hostData = localStorage.getItem('host');
+        
+        if (userType === 'host' && hostData) {
+          // Redirect host to their dashboard
+          try {
+            const host = JSON.parse(hostData);
+            const providerType = host.providerType || 'EXPERIENCE_HOST';
+            const dashboardRoute = getProviderDashboard(providerType);
+            router.push(dashboardRoute);
+            return;
+          } catch (e) {
+            // Fallback to default host dashboard
+            router.push('/host/dashboard');
+            return;
+          }
+        }
+      }
+      
+      // Regular user flow
       if (!user) {
         router.push('/login');
       } else {

@@ -1,11 +1,12 @@
 const express = require('express');
 const User = require('../models/User');
 const { authenticate, requireUser } = require('../middleware/auth');
+const checkDBConnection = require('../middleware/dbCheck');
 
 const router = express.Router();
 
 // Get current user
-router.get('/me', authenticate, requireUser, async (req, res) => {
+router.get('/me', authenticate, requireUser, checkDBConnection, async (req, res) => {
   try {
     const user = await User.findById(req.user._id)
       .select('-password')
@@ -14,6 +15,13 @@ router.get('/me', authenticate, requireUser, async (req, res) => {
     
     res.json({ user });
   } catch (error) {
+    // Check if it's a MongoDB connection error
+    if (error.name === 'MongoServerError' || error.message?.includes('Mongo') || error.message?.includes('connection')) {
+      return res.status(503).json({ 
+        message: 'Database connection unavailable. MongoDB is not running.',
+        error: 'MongoDB connection error'
+      });
+    }
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

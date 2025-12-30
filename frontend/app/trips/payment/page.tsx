@@ -26,16 +26,30 @@ export default function PaymentPage() {
     }
 
     setTripId(storedTripId);
-    fetchTrip();
-    fetchWallet();
   }, []);
 
+  useEffect(() => {
+    if (tripId) {
+      fetchTrip();
+      fetchWallet();
+    }
+  }, [tripId]);
+
   const fetchTrip = async () => {
+    if (!tripId) return;
+    
     try {
+      setLoading(true);
       const response = await api.get(`/trips/${tripId}`);
       setTrip(response.data.trip);
+      setError('');
     } catch (err: any) {
+      console.error('Error fetching trip:', err);
       setError(err.response?.data?.message || 'Failed to load trip');
+      if (err.response?.status === 404) {
+        // Trip not found, redirect to select
+        setTimeout(() => router.push('/trips/select'), 2000);
+      }
     } finally {
       setLoading(false);
     }
@@ -87,16 +101,31 @@ export default function PaymentPage() {
   };
 
   const handlePayment = async () => {
-    if (!trip) return;
+    if (!trip || !tripId) {
+      setError('Trip information is missing. Please try again.');
+      return;
+    }
 
     setProcessing(true);
     setError('');
     setMessage('');
 
     try {
+      console.log('Processing payment for trip:', tripId);
       const response = await api.post(`/trips/${tripId}/pay`);
+      
+      console.log('Payment response:', response.data);
+      
       const newTokens = response.data.tokens;
-      setMessage(`Payment successful! Your trip is confirmed. You earned 2 tokens! (Total: ${newTokens} tokens)`);
+      const remainingBalance = response.data.remainingBalance;
+      const ticketsGenerated = response.data.ticketsGenerated || 0;
+      const errors = response.data.errors || [];
+      const warnings = response.data.warnings || [];
+      
+      // Update wallet balance
+      if (remainingBalance !== undefined) {
+        setWallet(prev => ({ ...prev, balance: remainingBalance }));
+      }
       
       // Update tokens in localStorage
       if (typeof window !== 'undefined') {
@@ -108,14 +137,53 @@ export default function PaymentPage() {
         }
       }
       
-      // Refresh wallet to get updated tokens
+      // Refresh wallet to get updated balance
       await fetchWallet();
       
+      // Clear tripId from session storage
+      sessionStorage.removeItem('tripId');
+      
+      // Build message based on ticket generation status
+      if (ticketsGenerated > 0) {
+        setMessage(`Payment successful! ${ticketsGenerated} ticket(s) generated. Your trip is confirmed. You earned 2 tokens! (Total: ${newTokens} tokens)`);
+      } else {
+        // No tickets generated - show warning
+        const warningMsg = warnings.length > 0 
+          ? warnings.join(' ') 
+          : 'No tickets were generated. Please check your trip schedule.';
+        setError(`Payment successful, but ${warningMsg}`);
+        
+        // Also log errors if any
+        if (errors.length > 0) {
+          console.error('Ticket creation errors:', errors);
+          const errorDetails = errors.map((e: string, i: number) => `${i + 1}. ${e}`).join('\n');
+          setError(`Payment successful, but no tickets were generated:\n${errorDetails}`);
+        }
+        
+        // Don't redirect if no tickets - let user see the error
+        return;
+      }
+      
+      // Show errors if any (but tickets were still created)
+      if (errors.length > 0) {
+        console.warn('Some tickets failed to generate:', errors);
+        const errorDetails = errors.map((e: string, i: number) => `${i + 1}. ${e}`).join('\n');
+        setError(`Payment successful! ${ticketsGenerated} ticket(s) generated, but some failed:\n${errorDetails}`);
+      }
+      
+      // Wait a bit longer to ensure tickets are fully saved in database
       setTimeout(() => {
-        router.push('/');
-      }, 3000);
+        router.push('/dashboard/tickets');
+      }, 2000);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Payment failed');
+      console.error('Payment error:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Payment failed';
+      setError(errorMessage);
+      
+      // If insufficient balance, suggest funding wallet
+      if (err.response?.status === 400 && errorMessage.includes('balance')) {
+        setError(`${errorMessage}. Please add funds to your wallet.`);
+      }
     } finally {
       setProcessing(false);
     }
@@ -145,12 +213,16 @@ export default function PaymentPage() {
           <p className="text-subtitle text-gray-600 mb-0">
             Complete your booking and start your adventure
           </p>
+          <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary-50 border border-primary-200 rounded-lg">
+            <span className="text-primary-600">💳</span>
+            <span className="text-sm font-semibold text-primary-700">Payment via Tribelink Wallet</span>
+          </div>
         </div>
 
         {error && (
           <div className="alert-error mb-6">
             <span className="text-lg">⚠️</span>
-            <span className="flex-1">{error}</span>
+            <div className="flex-1 whitespace-pre-wrap">{error}</div>
           </div>
         )}
 

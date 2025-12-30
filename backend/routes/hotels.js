@@ -2,8 +2,80 @@ const express = require('express');
 const Hotel = require('../models/Hotel');
 const { authenticate, requireUser, requireHost } = require('../middleware/auth');
 const upload = require('../middleware/upload');
+const { filterHotelsAI } = require('../services/aiAgent');
 
 const router = express.Router();
+
+// Revolutionary AI-Powered Hotel Filtering
+// Filters hotels to top 2-3 based on comprehensive user profile
+router.get('/ai-filtered', authenticate, requireUser, async (req, res) => {
+  try {
+    const {
+      country,
+      state,
+      district,
+      fromDate,
+      toDate
+    } = req.query;
+    const userId = req.user._id;
+
+    if (!country || !state || !district) {
+      return res.status(400).json({ message: 'Country, state, and district are required' });
+    }
+
+    // Build query
+    const query = {
+      'location.country': country,
+      'location.state': state,
+      'location.district': district,
+      roomsAvailable: { $gt: 0 }
+    };
+
+    // Add date availability filtering if provided
+    if (fromDate && toDate) {
+      const from = new Date(fromDate);
+      const to = new Date(toDate);
+      query.availability = {
+        $elemMatch: {
+          date: { $gte: from, $lte: to },
+          roomsAvailable: { $gt: 0 }
+        }
+      };
+    }
+
+    // Fetch all hotels
+    const allHotels = await Hotel.find(query)
+      .sort({ rating: -1, pricePerNight: 1 })
+      .lean();
+
+    if (allHotels.length === 0) {
+      return res.json({
+        hotels: [],
+        aiFiltered: true,
+        message: 'No hotels found for this location'
+      });
+    }
+
+    // Use AI agent to filter to top 2-3
+    const filteredHotels = await filterHotelsAI(userId, allHotels, {
+      location: { country, state, district },
+      dateRange: fromDate && toDate ? { from: fromDate, to: toDate } : null
+    });
+
+    res.json({
+      hotels: filteredHotels,
+      aiFiltered: true,
+      totalAvailable: allHotels.length,
+      filteredTo: filteredHotels.length
+    });
+  } catch (error) {
+    console.error('Error in AI hotel filtering:', error);
+    res.status(500).json({
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
 
 // Get all hotels (with optional filters)
 router.get('/', async (req, res) => {
@@ -409,6 +481,250 @@ router.post('/:id/reviews', authenticate, requireUser, async (req, res) => {
     });
   } catch (error) {
     console.error('Error adding review:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get hotels by owner (for hotel owner dashboard)
+router.get('/owner/my-hotels', authenticate, requireHost, async (req, res) => {
+  try {
+    const hotels = await Hotel.find({ createdBy: req.user._id })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json({ hotels });
+  } catch (error) {
+    console.error('Error fetching owner hotels:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get bookings for owner's hotels
+router.get('/owner/bookings', authenticate, requireHost, async (req, res) => {
+  try {
+    const Trip = require('../models/Trip');
+    
+    // Get all hotels owned by this provider
+    const hotels = await Hotel.find({ createdBy: req.user._id }).select('_id name location pricePerNight');
+    const hotelIds = hotels.map(h => h._id);
+
+    // Get all trips that have bookings for these hotels
+    const trips = await Trip.find({
+      'schedule.hotel': { $in: hotelIds },
+      paymentStatus: 'Completed'
+    })
+      .populate('user', 'name email phoneNumber')
+      .populate('schedule.hotel')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Extract bookings from trips
+    const bookings = [];
+    trips.forEach(trip => {
+      trip.schedule.forEach((day, index) => {
+        if (day.hotel) {
+          const hotelIdStr = (day.hotel._id || day.hotel).toString();
+          if (hotelIds.some(id => id.toString() === hotelIdStr)) {
+            const hotelData = hotels.find(h => 
+              h._id.toString() === hotelIdStr
+            );
+            if (hotelData) {
+              bookings.push({
+                _id: `${trip._id}-${index}`,
+                tripId: trip._id,
+                hotel: {
+                  _id: hotelData._id,
+                  name: hotelData.name,
+                  location: hotelData.location || {}
+                },
+                checkIn: day.date,
+                checkOut: trip.toDate,
+                guestName: trip.user?.name || 'Guest',
+                guestEmail: trip.user?.email || '',
+                guestPhone: trip.user?.phoneNumber || '',
+                status: trip.paymentStatus === 'Completed' ? 'confirmed' : 'pending',
+                totalPrice: hotelData.pricePerNight || 0,
+                rooms: 1,
+                paymentStatus: trip.paymentStatus
+              });
+            }
+          }
+        }
+      });
+    });
+
+    res.json({ bookings });
+  } catch (error) {
+    console.error('Error fetching owner bookings:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Update hotel availability for specific dates
+router.put('/:id/availability', authenticate, requireHost, async (req, res) => {
+  try {
+    const { date, roomsAvailable } = req.body;
+
+    if (!date || roomsAvailable === undefined) {
+      return res.status(400).json({ message: 'Date and roomsAvailable are required' });
+    }
+
+    const hotel = await Hotel.findById(req.params.id);
+    if (!hotel) {
+      return res.status(404).json({ message: 'Hotel not found' });
+    }
+
+    // Verify ownership
+    if (hotel.createdBy && hotel.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Validate roomsAvailable
+    if (roomsAvailable < 0 || roomsAvailable > hotel.totalRooms) {
+      return res.status(400).json({ 
+        message: `Rooms available must be between 0 and ${hotel.totalRooms}` 
+      });
+    }
+
+    const dateObj = new Date(date);
+    const dateStr = dateObj.toISOString().split('T')[0];
+
+    // Find existing availability entry
+    const existingIndex = hotel.availability.findIndex(a => 
+      a.date.toISOString().split('T')[0] === dateStr
+    );
+
+    if (existingIndex >= 0) {
+      hotel.availability[existingIndex].roomsAvailable = roomsAvailable;
+    } else {
+      hotel.availability.push({
+        date: dateObj,
+        roomsAvailable: roomsAvailable
+      });
+    }
+
+    await hotel.save();
+
+    res.json({
+      message: 'Availability updated successfully',
+      hotel
+    });
+  } catch (error) {
+    console.error('Error updating availability:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get revenue analytics for owner
+router.get('/owner/revenue', authenticate, requireHost, async (req, res) => {
+  try {
+    const Trip = require('../models/Trip');
+    
+    // Get all hotels owned by this provider
+    const hotels = await Hotel.find({ createdBy: req.user._id }).select('_id name pricePerNight');
+    const hotelIds = hotels.map(h => h._id);
+
+    // Get all completed trips with bookings for these hotels
+    const trips = await Trip.find({
+      'schedule.hotel': { $in: hotelIds },
+      paymentStatus: 'Completed'
+    })
+      .select('schedule paymentStatus createdAt')
+      .lean();
+
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    // Calculate revenue metrics
+    let totalRevenue = 0;
+    let monthlyRevenue = 0;
+    let yearlyRevenue = 0;
+    const bookings = [];
+
+    trips.forEach(trip => {
+      trip.schedule.forEach(day => {
+        if (day.hotel && hotelIds.includes(day.hotel.toString())) {
+          const hotel = hotels.find(h => h._id.toString() === day.hotel.toString());
+          if (hotel) {
+            const bookingDate = new Date(day.date);
+            const revenue = hotel.pricePerNight;
+            
+            totalRevenue += revenue;
+            
+            if (bookingDate.getMonth() === currentMonth && bookingDate.getFullYear() === currentYear) {
+              monthlyRevenue += revenue;
+            }
+            
+            if (bookingDate.getFullYear() === currentYear) {
+              yearlyRevenue += revenue;
+            }
+
+            bookings.push({
+              hotelId: hotel._id.toString(),
+              hotelName: hotel.name,
+              revenue,
+              date: bookingDate
+            });
+          }
+        }
+      });
+    });
+
+    // Revenue by hotel
+    const revenueByHotelMap = new Map();
+    bookings.forEach(b => {
+      const existing = revenueByHotelMap.get(b.hotelId) || { revenue: 0, bookings: 0 };
+      revenueByHotelMap.set(b.hotelId, {
+        revenue: existing.revenue + b.revenue,
+        bookings: existing.bookings + 1
+      });
+    });
+
+    const revenueByHotel = Array.from(revenueByHotelMap.entries()).map(([hotelId, data]) => {
+      const hotel = hotels.find(h => h._id.toString() === hotelId);
+      return {
+        hotelId,
+        hotelName: hotel?.name || 'Unknown',
+        revenue: data.revenue,
+        bookings: data.bookings
+      };
+    }).sort((a, b) => b.revenue - a.revenue);
+
+    // Revenue by month (last 12 months)
+    const revenueByMonthMap = new Map();
+    bookings.forEach(b => {
+      const monthKey = `${b.date.getFullYear()}-${String(b.date.getMonth() + 1).padStart(2, '0')}`;
+      const existing = revenueByMonthMap.get(monthKey) || { revenue: 0, bookings: 0 };
+      revenueByMonthMap.set(monthKey, {
+        revenue: existing.revenue + b.revenue,
+        bookings: existing.bookings + 1
+      });
+    });
+
+    const revenueByMonth = Array.from(revenueByMonthMap.entries())
+      .map(([monthKey, data]) => {
+        const [year, month] = monthKey.split('-');
+        return {
+          month: new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          revenue: data.revenue,
+          bookings: data.bookings
+        };
+      })
+      .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime())
+      .slice(-12);
+
+    res.json({
+      totalRevenue,
+      monthlyRevenue,
+      yearlyRevenue,
+      bookingsCount: bookings.length,
+      averageBookingValue: bookings.length > 0 ? totalRevenue / bookings.length : 0,
+      revenueByHotel,
+      revenueByMonth
+    });
+  } catch (error) {
+    console.error('Error fetching revenue data:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

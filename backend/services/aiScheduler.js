@@ -2,6 +2,7 @@ const axios = require('axios');
 const { scheduleTrip } = require('./scheduler');
 const Experience = require('../models/Experience');
 const Review = require('../models/Review');
+const { validateAISchedule, scheduleTripWithAIValidated } = require('./scheduler/ai/aiSchedulerEnhanced');
 
 /**
  * Gumo.ai-like AI-Powered Scheduling Engine
@@ -293,8 +294,28 @@ async function scheduleTripWithAI({
 }) {
   console.log('🤖 AI Scheduler (Gumo.ai-like) starting...');
   
-  // First, get base schedule from rule-based scheduler
-  const baseSchedule = await scheduleTrip({
+  // Use enhanced AI scheduler with validation
+  if (USE_AI) {
+    try {
+      return await scheduleTripWithAIValidated({
+        experienceIds,
+        fromDate,
+        toDate,
+        preferences,
+        country,
+        state,
+        district,
+        locations,
+        guideId,
+        aiSchedulerFunction: generateAISchedule
+      });
+    } catch (error) {
+      console.error('Enhanced AI scheduler failed, falling back to base:', error.message);
+    }
+  }
+  
+  // Fallback: Use base scheduler
+  return await scheduleTrip({
     experienceIds,
     fromDate,
     toDate,
@@ -305,92 +326,70 @@ async function scheduleTripWithAI({
     locations,
     guideId
   });
-
-  // If AI is available, try to enhance the schedule
-  if (USE_AI && baseSchedule && baseSchedule.schedule) {
-    try {
-      // Fetch full experience details for AI
-      const Experience = require('../models/Experience');
-      const mongoose = require('mongoose');
-      
-      const experiences = await Experience.find({
-        _id: { $in: experienceIds.map(id => new mongoose.Types.ObjectId(id)) }
-      }).populate('provider');
-
-      const aiOptimized = await generateAISchedule({
-        experiences,
-        fromDate,
-        toDate,
-        preferences,
-        locations: locations || [{ state, district }],
-        existingSchedule: baseSchedule.schedule
-      });
-
-      if (aiOptimized && aiOptimized.schedule) {
-        console.log('✅ AI optimization applied');
-        // Merge AI insights with base schedule
-        return {
-          ...baseSchedule,
-          schedule: mergeAISchedule(baseSchedule.schedule, aiOptimized.schedule, experiences),
-          aiInsights: aiOptimized.insights || [],
-          optimizationScore: aiOptimized.optimizationScore || 0.85
-        };
-      }
-    } catch (error) {
-      console.error('AI optimization failed, using base schedule:', error.message);
-    }
-  }
-
-  // Fallback: Use intelligent rule-based optimization
-  const Experience = require('../models/Experience');
-  const mongoose = require('mongoose');
-  
-  const experiences = await Experience.find({
-    _id: { $in: experienceIds.map(id => new mongoose.Types.ObjectId(id)) }
-  }).populate('provider');
-
-  const optimizedSchedule = optimizeScheduleIntelligently({
-    experiences,
-    fromDate,
-    toDate,
-    preferences,
-    locations: locations || [{ state, district }]
-  });
-
-  if (optimizedSchedule && optimizedSchedule.length > 0) {
-    return {
-      ...baseSchedule,
-      schedule: optimizedSchedule,
-      aiInsights: ['Schedule optimized using intelligent algorithms'],
-      optimizationScore: 0.80
-    };
-  }
-
-  return baseSchedule;
 }
 
 /**
  * Merge AI schedule with base schedule
+ * Validates and converts AI experience IDs to proper MongoDB ObjectIds
  */
 function mergeAISchedule(baseSchedule, aiSchedule, experiences) {
-  // Create experience lookup
+  const mongoose = require('mongoose');
+  
+  // Create experience lookup by both string ID and index
   const expMap = {};
-  experiences.forEach(exp => {
-    expMap[exp._id.toString()] = exp;
+  const expArray = [];
+  experiences.forEach((exp, idx) => {
+    const idStr = exp._id.toString();
+    expMap[idStr] = exp;
+    expMap[idx + 1] = exp; // Also map by index (AI might use 1-based indexing)
+    expMap[idx] = exp; // And 0-based indexing
+    expArray.push(exp);
   });
 
   // Merge AI recommendations with base schedule
   return baseSchedule.map((baseDay, dayIdx) => {
-    const aiDay = aiSchedule.find(d => d.day === dayIdx + 1);
+    const aiDay = aiSchedule.find(d => d.day === dayIdx + 1 || d.day === dayIdx);
     
-    if (aiDay && aiDay.activities) {
+    if (aiDay && aiDay.activities && Array.isArray(aiDay.activities)) {
       // Use AI-optimized activities if available
-      const mergedActivities = aiDay.activities.map(aiAct => {
-        const exp = expMap[aiAct.experienceId];
-        if (!exp) return null;
+      const mergedActivities = aiDay.activities.map((aiAct, actIdx) => {
+        let exp = null;
+        
+        // Try multiple ways to find the experience
+        if (aiAct.experienceId) {
+          const expIdStr = String(aiAct.experienceId);
+          
+          // Try direct lookup
+          exp = expMap[expIdStr];
+          
+          // If not found, try to validate as ObjectId and lookup
+          if (!exp && mongoose.Types.ObjectId.isValid(expIdStr)) {
+            const objectId = new mongoose.Types.ObjectId(expIdStr);
+            exp = experiences.find(e => e._id.equals(objectId));
+          }
+          
+          // If still not found, try index-based lookup (AI might use 1-based indexing)
+          if (!exp) {
+            const index = parseInt(expIdStr);
+            if (!isNaN(index) && index > 0 && index <= expArray.length) {
+              exp = expArray[index - 1];
+            }
+          }
+        }
+        
+        // If still no experience found, skip this activity
+        if (!exp) {
+          console.warn(`AI activity ${actIdx} has invalid experienceId: ${aiAct.experienceId}, skipping`);
+          return null;
+        }
+
+        // Ensure we have valid ObjectId
+        const experienceId = exp._id instanceof mongoose.Types.ObjectId 
+          ? exp._id 
+          : new mongoose.Types.ObjectId(exp._id);
 
         return {
-          experienceId: exp._id,
+          experienceId: experienceId,
           title: exp.title,
           price: exp.price,
           startTime: aiAct.startTime || '09:00',
@@ -405,11 +404,14 @@ function mergeAISchedule(baseSchedule, aiSchedule, experiences) {
         };
       }).filter(Boolean);
 
-      return {
-        ...baseDay,
-        activities: mergedActivities.length > 0 ? mergedActivities : baseDay.activities,
-        optimizationNotes: aiDay.optimizationNotes
-      };
+      // Only use AI activities if we successfully merged at least one
+      if (mergedActivities.length > 0) {
+        return {
+          ...baseDay,
+          activities: mergedActivities,
+          optimizationNotes: aiDay.optimizationNotes
+        };
+      }
     }
 
     return baseDay;
@@ -547,6 +549,7 @@ Return JSON:
 module.exports = {
   scheduleTripWithAI,
   getAIRecommendations,
+  mergeAISchedule,
   USE_AI
 };
 

@@ -100,26 +100,64 @@ export default function HostDashboard() {
 
           <div className="card-professional card-hover p-6">
             <div className="flex items-center gap-4 mb-4">
+              <div className="flex items-center justify-center w-12 h-12 bg-purple-100 rounded-xl">
+                <span className="text-2xl">📋</span>
+              </div>
+              <h3 className="heading-tertiary mb-0">Bookings</h3>
+            </div>
+            <p className="text-gray-600 mb-4">View and manage all bookings</p>
+            <button 
+              onClick={() => router.push('/provider/experiences/bookings')}
+              className="btn-primary w-full"
+            >
+              View Bookings
+            </button>
+          </div>
+
+          <div className="card-professional card-hover p-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-xl">
+                <span className="text-2xl">✅</span>
+              </div>
+              <h3 className="heading-tertiary mb-0">Verify Tickets</h3>
+            </div>
+            <p className="text-gray-600 mb-4">Verify traveler tickets for your experiences</p>
+            <button 
+              onClick={() => router.push('/host/verify')}
+              className="btn-primary w-full"
+            >
+              Verify Tickets
+            </button>
+          </div>
+
+          <div className="card-professional card-hover p-6">
+            <div className="flex items-center gap-4 mb-4">
               <div className="flex items-center justify-center w-12 h-12 bg-accent-100 rounded-xl">
                 <span className="text-2xl">📅</span>
               </div>
               <h3 className="heading-tertiary mb-0">Availability</h3>
             </div>
             <p className="text-gray-600 mb-4">Set your availability calendar</p>
-            <button className="btn-secondary w-full">
+            <button 
+              onClick={() => router.push('/host/availability')}
+              className="btn-primary w-full"
+            >
               Set Availability
             </button>
           </div>
 
           <div className="card-professional card-hover p-6">
             <div className="flex items-center gap-4 mb-4">
-              <div className="flex items-center justify-center w-12 h-12 bg-primary-100 rounded-xl">
+              <div className="flex items-center justify-center w-12 h-12 bg-orange-100 rounded-xl">
                 <span className="text-2xl">📊</span>
               </div>
               <h3 className="heading-tertiary mb-0">Analytics</h3>
             </div>
             <p className="text-gray-600 mb-4">View your performance metrics</p>
-            <button className="btn-secondary w-full">
+            <button 
+              onClick={() => router.push('/host/analytics')}
+              className="btn-primary w-full"
+            >
               View Analytics
             </button>
           </div>

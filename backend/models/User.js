@@ -52,6 +52,60 @@ const userSchema = new mongoose.Schema({
       default: null
     }
   },
+  // Revolutionary AI-Powered Personalization Profile
+  personalizationProfile: {
+    culturalInterests: [{
+      type: String // e.g., 'Traditional Crafts', 'Local Cuisine', 'Religious Sites', 'Festivals'
+    }],
+    preferredHeritage: [{
+      type: String // e.g., 'Traditional', 'Indigenous', 'Colonial'
+    }],
+    experiencePreferences: {
+      handsOn: { type: Number, min: 0, max: 10, default: 5 },
+      observational: { type: Number, min: 0, max: 10, default: 5 },
+      interactive: { type: Number, min: 0, max: 10, default: 5 },
+      educational: { type: Number, min: 0, max: 10, default: 5 },
+      spiritual: { type: Number, min: 0, max: 10, default: 5 }
+    },
+    budgetPattern: {
+      averageSpent: { type: Number, default: 0 },
+      preferredRange: {
+        min: { type: Number, default: 0 },
+        max: { type: Number, default: 1000 }
+      },
+      valueSeeking: { type: Number, min: 0, max: 10, default: 5 } // 0 = luxury, 10 = budget
+    },
+    accommodationPreferences: {
+      preferredTypes: [{
+        type: String // e.g., 'Heritage', 'Boutique', 'Luxury', 'Budget', 'Homestay'
+      }],
+      averageSpentPerNight: { type: Number, default: 0 },
+      amenitiesPriority: [{
+        type: String // e.g., 'WiFi', 'Pool', 'Breakfast', 'Location'
+      }]
+    },
+    transportationPreferences: {
+      preferredVehicleTypes: [{
+        type: String // e.g., 'Sedan', 'SUV', 'Luxury'
+      }],
+      averageSpentPerDay: { type: Number, default: 0 },
+      comfortLevel: { type: Number, min: 0, max: 10, default: 5 }
+    },
+    travelPatterns: {
+      averageTripDuration: { type: Number, default: 0 },
+      preferredRegions: [{
+        type: String
+      }],
+      repeatLocations: [{
+        location: String,
+        visitCount: { type: Number, default: 1 }
+      }]
+    },
+    lastUpdated: {
+      type: Date,
+      default: Date.now
+    }
+  },
   tripWallet: {
     balance: {
       type: Number,

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { INDIAN_STATES, DISTRICTS_BY_STATE } from '@/lib/indianStates';
+import LocationPicker from '@/components/LocationPicker';
 
 const AMENITIES_OPTIONS = [
   'WiFi', 'Pool', 'Gym', 'Breakfast', 'Parking', 'Air Conditioning', 
@@ -276,35 +277,25 @@ export default function AddHotelPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Latitude (optional)
-                  </label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={formData.lat}
-                    onChange={(e) => setFormData({ ...formData, lat: e.target.value })}
-                    placeholder="e.g., 28.6139"
-                    className="input-field"
+              {/* Location Picker Map */}
+              {formData.district && (
+                <div className="mt-4">
+                  <LocationPicker
+                    district={formData.district}
+                    state={formData.state}
+                    initialLat={formData.lat ? parseFloat(formData.lat) : undefined}
+                    initialLng={formData.lng ? parseFloat(formData.lng) : undefined}
+                    onLocationChange={(lat, lng) => {
+                      setFormData({
+                        ...formData,
+                        lat: lat.toString(),
+                        lng: lng.toString()
+                      });
+                    }}
+                    required={true}
                   />
                 </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Longitude (optional)
-                  </label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={formData.lng}
-                    onChange={(e) => setFormData({ ...formData, lng: e.target.value })}
-                    placeholder="e.g., 77.2090"
-                    className="input-field"
-                  />
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Pricing & Capacity */}

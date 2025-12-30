@@ -81,7 +81,50 @@ const experienceSchema = new mongoose.Schema({
   reviewCount: {
     type: Number,
     default: 0
-  }
+  },
+  // Revolutionary Cultural/Traditional Experience Metadata
+  culturalMetadata: {
+    heritage: {
+      type: String,
+      enum: ['Traditional', 'Contemporary', 'Fusion', 'Indigenous', 'Colonial', 'Modern', null],
+      default: null
+    },
+    traditions: [{
+      type: String // e.g., 'Festival', 'Cuisine', 'Craft', 'Music', 'Dance', 'Ritual', 'Ceremony'
+    }],
+    culturalSignificance: {
+      type: String,
+      enum: ['High', 'Medium', 'Low', null],
+      default: null
+    },
+    authenticityScore: {
+      type: Number,
+      min: 0,
+      max: 10,
+      default: 5
+    },
+    regionalTags: [{
+      type: String // e.g., 'Kerala Backwaters', 'Tamil Nadu Temples', 'Rajasthan Desert'
+    }],
+    experienceType: {
+      type: String,
+      enum: ['Hands-on', 'Observational', 'Interactive', 'Educational', 'Spiritual', 'Festive', 'Culinary', 'Artistic', null],
+      default: null
+    },
+    languageOfExperience: [{
+      type: String // Languages used during the experience
+    }],
+    localCommunityInvolvement: {
+      type: Boolean,
+      default: false
+    },
+    seasonalAvailability: [{
+      type: String // e.g., 'Monsoon', 'Harvest', 'Festival Season'
+    }]
+  },
+  tags: [{
+    type: String // General tags for AI matching
+  }]
 }, {
   timestamps: true
 });

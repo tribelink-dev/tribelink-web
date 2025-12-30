@@ -40,6 +40,8 @@ export default function TravelerDashboard() {
   const [success, setSuccess] = useState('');
   const [showKYTForm, setShowKYTForm] = useState(false);
   const [deletingTripId, setDeletingTripId] = useState<string | null>(null);
+  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
+  const [deletingAllTrips, setDeletingAllTrips] = useState(false);
 
   useEffect(() => {
     fetchUserData();
@@ -63,7 +65,10 @@ export default function TravelerDashboard() {
       setWalletBalance(userData.tripWallet?.balance || 0);
       setWalletCurrency(userData.tripWallet?.currency || 'USD');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load dashboard data');
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to load dashboard data';
+      // Clean up error message to prevent concatenation issues
+      setError(errorMessage);
+      console.error('Dashboard load error:', err);
     } finally {
       setLoading(false);
     }
@@ -109,6 +114,22 @@ export default function TravelerDashboard() {
     }
   };
 
+  const handleDeleteAllTrips = async () => {
+    try {
+      setDeletingAllTrips(true);
+      const response = await api.delete('/trips/all');
+      setTrips([]);
+      setSuccess(response.data.message || 'All trips deleted successfully');
+      setTimeout(() => setSuccess(''), 4000);
+      setShowDeleteAllModal(false);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to delete all trips');
+      setTimeout(() => setError(''), 4000);
+    } finally {
+      setDeletingAllTrips(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       'Completed': 'bg-green-50 text-green-700 border-green-200',
@@ -143,19 +164,59 @@ export default function TravelerDashboard() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6">
             <div>
               <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-2 tracking-tight">
-                Welcome back, <span className="text-primary-600">{user?.name?.split(' ')[0]}</span>! 👋
+                Welcome back, <span className="text-primary-500">{user?.name?.split(' ')[0]}</span>! 👋
               </h1>
               <p className="text-lg text-gray-600">Here's an overview of your travel journey</p>
             </div>
-            <Link 
-              href="/trips/select" 
-              className="btn-primary flex items-center gap-2 whitespace-nowrap shadow-medium hover:shadow-large transition-all duration-300 transform hover:scale-105"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Plan New Trip
-            </Link>
+            <div className="flex items-center w-full md:w-auto justify-end gap-3">
+              <Link
+                href="/dashboard/tickets"
+                aria-label="Open my tickets"
+                className="relative inline-flex items-center gap-1.5 rounded-2xl border border-transparent bg-gradient-to-r from-yellow-100 via-amber-200 to-yellow-300 px-3 py-1.5 text-xs font-semibold text-amber-900 shadow-medium transition-all duration-200 hover:-translate-y-0.5 hover:shadow-large"
+              >
+                <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-white/40 backdrop-blur-sm">
+                  <svg className="h-4 w-4 text-amber-500" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M5.5 7.25a1 1 0 011-1H15a1 1 0 01.7.3l1.5 1.5 1.5-1.5a1 1 0 01.7-.3h.1a1 1 0 011 1v2A1.75 1.75 0 0121 11a1.75 1.75 0 01-1.5 1.75V15a1 1 0 01-1 1H6.5a1 1 0 01-1-1v-2.25A1.75 1.75 0 014 11c0-.86.64-1.58 1.5-1.75V7.25z"
+                      fill="url(#softGoldTicketFill)"
+                      stroke="currentColor"
+                      strokeWidth="0.8"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M11.25 9.75c0-.828.657-1.5 1.468-1.5h.532a1.5 1.5 0 110 3h-.5v1.5c0 .414-.336.75-.75.75h-.75c-.414 0-.75-.336-.75-.75v-3z"
+                      fill="white"
+                      stroke="white"
+                      strokeWidth="0.15"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M14.75 12.5c0 .69.56 1.25 1.25 1.25s1.25-.56 1.25-1.25-.56-1.25-1.25-1.25-1.25.56-1.25 1.25z"
+                      fill="white"
+                      stroke="white"
+                      strokeWidth="0.25"
+                    />
+                    <defs>
+                      <linearGradient id="softGoldTicketFill" x1="5" y1="6.5" x2="20" y2="15.5" gradientUnits="userSpaceOnUse">
+                        <stop stopColor="#FFE9A3" />
+                        <stop offset="1" stopColor="#FCD34D" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </span>
+                <span className="text-[10px] uppercase tracking-wide">My Tickets</span>
+              </Link>
+              <Link 
+                href="/trips/select" 
+                className="btn-primary flex items-center gap-2 whitespace-nowrap shadow-medium hover:shadow-large transition-all duration-300 transform hover:scale-105"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Plan New Trip
+              </Link>
+            </div>
           </div>
 
           {/* Alerts */}
@@ -165,6 +226,16 @@ export default function TravelerDashboard() {
               <div className="flex-1">
                 <p className="font-semibold text-red-800">Error</p>
                 <p className="text-red-700 text-sm mt-1">{error}</p>
+                {error.toLowerCase().includes('mongodb') || error.toLowerCase().includes('database') ? (
+                  <div className="mt-3 p-3 bg-red-100 rounded-lg">
+                    <p className="text-xs font-semibold text-red-800 mb-1">Troubleshooting:</p>
+                    <ul className="text-xs text-red-700 space-y-1 list-disc list-inside">
+                      <li>Ensure MongoDB is running: <code className="bg-red-200 px-1 rounded">sudo systemctl start mongod</code></li>
+                      <li>Or check your MongoDB Atlas connection settings</li>
+                      <li>Verify backend server is running and can connect to the database</li>
+                    </ul>
+                  </div>
+                ) : null}
               </div>
               <button 
                 onClick={() => setError('')} 
@@ -199,9 +270,9 @@ export default function TravelerDashboard() {
         </div>
 
         {/* Quick Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {/* Wallet Card */}
-          <div className="group relative overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-large p-6 text-white transform transition-all duration-300 hover:scale-105 hover:shadow-xl-soft">
+          <div className="group relative overflow-hidden bg-gradient-to-br from-primary-500 to-ocean-600 rounded-2xl shadow-large p-6 text-white transform transition-all duration-300 hover:scale-105 hover:shadow-xl-soft">
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
@@ -212,7 +283,7 @@ export default function TravelerDashboard() {
                 <div className="text-white/80 text-sm font-medium">Wallet</div>
               </div>
               <div className="mb-6">
-                <p className="text-sm text-blue-100 mb-1 font-medium">Current Balance</p>
+                <p className="text-sm text-primary-100 mb-1 font-medium">Current Balance</p>
                 <p className="text-3xl font-bold">
                   {walletCurrency} {walletBalance.toFixed(2)}
                 </p>
@@ -231,7 +302,7 @@ export default function TravelerDashboard() {
           </div>
 
           {/* Trips Card */}
-          <div className="group relative overflow-hidden bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl shadow-large p-6 text-white transform transition-all duration-300 hover:scale-105 hover:shadow-xl-soft">
+          <div className="group relative overflow-hidden bg-gradient-to-br from-jade-500 to-ocean-600 rounded-2xl shadow-large p-6 text-white transform transition-all duration-300 hover:scale-105 hover:shadow-xl-soft">
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
@@ -242,10 +313,10 @@ export default function TravelerDashboard() {
                 <div className="text-white/80 text-sm font-medium">Trips</div>
               </div>
               <div className="mb-6">
-                <p className="text-sm text-green-100 mb-1 font-medium">Active Trips</p>
+                <p className="text-sm text-jade-100 mb-1 font-medium">Active Trips</p>
                 <p className="text-3xl font-bold">{trips.length}</p>
                 {trips.length > 0 && (
-                  <p className="text-sm text-green-100 mt-2">{trips.filter(t => t.paymentStatus === 'Completed').length} completed</p>
+                  <p className="text-sm text-jade-100 mt-2">{trips.filter(t => t.paymentStatus === 'Completed').length} completed</p>
                 )}
               </div>
               <Link 
@@ -262,7 +333,7 @@ export default function TravelerDashboard() {
           </div>
 
           {/* Preferences Card - Expandable */}
-          <div className={`group relative overflow-hidden bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl shadow-large transition-all duration-300 ${showKYTForm ? '' : 'transform hover:scale-105 hover:shadow-xl-soft'}`}>
+          <div className={`group relative overflow-hidden bg-gradient-to-br from-culture-500 to-indigo-600 rounded-2xl shadow-large transition-all duration-300 ${showKYTForm ? '' : 'transform hover:scale-105 hover:shadow-xl-soft'}`}>
             <div 
               onClick={() => !showKYTForm && setShowKYTForm(true)}
               className={`p-6 text-white transition-all duration-300 ${showKYTForm ? 'cursor-default' : 'cursor-pointer'}`}
@@ -278,7 +349,7 @@ export default function TravelerDashboard() {
                   <div className="text-white/80 text-sm font-medium">Settings</div>
                 </div>
                 <div className="mb-6">
-                  <p className="text-sm text-purple-100 mb-1 font-medium">Preferences</p>
+                  <p className="text-sm text-culture-100 mb-1 font-medium">Preferences</p>
                   {preferences.travelStyle && preferences.pace && preferences.transport ? (
                     <div className="space-y-3">
                       <p className="text-2xl font-bold text-white">Set ✓</p>
@@ -315,93 +386,6 @@ export default function TravelerDashboard() {
           </div>
         </div>
 
-        {/* Safety Section */}
-        <div className="content-card mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="heading-tertiary text-gray-900 mb-1">Safety & Emergency</h2>
-              <p className="text-sm text-gray-600">Manage your safety settings and emergency information</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Link
-              href="/dashboard/safety/contacts"
-              className="group bg-gradient-to-br from-red-50 to-red-100 border-2 border-red-200 rounded-xl p-6 hover:border-red-300 hover:shadow-medium transition-all transform hover:scale-105"
-            >
-              <div className="flex items-center gap-4 mb-3">
-                <div className="w-12 h-12 bg-red-500 rounded-xl flex items-center justify-center">
-                  <span className="text-2xl">📞</span>
-                </div>
-                <h3 className="text-lg font-bold text-gray-900">Emergency Contacts</h3>
-              </div>
-              <p className="text-sm text-gray-600 mb-4">Manage your emergency contact list</p>
-              <div className="flex items-center gap-2 text-red-600 font-semibold text-sm group-hover:gap-3 transition-all">
-                Manage
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </div>
-            </Link>
-
-            <Link
-              href="/dashboard/safety/info"
-              className="group bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl p-6 hover:border-blue-300 hover:shadow-medium transition-all transform hover:scale-105"
-            >
-              <div className="flex items-center gap-4 mb-3">
-                <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
-                  <span className="text-2xl">🏥</span>
-                </div>
-                <h3 className="text-lg font-bold text-gray-900">Medical Info</h3>
-              </div>
-              <p className="text-sm text-gray-600 mb-4">Store your medical information</p>
-              <div className="flex items-center gap-2 text-blue-600 font-semibold text-sm group-hover:gap-3 transition-all">
-                Update
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </div>
-            </Link>
-
-            <Link
-              href="/dashboard/safety/settings"
-              className="group bg-gradient-to-br from-yellow-50 to-yellow-100 border-2 border-yellow-200 rounded-xl p-6 hover:border-yellow-300 hover:shadow-medium transition-all transform hover:scale-105"
-            >
-              <div className="flex items-center gap-4 mb-3">
-                <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center">
-                  <span className="text-2xl">🚨</span>
-                </div>
-                <h3 className="text-lg font-bold text-gray-900">Emergency Numbers</h3>
-              </div>
-              <p className="text-sm text-gray-600 mb-4">Local emergency service numbers</p>
-              <div className="flex items-center gap-2 text-yellow-600 font-semibold text-sm group-hover:gap-3 transition-all">
-                View
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </div>
-            </Link>
-
-            <Link
-              href="/dashboard/safety/history"
-              className="group bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-xl p-6 hover:border-purple-300 hover:shadow-medium transition-all transform hover:scale-105"
-            >
-              <div className="flex items-center gap-4 mb-3">
-                <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center">
-                  <span className="text-2xl">📋</span>
-                </div>
-                <h3 className="text-lg font-bold text-gray-900">SOS History</h3>
-              </div>
-              <p className="text-sm text-gray-600 mb-4">View your emergency SOS events</p>
-              <div className="flex items-center gap-2 text-purple-600 font-semibold text-sm group-hover:gap-3 transition-all">
-                View History
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </div>
-            </Link>
-          </div>
-        </div>
 
         {/* Preferences Form - Expands below when opened */}
         {showKYTForm && (
@@ -608,8 +592,24 @@ export default function TravelerDashboard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                 </svg>
               </div>
-              <h2 className="heading-tertiary text-gray-900">My Trips</h2>
+              <div>
+                <h2 className="heading-tertiary text-gray-900">My Trips</h2>
+                {trips.length > 0 && (
+                  <p className="text-sm text-gray-500 mt-1">{trips.length} {trips.length === 1 ? 'trip' : 'trips'} total</p>
+                )}
+              </div>
             </div>
+            {trips.length > 0 && (
+              <button
+                onClick={() => setShowDeleteAllModal(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition-all duration-200 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Delete All Trips
+              </button>
+            )}
           </div>
           
           {trips.length === 0 ? (
@@ -705,6 +705,78 @@ export default function TravelerDashboard() {
             </div>
           )}
         </div>
+
+        {/* Delete All Trips Confirmation Modal */}
+        {showDeleteAllModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all animate-slide-up">
+              <div className="p-6">
+                {/* Icon */}
+                <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full">
+                  <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+
+                {/* Title */}
+                <h3 className="text-2xl font-bold text-gray-900 text-center mb-2">
+                  Delete All Trips?
+                </h3>
+
+                {/* Description */}
+                <p className="text-gray-600 text-center mb-6">
+                  Are you sure you want to delete all <span className="font-semibold text-gray-900">{trips.length}</span> {trips.length === 1 ? 'trip' : 'trips'}? This action cannot be undone and will permanently remove all your trip data.
+                </p>
+
+                {/* Warning */}
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                  <div className="flex items-start gap-3">
+                    <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <div>
+                      <p className="text-sm font-semibold text-red-800 mb-1">This action is permanent</p>
+                      <p className="text-sm text-red-700">All trip schedules, bookings, and related data will be permanently deleted.</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowDeleteAllModal(false)}
+                    disabled={deletingAllTrips}
+                    className="flex-1 px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteAllTrips}
+                    disabled={deletingAllTrips}
+                    className="flex-1 px-4 py-3 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {deletingAllTrips ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Delete All
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

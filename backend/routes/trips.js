@@ -4,10 +4,15 @@ const Review = require('../models/Review');
 const Trip = require('../models/Trip');
 const User = require('../models/User');
 const Hotel = require('../models/Hotel');
+const Ticket = require('../models/Ticket');
+const Provider = require('../models/Provider');
 const { scheduleTrip } = require('../services/scheduler');
 const { scheduleTripWithAI, getAIRecommendations } = require('../services/aiScheduler');
 const { convertCurrency } = require('../services/currency');
 const { authenticate, requireUser } = require('../middleware/auth');
+const { filterExperiencesAI } = require('../services/aiAgent');
+const { matchUserToCulturalExperiences, getSeasonalCulturalRecommendations } = require('../services/culturalMatchingEngine');
+const { canExperienceBeScheduledForTrip } = require('../services/scheduler/availability/availabilityService');
 
 const router = express.Router();
 
@@ -78,7 +83,7 @@ router.get('/search', async (req, res) => {
 router.get('/experiences/:district', async (req, res) => {
   try {
     const { district } = req.params;
-    const { country, state } = req.query;
+    const { country, state, from, to } = req.query;
 
     // Decode district parameter (in case it's URL encoded)
     const decodedDistrict = decodeURIComponent(district).trim();
@@ -203,7 +208,7 @@ router.get('/experiences/:district', async (req, res) => {
       return res.json({ experiences: [] });
     }
 
-    // Don't filter out experiences based on provider - show all experiences
+    // Don't filter out experiences - show all experiences with availability status
     // Convert to plain objects
     const validExperiences = experiences
       .filter(exp => {
@@ -270,16 +275,45 @@ router.get('/experiences/:district', async (req, res) => {
                 }
               }
               
+              // Check availability for selected dates if provided
+              let availabilityStatus = {
+                available: true,
+                reason: null
+              };
+              
+              if (from && to) {
+                const isSchedulable = canExperienceBeScheduledForTrip(exp, from, to, 1);
+                availabilityStatus = {
+                  available: isSchedulable,
+                  reason: isSchedulable ? null : 'Not available for selected dates'
+                };
+              }
+              
               const experienceObj = {
                 ...exp,
                 provider: providerInfo,
-                recentReviews: reviews || []
+                recentReviews: reviews || [],
+                availabilityStatus
               };
           
           return experienceObj;
         } catch (err) {
           console.error(`Error fetching reviews for experience ${exp._id}:`, err);
           // If review fetch fails, return experience without reviews
+          // Check availability for selected dates if provided
+          let availabilityStatus = {
+            available: true,
+            reason: null
+          };
+          
+          if (from && to) {
+            const isSchedulable = canExperienceBeScheduledForTrip(exp, from, to, 1);
+            availabilityStatus = {
+              available: isSchedulable,
+              reason: isSchedulable ? null : 'Not available for selected dates'
+            };
+          }
+          
           return {
             ...exp,
             provider: exp.provider ? {
@@ -289,13 +323,18 @@ router.get('/experiences/:district', async (req, res) => {
               name: 'Unknown',
               rating: 0
             },
-            recentReviews: []
+            recentReviews: [],
+            availabilityStatus
           };
         }
       })
     );
 
-    res.json({ experiences: experiencesWithReviews });
+    res.json({ 
+      experiences: experiencesWithReviews,
+      totalAvailable: experiencesWithReviews.length,
+      aiFiltered: false
+    });
   } catch (error) {
     console.error('Error fetching experiences:', error);
     console.error('Error stack:', error.stack);
@@ -303,6 +342,124 @@ router.get('/experiences/:district', async (req, res) => {
       message: 'Server error', 
       error: error.message,
       ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+    });
+  }
+});
+
+// Revolutionary AI-Powered Experience Filtering
+// Filters hundreds of experiences to top 2-3 based on comprehensive user profile
+router.get('/experiences/:district/ai-filtered', authenticate, requireUser, async (req, res) => {
+  try {
+    const { district } = req.params;
+    const { country, state, from, to } = req.query;
+    const userId = req.user._id;
+
+    const decodedDistrict = decodeURIComponent(district).trim();
+    if (!decodedDistrict) {
+      return res.status(400).json({ message: 'District parameter is required' });
+    }
+
+    // Build query similar to regular endpoint
+    const query = {
+      'location.district': { 
+        $regex: new RegExp(`^${decodedDistrict.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+      }
+    };
+    
+    if (country) {
+      query['location.country'] = { 
+        $regex: new RegExp(`^${country.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+      };
+    }
+    
+    if (state) {
+      query['location.state'] = { 
+        $regex: new RegExp(`^${state.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+      };
+    }
+
+    // Add date filtering if provided
+    if (from && to) {
+      const fromDate = new Date(from);
+      const toDate = new Date(to);
+      query.availableDates = {
+        $elemMatch: {
+          date: { $gte: fromDate, $lte: toDate },
+          available: true
+        }
+      };
+    }
+
+    // Fetch all experiences
+    let allExperiences = await Experience.find(query)
+      .populate('provider', 'name rating')
+      .sort({ _id: 1 }) // Consistent sorting for deterministic AI results
+      .lean();
+
+    if (allExperiences.length === 0) {
+      return res.json({ 
+        experiences: [],
+        aiFiltered: true,
+        message: 'No experiences found for this location'
+      });
+    }
+
+    // Use AI agent to filter to top 2-3
+    const filteredExperiences = await filterExperiencesAI(userId, allExperiences, {
+      location: { district: decodedDistrict, state, country },
+      dateRange: from && to ? { from, to } : null
+    });
+
+    // Get reviews for filtered experiences
+    const experiencesWithReviews = await Promise.all(
+      filteredExperiences.map(async (exp) => {
+        const reviews = await Review.find({ experience: exp._id })
+          .populate('user', 'name email')
+          .sort({ createdAt: -1 })
+          .limit(3)
+          .lean();
+        
+        // Check availability for selected dates if provided
+        let availabilityStatus = {
+          available: true,
+          reason: null
+        };
+        
+        if (from && to) {
+          const isSchedulable = canExperienceBeScheduledForTrip(exp, from, to, 1);
+          availabilityStatus = {
+            available: isSchedulable,
+            reason: isSchedulable ? null : 'Not available for selected dates'
+          };
+        }
+        
+        return {
+          ...exp,
+          recentReviews: reviews,
+          provider: exp.provider ? {
+            name: exp.provider.name || 'Unknown',
+            rating: exp.provider.rating || 0
+          } : {
+            name: 'Unknown',
+            rating: 0
+          },
+          availabilityStatus
+        };
+      })
+    );
+
+    res.json({
+      experiences: experiencesWithReviews,
+      aiFiltered: true,
+      totalAvailable: allExperiences.length,
+      filteredTo: experiencesWithReviews.length,
+      insights: filteredExperiences[0]?.aiInsights || 'AI-selected experiences based on your travel profile'
+    });
+  } catch (error) {
+    console.error('Error in AI filtering:', error);
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error.message
     });
   }
 });
@@ -526,7 +683,7 @@ router.put('/:tripId/hotels', authenticate, requireUser, async (req, res) => {
   }
 });
 
-// Fund wallet
+// Fund wallet (must be before /:tripId routes to avoid route conflicts)
 router.post('/wallet/fund', authenticate, requireUser, async (req, res) => {
   try {
     const { amount, currency } = req.body;
@@ -602,14 +759,347 @@ router.post('/:tripId/pay', authenticate, requireUser, async (req, res) => {
     user.tokens = (user.tokens || 0) + 2;
     
     await user.save();
+    
+    // Validate trip schedule before generating tickets
+    if (!trip.schedule || !Array.isArray(trip.schedule) || trip.schedule.length === 0) {
+      console.error(`❌ Trip ${trip._id} has no schedule`);
+      return res.status(400).json({ 
+        message: 'Cannot generate tickets: Trip has no schedule',
+        ticketsGenerated: 0,
+        errors: ['Trip schedule is empty']
+      });
+    }
+    
+    // Count total activities for logging
+    let totalActivities = 0;
+    let activitiesWithExperienceId = 0;
+    for (const day of trip.schedule) {
+      if (day.activities && Array.isArray(day.activities)) {
+        totalActivities += day.activities.length;
+        activitiesWithExperienceId += day.activities.filter(a => a.experienceId).length;
+      }
+    }
+    
+    console.log(`📋 Processing payment for trip ${trip._id}:`);
+    console.log(`   - Schedule days: ${trip.schedule.length}`);
+    console.log(`   - Total activities: ${totalActivities}`);
+    console.log(`   - Activities with experienceId: ${activitiesWithExperienceId}`);
+    
+    if (totalActivities === 0) {
+      console.error(`❌ Trip ${trip._id} has no activities in schedule`);
+      return res.status(400).json({ 
+        message: 'Cannot generate tickets: Trip schedule has no activities',
+        ticketsGenerated: 0,
+        errors: ['Trip schedule contains no activities']
+      });
+    }
+    
+    if (activitiesWithExperienceId === 0) {
+      console.error(`❌ Trip ${trip._id} has activities but none have experienceId`);
+      return res.status(400).json({ 
+        message: 'Cannot generate tickets: Activities missing experience IDs',
+        ticketsGenerated: 0,
+        errors: ['Activities in schedule are missing experience IDs']
+      });
+    }
+    
+    // Generate tickets for all experiences in the schedule
+    const tickets = [];
+    const ticketErrors = [];
+    let processedActivities = 0;
+    let skippedActivities = 0;
+    
+    for (const day of trip.schedule) {
+      if (!day.activities || !Array.isArray(day.activities)) {
+        console.log(`⚠️ Skipping day ${day.date}: no activities array`);
+        continue;
+      }
+      
+      console.log(`📅 Processing day ${day.date}: ${day.activities.length} activities`);
+      
+      for (const activity of day.activities) {
+        processedActivities++;
+        
+        if (!activity.experienceId) {
+          skippedActivities++;
+          console.warn(`⚠️ Skipping activity "${activity.title || 'Untitled'}": no experienceId`);
+          ticketErrors.push(`Activity "${activity.title || 'Untitled'}" skipped: missing experienceId`);
+          continue;
+        }
+        
+        console.log(`   Processing activity: ${activity.title || activity.experienceId} (experienceId: ${activity.experienceId})`);
+        
+        try {
+          // Fetch experience details for snapshot
+          const experience = await Experience.findById(activity.experienceId)
+            .populate('provider', 'name _id');
+          
+          if (!experience) {
+            skippedActivities++;
+            console.error(`❌ Experience ${activity.experienceId} not found in database`);
+            ticketErrors.push(`Experience "${activity.title || activity.experienceId}" (ID: ${activity.experienceId}) not found in database`);
+            continue;
+          }
+          
+          // Get provider ID (handle both populated and non-populated cases)
+          // Priority: experience.provider > experience document > activity.provider
+          let providerId = null;
+          
+          // Helper function to extract valid provider ID
+          const extractProviderId = (provider) => {
+            if (!provider) return null;
+            
+            // If it's a string, assume it's an ID
+            if (typeof provider === 'string') {
+              return provider;
+            }
+            
+            // If it's an object, extract _id
+            if (typeof provider === 'object') {
+              // Check if _id exists and is not null
+              if (provider._id && provider._id !== null) {
+                // If _id is an object (ObjectId), convert to string
+                return typeof provider._id === 'object' ? provider._id.toString() : provider._id;
+              }
+              // If _id is null or missing, this provider is invalid
+              return null;
+            }
+            
+            return null;
+          };
+          
+          // First, try from experience (most reliable source)
+          if (experience.provider) {
+            providerId = extractProviderId(experience.provider);
+          }
+          
+          // If not found, try from experience document directly
+          if (!providerId) {
+            const experienceDoc = await Experience.findById(activity.experienceId).select('provider').lean();
+            if (experienceDoc && experienceDoc.provider) {
+              providerId = extractProviderId(experienceDoc.provider);
+            }
+          }
+          
+          // Last resort: try from activity (but only if it has a valid _id)
+          if (!providerId && activity.provider) {
+            const activityProviderId = extractProviderId(activity.provider);
+            // Only use if it's valid (not null)
+            if (activityProviderId) {
+              providerId = activityProviderId;
+            }
+          }
+          
+          if (!providerId) {
+            skippedActivities++;
+            console.error(`❌ No valid provider found for experience ${activity.experienceId} (${experience.title || 'Untitled'})`);
+            console.error(`   Activity provider:`, activity.provider);
+            console.error(`   Experience provider:`, experience.provider);
+            ticketErrors.push(`No valid provider found for experience: "${activity.title || experience.title || activity.experienceId}"`);
+            continue;
+          }
+          
+          // Ensure providerId is a valid ObjectId string
+          const providerIdStr = providerId.toString();
+          
+          // Validate it's a valid MongoDB ObjectId format
+          if (!/^[0-9a-fA-F]{24}$/.test(providerIdStr)) {
+            skippedActivities++;
+            console.error(`❌ Invalid provider ID format: ${providerIdStr} for experience ${activity.experienceId}`);
+            ticketErrors.push(`Invalid provider ID format for experience: "${activity.title || experience.title || activity.experienceId}"`);
+            continue;
+          }
+          
+          // Verify provider exists
+          const providerExists = await Provider.findById(providerIdStr);
+          if (!providerExists) {
+            skippedActivities++;
+            console.error(`❌ Provider ${providerIdStr} does not exist in database`);
+            ticketErrors.push(`Provider ${providerIdStr} does not exist for experience: "${activity.title || experience.title || activity.experienceId}"`);
+            continue;
+          }
+          
+          // Create ticket
+          const ticket = new Ticket({
+            user: user._id,
+            trip: trip._id,
+            experience: activity.experienceId,
+            provider: providerIdStr,
+            experienceDetails: {
+              title: activity.title || experience.title || 'Untitled Experience',
+              price: activity.price || experience.price || 0,
+              duration: activity.duration || experience.duration || 2,
+              location: {
+                district: experience.location?.district || trip.district || 'Unknown',
+                state: experience.location?.state || trip.state || 'Unknown',
+                country: experience.location?.country || trip.country || 'Unknown'
+              }
+            },
+            scheduledDate: day.date,
+            startTime: activity.startTime || '09:00',
+            endTime: activity.endTime || '17:00',
+            status: 'active'
+          });
+          
+          // Generate QR code
+          ticket.qrCode = ticket.generateQRCode();
+          
+          // Save ticket and ensure it's persisted
+          await ticket.save();
+          
+          // Verify ticket was saved
+          const savedTicket = await Ticket.findById(ticket._id);
+          if (!savedTicket) {
+            throw new Error(`Failed to save ticket ${ticket.ticketId}`);
+          }
+          
+          tickets.push(ticket);
+          
+          console.log(`✅ Ticket created and saved: ${ticket.ticketId} for experience: ${ticket.experienceDetails.title} (User: ${user._id}, Provider: ${providerIdStr})`);
+        } catch (ticketError) {
+          console.error(`❌ Error creating ticket for experience ${activity.experienceId}:`, ticketError);
+          console.error('Error details:', {
+            message: ticketError.message,
+            stack: ticketError.stack,
+            activity: activity
+          });
+          ticketErrors.push(`Failed to create ticket: ${ticketError.message}`);
+        }
+      }
+    }
+    
+    // Log ticket creation summary
+    console.log(`\n📝 Ticket creation summary for trip ${trip._id}:`);
+    console.log(`   ✅ Tickets created: ${tickets.length}`);
+    console.log(`   ⚠️  Activities processed: ${processedActivities}`);
+    console.log(`   ⏭️  Activities skipped: ${skippedActivities}`);
+    console.log(`   ❌ Errors: ${ticketErrors.length}`);
+    
+    if (ticketErrors.length > 0) {
+      console.warn('   Error details:');
+      ticketErrors.forEach((error, idx) => {
+        console.warn(`   ${idx + 1}. ${error}`);
+      });
+    }
+    
+    if (tickets.length === 0) {
+      console.error(`\n❌ WARNING: No tickets were created for trip ${trip._id}`);
+      console.error(`   This may indicate a problem with the trip schedule or experience data.`);
+    }
+    
     await trip.save();
 
+    // Build response message
+    let responseMessage = 'Payment successful';
+    if (tickets.length > 0) {
+      responseMessage += `. ${tickets.length} ticket(s) generated.`;
+    } else {
+      responseMessage += ', but no tickets were generated.';
+    }
+
     res.json({
-      message: 'Payment successful',
+      message: responseMessage,
       remainingBalance: user.tripWallet.balance,
-      tokens: user.tokens
+      tokens: user.tokens,
+      ticketsGenerated: tickets.length,
+      ticketIds: tickets.map(t => t.ticketId),
+      errors: ticketErrors.length > 0 ? ticketErrors : undefined,
+      warnings: tickets.length === 0 ? ['No tickets were generated. Please check trip schedule and experience data.'] : undefined
     });
   } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Clear all activities from trip schedule
+router.put('/:tripId/clear-activities', authenticate, requireUser, async (req, res) => {
+  try {
+    const trip = await Trip.findById(req.params.tripId);
+
+    if (!trip) {
+      return res.status(404).json({ message: 'Trip not found' });
+    }
+
+    // Check if user owns this trip
+    if (trip.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Clear all activities from all days
+    trip.schedule.forEach((day) => {
+      day.activities = [];
+    });
+
+    // Recalculate total price (only hotels and chauffeur costs remain)
+    let totalPrice = 0;
+    for (const day of trip.schedule) {
+      // Add hotel price
+      if (day.hotel && day.hotelSelected) {
+        const hotel = await Hotel.findById(day.hotel);
+        if (hotel) {
+          totalPrice += hotel.pricePerNight;
+        }
+      }
+      
+      // Add chauffeur cost
+      if (day.chauffeur) {
+        totalPrice += 50; // $50 per day for chauffeur
+      }
+    }
+    
+    trip.totalPrice = totalPrice;
+    await trip.save();
+
+    // Get updated trip
+    const tripData = await Trip.findById(trip._id)
+      .populate('schedule.hotel')
+      .populate('schedule.guide');
+    
+    const tripObj = tripData.toObject();
+    
+    res.json({ 
+      trip: tripObj,
+      totalPrice: trip.totalPrice,
+      message: 'All activities cleared successfully'
+    });
+  } catch (error) {
+    console.error('Error clearing activities:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Delete all trips for the authenticated user
+router.delete('/all', authenticate, requireUser, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Get all trip IDs for this user
+    const tripIds = user.bookings || [];
+    
+    if (tripIds.length === 0) {
+      return res.json({ 
+        message: 'No trips to delete',
+        deletedCount: 0
+      });
+    }
+
+    // Delete all trips
+    await Trip.deleteMany({ _id: { $in: tripIds } });
+
+    // Clear bookings array from user
+    user.bookings = [];
+    await user.save();
+
+    res.json({
+      message: `Successfully deleted ${tripIds.length} trip${tripIds.length === 1 ? '' : 's'}`,
+      deletedCount: tripIds.length
+    });
+  } catch (error) {
+    console.error('Error deleting all trips:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -653,7 +1143,14 @@ router.get('/:tripId', authenticate, requireUser, async (req, res) => {
     const trip = await Trip.findById(req.params.tripId)
       .populate('schedule.hotel')
       .populate('schedule.guide')
-      .populate('schedule.activities.experienceId');
+      .populate({
+        path: 'schedule.activities.experienceId',
+        select: 'title description price imageUrl contentUrl duration location provider culturalMetadata tags averageRating reviewCount',
+        populate: {
+          path: 'provider',
+          select: 'name rating'
+        }
+      });
 
     if (!trip) {
       return res.status(404).json({ message: 'Trip not found' });
@@ -868,6 +1365,40 @@ router.post('/recommendations', authenticate, requireUser, async (req, res) => {
   } catch (error) {
     console.error('Error getting recommendations:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Revolutionary Cultural Matching Engine Endpoint
+// Discovers authentic regional experiences based on cultural patterns
+router.get('/cultural-discovery/:state', authenticate, requireUser, async (req, res) => {
+  try {
+    const { state } = req.params;
+    const { district, region } = req.query;
+    const userId = req.user._id;
+
+    if (!state) {
+      return res.status(400).json({ message: 'State parameter is required' });
+    }
+
+    // Match user to cultural experiences
+    const culturalMatch = await matchUserToCulturalExperiences(
+      userId,
+      region || state,
+      state,
+      district || null
+    );
+
+    res.json({
+      success: true,
+      ...culturalMatch,
+      seasonalRecommendations: getSeasonalCulturalRecommendations(state)
+    });
+  } catch (error) {
+    console.error('Error in cultural discovery:', error);
+    res.status(500).json({
+      message: 'Server error',
+      error: error.message
+    });
   }
 });
 

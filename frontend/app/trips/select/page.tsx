@@ -28,6 +28,37 @@ export default function TripSelectPage() {
 
   useEffect(() => {
     setIsClient(true);
+    
+    // Check for saved trip data in sessionStorage
+    const savedTripData = sessionStorage.getItem('tripData');
+    if (savedTripData) {
+      try {
+        const trip = JSON.parse(savedTripData);
+        
+        // Restore dates
+        if (trip.fromDate) {
+          setStartDate(new Date(trip.fromDate));
+        }
+        if (trip.toDate) {
+          setEndDate(new Date(trip.toDate));
+        }
+        
+        // Restore locations
+        if (trip.locations && trip.locations.length > 0) {
+          setLocations(trip.locations.map((loc: Location) => ({
+            state: loc.state || '',
+            district: loc.district || ''
+          })));
+        } else if (trip.state && trip.district) {
+          // Fallback for old format
+          setLocations([{ state: trip.state, district: trip.district }]);
+        }
+      } catch (err) {
+        console.error('Error parsing saved trip data:', err);
+        // Clear invalid data
+        sessionStorage.removeItem('tripData');
+      }
+    }
   }, []);
 
   useEffect(() => {

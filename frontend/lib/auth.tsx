@@ -29,6 +29,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
+  // Fetch user data when token changes
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!token) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await api.get('/user/me');
+        if (response.data.user) {
+          const updatedUser = {
+            id: response.data.user._id || response.data.user.id,
+            email: response.data.user.email,
+            phoneNumber: response.data.user.phoneNumber,
+            name: response.data.user.name,
+            tokens: response.data.user.tokens
+          };
+          setUser(updatedUser);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching user data:', err);
+        // If fetch fails and we have stored user, use it
+        if (typeof window !== 'undefined') {
+          const storedUser = localStorage.getItem('user');
+          if (storedUser) {
+            try {
+              const parsedUser = JSON.parse(storedUser);
+              setUser(parsedUser);
+            } catch (parseErr) {
+              console.error('Error parsing stored user:', parseErr);
+            }
+          }
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [token]);
+
   useEffect(() => {
     // Check for stored token on mount
     if (typeof window !== 'undefined') {
@@ -36,33 +82,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const storedToken = localStorage.getItem('token');
           const storedUser = localStorage.getItem('user');
-          if (storedToken && storedUser) {
+          if (storedToken) {
             setToken(storedToken);
-            const parsedUser = JSON.parse(storedUser);
-            setUser(parsedUser);
-            
-            // Fetch fresh user data including tokens
-            try {
-              const response = await api.get('/user/me');
-              if (response.data.user) {
-                const updatedUser = {
-                  id: response.data.user._id || response.data.user.id,
-                  email: response.data.user.email,
-                  phoneNumber: response.data.user.phoneNumber,
-                  name: response.data.user.name,
-                  tokens: response.data.user.tokens
-                };
-                setUser(updatedUser);
-                localStorage.setItem('user', JSON.stringify(updatedUser));
+            // If we have stored user, set it temporarily while fetching fresh data
+            if (storedUser) {
+              try {
+                const parsedUser = JSON.parse(storedUser);
+                setUser(parsedUser);
+              } catch (err) {
+                console.error('Error parsing stored user:', err);
               }
-            } catch (err) {
-              // If fetch fails, use stored user data
-              console.error('Error fetching user data:', err);
             }
+            // The useEffect above will fetch fresh data
+          } else {
+            setLoading(false);
           }
         } catch (error) {
           console.error('Error loading auth state:', error);
-        } finally {
           setLoading(false);
         }
       };
@@ -95,39 +131,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Invalid response from server');
       }
       
-      setToken(newToken);
-      
-      // Fetch full user data including tokens
-      try {
-        const userResponse = await api.get('/user/me');
-        if (userResponse.data.user) {
-          const fullUser = {
-            id: userResponse.data.user._id || userResponse.data.user.id,
-            email: userResponse.data.user.email,
-            phoneNumber: userResponse.data.user.phoneNumber,
-            name: userResponse.data.user.name,
-            tokens: userResponse.data.user.tokens
-          };
-          setUser(fullUser);
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('token', newToken);
-            localStorage.setItem('user', JSON.stringify(fullUser));
-          }
-        } else {
-          setUser(newUser);
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('token', newToken);
-            localStorage.setItem('user', JSON.stringify(newUser));
-          }
-        }
-      } catch (err) {
-        // Fallback to response user if fetch fails
-        setUser(newUser);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('token', newToken);
-          localStorage.setItem('user', JSON.stringify(newUser));
-        }
+      // Store token first - this will trigger the useEffect to fetch fresh user data
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('token', newToken);
+        localStorage.setItem('user', JSON.stringify(newUser));
       }
+      setToken(newToken);
+      setUser(newUser); // Set immediately for quick UI update
+      
+      // Small delay to ensure state updates before redirect
+      // The useEffect will fetch fresh data with tokens in the background
+      await new Promise(resolve => setTimeout(resolve, 50));
       
       router.push('/');
     } catch (error: any) {
@@ -162,39 +176,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await api.post('/auth/signup', { email, phoneNumber, password, name });
       const { token: newToken, user: newUser } = response.data;
       
-      setToken(newToken);
-      
-      // Fetch full user data including tokens
-      try {
-        const userResponse = await api.get('/user/me');
-        if (userResponse.data.user) {
-          const fullUser = {
-            id: userResponse.data.user._id || userResponse.data.user.id,
-            email: userResponse.data.user.email,
-            phoneNumber: userResponse.data.user.phoneNumber,
-            name: userResponse.data.user.name,
-            tokens: userResponse.data.user.tokens
-          };
-          setUser(fullUser);
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('token', newToken);
-            localStorage.setItem('user', JSON.stringify(fullUser));
-          }
-        } else {
-          setUser(newUser);
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('token', newToken);
-            localStorage.setItem('user', JSON.stringify(newUser));
-          }
-        }
-      } catch (err) {
-        // Fallback to response user if fetch fails
-        setUser(newUser);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('token', newToken);
-          localStorage.setItem('user', JSON.stringify(newUser));
-        }
+      // Store token first - this will trigger the useEffect to fetch fresh user data
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('token', newToken);
+        localStorage.setItem('user', JSON.stringify(newUser));
       }
+      setToken(newToken);
+      setUser(newUser); // Set immediately for quick UI update
+      
+      // Small delay to ensure state updates before redirect
+      // The useEffect will fetch fresh data with tokens in the background
+      await new Promise(resolve => setTimeout(resolve, 50));
       
       router.push('/');
     } catch (error: any) {

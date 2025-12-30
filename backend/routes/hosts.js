@@ -6,10 +6,24 @@ const upload = require('../middleware/upload');
 
 const router = express.Router();
 
+// Get host availability
+router.get('/availability', authenticate, requireHost, async (req, res) => {
+  try {
+    const host = await Host.findById(req.user._id);
+    if (!host) {
+      return res.status(404).json({ message: 'Host not found' });
+    }
+
+    res.json({ availability: host.availability || [] });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Update host availability
 router.post('/availability', authenticate, requireHost, async (req, res) => {
   try {
-    const { availability } = req.body; // Array of { date: Date, available: boolean }
+    const { availability } = req.body; // Array of { date: Date, available: boolean, timeSlots?: Array }
 
     if (!availability || !Array.isArray(availability)) {
       return res.status(400).json({ message: 'Availability array is required' });
@@ -18,7 +32,8 @@ router.post('/availability', authenticate, requireHost, async (req, res) => {
     const host = await Host.findById(req.user._id);
     host.availability = availability.map(av => ({
       date: new Date(av.date),
-      available: av.available !== false
+      available: av.available !== false,
+      timeSlots: av.timeSlots || []
     }));
 
     await host.save();

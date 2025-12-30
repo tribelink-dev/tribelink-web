@@ -58,6 +58,10 @@ const providerSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  profilePicture: {
+    type: String,
+    default: null
+  },
   // Only for EXPERIENCE_HOST providers
   experiences: [{
     type: mongoose.Schema.Types.ObjectId,
