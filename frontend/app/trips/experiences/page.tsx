@@ -626,7 +626,7 @@ export default function ExperiencesPage() {
               .map((experience) => {
               const imageUrl = getImageUrl(experience.imageUrl);
               const isAvailable = experience.availabilityStatus?.available !== false;
-              const hasDateFilter = from && to;
+              const hasDateFilter = !!(from && to);
               return (
                 <div 
                   key={experience._id} 

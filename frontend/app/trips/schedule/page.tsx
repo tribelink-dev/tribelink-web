@@ -341,7 +341,7 @@ export default function SchedulePage() {
         guide: 0
       };
       
-      transformedSchedule.forEach(day => {
+      transformedSchedule.forEach((day: ScheduleDay) => {
         // Calculate activities cost
         day.activities.forEach(activity => {
           priceBreakdown.activities += activity.price || 0;
@@ -367,7 +367,7 @@ export default function SchedulePage() {
       }
       
       // Calculate guide cost ($50 per day if guide exists)
-      const hasGuide = transformedSchedule.some(day => day.guide);
+      const hasGuide = transformedSchedule.some((day: ScheduleDay) => day.guide);
       if (hasGuide && transformedSchedule.length > 0) {
         priceBreakdown.guide = 50 * transformedSchedule.length;
       }
@@ -375,11 +375,11 @@ export default function SchedulePage() {
       // Calculate statistics from schedule
       const statistics = {
         duration: transformedSchedule.length,
-        totalActivities: transformedSchedule.reduce((sum, day) => sum + (day.activities?.length || 0), 0),
-        selectedExperiencesCount: transformedSchedule.reduce((sum, day) => sum + (day.activities?.length || 0), 0),
-        totalHotels: transformedSchedule.filter(day => day.hotel).length,
-        totalChauffeurDays: transformedSchedule.filter(day => day.chauffeur).length,
-        totalCabDays: transformedSchedule.filter(day => day.cab).length,
+        totalActivities: transformedSchedule.reduce((sum: number, day: ScheduleDay) => sum + (day.activities?.length || 0), 0),
+        selectedExperiencesCount: transformedSchedule.reduce((sum: number, day: ScheduleDay) => sum + (day.activities?.length || 0), 0),
+        totalHotels: transformedSchedule.filter((day: ScheduleDay) => day.hotel).length,
+        totalChauffeurDays: transformedSchedule.filter((day: ScheduleDay) => day.chauffeur).length,
+        totalCabDays: transformedSchedule.filter((day: ScheduleDay) => day.cab).length,
         hasGuide: hasGuide
       };
 
@@ -601,7 +601,7 @@ export default function SchedulePage() {
         guide: 0
       };
       
-      transformedSchedule.forEach(day => {
+      transformedSchedule.forEach((day: ScheduleDay) => {
         // Calculate activities cost
         day.activities.forEach(activity => {
           priceBreakdown.activities += activity.price || 0;
@@ -634,12 +634,12 @@ export default function SchedulePage() {
       // Calculate statistics from schedule
       const statistics = {
         duration: transformedSchedule.length,
-        totalActivities: transformedSchedule.reduce((sum, day) => sum + (day.activities?.length || 0), 0),
-        selectedExperiencesCount: response.data.selectedExperiencesCount || transformedSchedule.reduce((sum, day) => sum + (day.activities?.length || 0), 0),
-        totalHotels: transformedSchedule.filter(day => day.hotel).length,
-        totalChauffeurDays: transformedSchedule.filter(day => day.chauffeur).length,
-        totalCabDays: transformedSchedule.filter(day => day.cab).length,
-        hasGuide: !!guideId || transformedSchedule.some(day => day.guide)
+        totalActivities: transformedSchedule.reduce((sum: number, day: ScheduleDay) => sum + (day.activities?.length || 0), 0),
+        selectedExperiencesCount: response.data.selectedExperiencesCount || transformedSchedule.reduce((sum: number, day: ScheduleDay) => sum + (day.activities?.length || 0), 0),
+        totalHotels: transformedSchedule.filter((day: ScheduleDay) => day.hotel).length,
+        totalChauffeurDays: transformedSchedule.filter((day: ScheduleDay) => day.chauffeur).length,
+        totalCabDays: transformedSchedule.filter((day: ScheduleDay) => day.cab).length,
+        hasGuide: !!guideId || transformedSchedule.some((day: ScheduleDay) => day.guide)
       };
 
       setTripData({
@@ -1685,7 +1685,7 @@ export default function SchedulePage() {
                                         </div>
 
                                         {/* Enhanced Provider Info */}
-                                        {typeof activityProvider === 'object' ? activityProvider.name : activityProvider !== 'Unknown' && (
+                                        {typeof activityProvider === 'object' && activityProvider !== null && 'name' in activityProvider && (
                                           <div className="pt-5 border-t-2 border-gray-100">
                                             <div className="flex items-center gap-4 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200">
                                               <div className="w-10 h-10 bg-gradient-to-br from-primary-400 to-accent-500 rounded-xl flex items-center justify-center shadow-md">
@@ -1695,7 +1695,7 @@ export default function SchedulePage() {
                                               </div>
                                               <div>
                                                 <div className="text-xs text-gray-500 font-bold uppercase tracking-wide mb-0.5">Hosted by</div>
-                                                <div className="text-base font-bold text-gray-900">{typeof activityProvider === 'object' ? activityProvider.name : activityProvider}</div>
+                                                <div className="text-base font-bold text-gray-900">{(activityProvider as { name: string }).name}</div>
                                               </div>
                                             </div>
                                           </div>

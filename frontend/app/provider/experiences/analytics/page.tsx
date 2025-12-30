@@ -166,7 +166,8 @@ export default function ExperienceAnalyticsPage() {
       }
     });
 
-    const bookingsByExperience = Array.from(bookingsByExperienceMap.values())
+    const bookingsByExperience = Array.from(bookingsByExperienceMap.entries())
+      .map(([experienceId, data]) => ({ experienceId, ...data }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 10); // Top 10
 

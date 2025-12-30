@@ -149,7 +149,6 @@ export default function AvailabilityPage() {
       // Refresh hotel data
       if (selectedHotelData) {
         const updatedHotel = { ...selectedHotelData };
-        const dateObj = new Date(date);
         const existingIndex = updatedHotel.availability?.findIndex((a: any) => 
           new Date(a.date).toISOString().split('T')[0] === date
         );
@@ -157,7 +156,7 @@ export default function AvailabilityPage() {
           updatedHotel.availability[existingIndex].roomsAvailable = rooms;
         } else {
           updatedHotel.availability = updatedHotel.availability || [];
-          updatedHotel.availability.push({ date: dateObj, roomsAvailable: rooms });
+          updatedHotel.availability.push({ date: date, roomsAvailable: rooms });
         }
         setSelectedHotelData(updatedHotel);
       }
