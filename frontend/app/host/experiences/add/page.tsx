@@ -245,7 +245,8 @@ export default function AddExperiencePage() {
         location: {
           country: 'India',
           state: '',
-          district: ''
+          district: '',
+          coordinates: { lat: 0, lng: 0 }
         },
         price: '',
         duration: '2',
