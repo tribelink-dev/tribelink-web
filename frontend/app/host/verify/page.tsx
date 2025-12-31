@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { format } from 'date-fns';
+import { getImageUrl } from '@/lib/imageUtils';
 
 interface Ticket {
   _id: string;
@@ -158,11 +159,6 @@ export default function VerifyTicketsPage() {
     }
   };
 
-  const getImageUrl = (imageUrl?: string) => {
-    if (!imageUrl) return null;
-    if (imageUrl.startsWith('http')) return imageUrl;
-    return `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000'}${imageUrl}`;
-  };
 
   const isTicketValidForVerification = (ticket: Ticket) => {
     if (ticket.status !== 'active') return false;

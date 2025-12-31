@@ -7,6 +7,7 @@ import TripMap from '@/components/TripMap';
 import HotelBookingCard from '@/components/HotelBookingCard';
 import ChauffeurSelectionCard from '@/components/ChauffeurSelectionCard';
 import { useAuth } from '@/lib/auth';
+import { getImageUrl } from '@/lib/imageUtils';
 
 interface Activity {
   experienceId: string | any;
@@ -1423,32 +1424,6 @@ export default function SchedulePage() {
                             const activityLocation = activity.location || experienceData?.location || null;
                             const activityProvider = activity.provider || experienceData?.provider || { name: 'Unknown' };
                             
-                            // Get image URL helper - handles various formats
-                            const getImageUrl = (imageUrl: string | string[] | undefined | null) => {
-                              if (!imageUrl) return null;
-                              
-                              // Handle array format
-                              if (Array.isArray(imageUrl)) {
-                                const firstImage = imageUrl.find(img => img) || imageUrl[0];
-                                if (!firstImage) return null;
-                                imageUrl = typeof firstImage === 'string' ? firstImage : (firstImage as any).url || firstImage;
-                              }
-                              
-                              if (typeof imageUrl !== 'string') return null;
-                              
-                              // Already a full URL
-                              if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-                                return imageUrl;
-                              }
-                              
-                              // Handle relative paths
-                              const cleanUrl = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
-                              const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
-                              
-                              // Remove double slashes
-                              const finalUrl = `${apiBase}${cleanUrl}`.replace(/([^:]\/)\/+/g, '$1');
-                              return finalUrl;
-                            };
                             
                             // Get image URL - check multiple sources
                             // Priority: activity.imageUrl > activity.contentUrl > experienceData.imageUrl > experienceData.contentUrl

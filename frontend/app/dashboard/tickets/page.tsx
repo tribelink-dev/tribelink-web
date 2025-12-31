@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
 import { format } from 'date-fns';
 import Link from 'next/link';
+import { getImageUrl } from '@/lib/imageUtils';
 
 interface Ticket {
   _id: string;
@@ -175,11 +176,6 @@ export default function MyTicketsPage() {
     );
   };
 
-  const getImageUrl = (imageUrl?: string) => {
-    if (!imageUrl) return null;
-    if (imageUrl.startsWith('http')) return imageUrl;
-    return `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000'}${imageUrl}`;
-  };
 
   if (loading) {
     return (

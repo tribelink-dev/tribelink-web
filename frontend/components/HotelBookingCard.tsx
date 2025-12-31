@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { getImageUrl } from '@/lib/imageUtils';
 
 interface Hotel {
   _id: string;
@@ -86,12 +87,8 @@ export default function HotelBookingCard({ hotel, isSelected, onSelect, date }: 
       return mainImage;
     }
     
-    // Handle relative paths
-    const cleanUrl = mainImage.startsWith('/') ? mainImage : `/${mainImage}`;
-    const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
-    
-    // Remove double slashes
-    const finalUrl = `${apiBase}${cleanUrl}`.replace(/([^:]\/)\/+/g, '$1');
+    // Use centralized utility for URL construction
+    const finalUrl = getImageUrl(mainImage);
     console.log('Final constructed URL:', finalUrl);
     console.log('=======================');
     return finalUrl;

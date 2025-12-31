@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { getImageUrl } from '@/lib/imageUtils';
 
 interface Review {
   _id: string;
@@ -313,11 +314,6 @@ export default function ExperiencesPage() {
     setShowReviewModal(true);
   };
 
-  const getImageUrl = (imageUrl?: string) => {
-    if (!imageUrl) return null;
-    if (imageUrl.startsWith('http')) return imageUrl;
-    return `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000'}${imageUrl}`;
-  };
 
   if (loading) {
     return (
@@ -644,6 +640,15 @@ export default function ExperiencesPage() {
                         src={imageUrl} 
                         alt={experience.title}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Hide broken images
+                          e.currentTarget.style.display = 'none';
+                          // Show placeholder if parent div exists
+                          const parent = e.currentTarget.parentElement;
+                          if (parent) {
+                            parent.innerHTML = '<div class="w-full h-48 bg-gradient-primary flex items-center justify-center"><span class="text-6xl">🎬</span></div>';
+                          }
+                        }}
                       />
                     </div>
                   ) : experience.contentUrl ? (

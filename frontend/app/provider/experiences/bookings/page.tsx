@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
+import { getImageUrl } from '@/lib/imageUtils';
 
 interface Booking {
   _id: string;
@@ -188,11 +189,6 @@ export default function ExperienceBookingsPage() {
     );
   };
 
-  const getImageUrl = (imageUrl?: string) => {
-    if (!imageUrl) return null;
-    if (imageUrl.startsWith('http')) return imageUrl;
-    return `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000'}${imageUrl}`;
-  };
 
   const stats = {
     total: bookings.length,

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
+import { getImageUrl } from '@/lib/imageUtils';
 
 interface Experience {
   _id: string;
@@ -64,11 +65,6 @@ export default function HostExperiencesPage() {
     });
   };
 
-  const getImageUrl = (imageUrl?: string) => {
-    if (!imageUrl) return null;
-    if (imageUrl.startsWith('http')) return imageUrl;
-    return `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000'}${imageUrl}`;
-  };
 
   const handleDelete = async (experienceId: string, title: string) => {
     if (!confirm(`Are you sure you want to delete "${title}"? This action cannot be undone.`)) {
@@ -151,6 +147,15 @@ export default function HostExperiencesPage() {
                         src={imageUrl} 
                         alt={experience.title}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Hide broken images
+                          e.currentTarget.style.display = 'none';
+                          // Show placeholder if parent div exists
+                          const parent = e.currentTarget.parentElement;
+                          if (parent) {
+                            parent.innerHTML = '<div class="w-full h-48 bg-gradient-primary flex items-center justify-center"><span class="text-6xl">🎬</span></div>';
+                          }
+                        }}
                       />
                     </div>
                   ) : experience.contentUrl ? (

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { INDIAN_STATES, DISTRICTS_BY_STATE } from '@/lib/indianStates';
+import { getImageUrl } from '@/lib/imageUtils';
 
 interface Hotel {
   _id: string;
@@ -96,11 +97,6 @@ export default function HostHotelsPage() {
     return matchesSearch && matchesState;
   });
 
-  const getImageUrl = (imageUrl?: string) => {
-    if (!imageUrl) return null;
-    if (imageUrl.startsWith('http')) return imageUrl;
-    return `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000'}${imageUrl}`;
-  };
 
   if (loading) {
     return (
