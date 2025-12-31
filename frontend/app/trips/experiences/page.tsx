@@ -641,6 +641,14 @@ export default function ExperiencesPage() {
                         alt={experience.title}
                         className="w-full h-full object-cover"
                         onError={(e) => {
+                          // Log error for debugging
+                          console.error('[Image Load Error]', {
+                            experienceId: experience._id,
+                            experienceTitle: experience.title,
+                            imageUrl: imageUrl,
+                            attemptedUrl: e.currentTarget.src
+                          });
+                          
                           // Hide broken images
                           e.currentTarget.style.display = 'none';
                           // Show placeholder if parent div exists

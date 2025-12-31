@@ -65,6 +65,10 @@ export function getImageUrl(imageUrl?: string | string[] | null | any): string |
   
   // Already a full URL (http:// or https://)
   if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    // Log in development to help debug
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Frontend Image URL] Already full URL:', imageUrl);
+    }
     return imageUrl;
   }
   
@@ -74,6 +78,15 @@ export function getImageUrl(imageUrl?: string | string[] | null | any): string |
   
   // Remove double slashes
   const finalUrl = `${apiBase}${cleanUrl}`.replace(/([^:]\/)\/+/g, '$1');
+  
+  // Log in development to help debug
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[Frontend Image URL] Constructed:', {
+      original: imageUrl,
+      apiBase: apiBase,
+      final: finalUrl
+    });
+  }
   
   return finalUrl;
 }

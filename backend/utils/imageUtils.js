@@ -48,14 +48,13 @@ function normalizeImageUrl(imageUrl, baseUrl = null) {
   // Remove double slashes but preserve protocol double slash
   const finalUrl = `${base}${cleanUrl}`.replace(/([^:]\/)\/+/g, '$1');
   
-  // Debug logging in development
-  if (process.env.NODE_ENV === 'development') {
-    console.log('Image URL normalization:', {
-      original: imageUrl,
-      base: base,
-      normalized: finalUrl
-    });
-  }
+  // Debug logging (always log to help diagnose issues)
+  console.log('[Image Normalization]', {
+    original: imageUrl,
+    base: base,
+    normalized: finalUrl,
+    environment: process.env.NODE_ENV
+  });
   
   return finalUrl;
 }
