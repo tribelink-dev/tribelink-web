@@ -1009,7 +1009,11 @@ export default function AddExperiencePage() {
                             setRangeStart(dates.from);
                             setRangeEnd(dates.to);
                             // Auto-apply range when both dates are selected
-                            setTimeout(() => applyDateRangeWithDates(dates.from, dates.to), 100);
+                            const fromDate = dates.from;
+                            const toDate = dates.to;
+                            if (fromDate && toDate) {
+                              setTimeout(() => applyDateRangeWithDates(fromDate, toDate), 100);
+                            }
                           }
                         }
                       }}
