@@ -4,7 +4,7 @@ const Provider = require('../models/Provider');
 const DriverProvider = require('../models/DriverProvider');
 const Trip = require('../models/Trip');
 const { authenticate, requireHost, requireUser } = require('../middleware/auth');
-const upload = require('../middleware/upload');
+const upload = require('../middleware/uploadCloudinary');
 const multer = require('multer');
 const { filterDriversAI } = require('../services/aiAgent');
 
@@ -371,7 +371,8 @@ router.post('/documents/:providerId', authenticate, requireHost, handleUpload(up
     }
 
     // Create document entry
-    const documentUrl = `/uploads/${req.file.filename}`;
+    // Cloudinary returns full URL in req.file.path, local storage uses filename
+    const documentUrl = req.file.path || `/uploads/${req.file.filename}`;
     const documentEntry = {
       name: documentName || req.file.originalname,
       url: documentUrl,
@@ -462,7 +463,8 @@ router.post('/profile-picture/:providerId', authenticate, requireHost, handleUpl
     }
 
     // Update provider profile picture
-    provider.profilePicture = `/uploads/${req.file.filename}`;
+    // Cloudinary returns full URL in req.file.path, local storage uses filename
+    provider.profilePicture = req.file.path || `/uploads/${req.file.filename}`;
     await provider.save();
 
     res.json({

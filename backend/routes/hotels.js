@@ -1,7 +1,7 @@
 const express = require('express');
 const Hotel = require('../models/Hotel');
 const { authenticate, requireUser, requireHost } = require('../middleware/auth');
-const upload = require('../middleware/upload');
+const upload = require('../middleware/uploadCloudinary');
 const { filterHotelsAI } = require('../services/aiAgent');
 const { normalizeHotels, normalizeHotel, getBaseUrlFromRequest } = require('../utils/imageUtils');
 
@@ -213,11 +213,12 @@ router.post('/', authenticate, requireHost, upload.array('images', 10), async (r
     }
 
     // Handle uploaded images
+    // Cloudinary returns full URL in file.path, local storage uses filename
     const images = [];
     if (req.files && req.files.length > 0) {
       req.files.forEach((file, index) => {
         images.push({
-          url: `/uploads/${file.filename}`,
+          url: file.path || `/uploads/${file.filename}`,
           isMain: index === 0
         });
       });
@@ -342,10 +343,11 @@ router.put('/:id', authenticate, requireHost, upload.array('images', 10), async 
     }
 
     // Add new images if uploaded
+    // Cloudinary returns full URL in file.path, local storage uses filename
     if (req.files && req.files.length > 0) {
       req.files.forEach((file) => {
         hotel.images.push({
-          url: `/uploads/${file.filename}`,
+          url: file.path || `/uploads/${file.filename}`,
           isMain: false
         });
       });

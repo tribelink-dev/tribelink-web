@@ -2,7 +2,7 @@ const express = require('express');
 const Host = require('../models/Host');
 const Experience = require('../models/Experience');
 const { authenticate, requireHost, requireUser } = require('../middleware/auth');
-const upload = require('../middleware/upload');
+const upload = require('../middleware/uploadCloudinary');
 const { normalizeExperiences, normalizeExperience, getBaseUrlFromRequest } = require('../utils/imageUtils');
 
 const router = express.Router();
@@ -169,7 +169,8 @@ router.post('/experience', authenticate, requireHost, upload.single('image'), as
           }),
       price,
       contentUrl: contentUrl || null,
-      imageUrl: req.file ? `/uploads/${req.file.filename}` : null,
+      // Cloudinary returns full URL in req.file.path, local storage uses filename
+      imageUrl: req.file ? (req.file.path || `/uploads/${req.file.filename}`) : null,
       duration: duration || 2,
       maxParticipants: maxParticipants || 10
     });
@@ -530,8 +531,9 @@ router.put('/experience/:experienceId', authenticate, requireHost, upload.single
     }
     
     // Update image if new one is uploaded
+    // Cloudinary returns full URL in req.file.path, local storage uses filename
     if (req.file) {
-      experience.imageUrl = `/uploads/${req.file.filename}`;
+      experience.imageUrl = req.file.path || `/uploads/${req.file.filename}`;
     }
 
     // Validate required fields before saving
