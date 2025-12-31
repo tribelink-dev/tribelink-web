@@ -2,6 +2,7 @@ const express = require('express');
 const Ticket = require('../models/Ticket');
 const { authenticate, requireUser } = require('../middleware/auth');
 const Provider = require('../models/Provider');
+const { normalizeExperience, getBaseUrlFromRequest } = require('../utils/imageUtils');
 
 const router = express.Router();
 
@@ -24,6 +25,8 @@ router.get('/user', authenticate, requireUser, async (req, res) => {
       .lean(); // Use lean() for better performance
     
     // Convert to plain objects and ensure all fields are present
+    // Normalize image URLs
+    const baseUrl = getBaseUrlFromRequest(req);
     tickets = tickets.map(ticket => {
       // Ensure experienceDetails exists (for tickets created before this field was added)
       if (!ticket.experienceDetails && ticket.experience) {
@@ -37,6 +40,11 @@ router.get('/user', authenticate, requireUser, async (req, res) => {
             country: ticket.experience.location?.country || 'Unknown'
           }
         };
+      }
+      
+      // Normalize experience imageUrl if it exists
+      if (ticket.experience && ticket.experience.imageUrl) {
+        ticket.experience = normalizeExperience(ticket.experience, baseUrl);
       }
       
       return ticket;
@@ -79,7 +87,14 @@ router.get('/:ticketId', authenticate, requireUser, async (req, res) => {
       return res.status(403).json({ message: 'Access denied' });
     }
     
-    res.json({ ticket });
+    // Normalize experience imageUrl if it exists
+    const baseUrl = getBaseUrlFromRequest(req);
+    const ticketObj = ticket.toObject ? ticket.toObject() : ticket;
+    if (ticketObj.experience && ticketObj.experience.imageUrl) {
+      ticketObj.experience = normalizeExperience(ticketObj.experience, baseUrl);
+    }
+    
+    res.json({ ticket: ticketObj });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -177,10 +192,20 @@ router.get('/provider/verifications', authenticate, async (req, res) => {
       .populate('experience', 'title imageUrl')
       .populate('user', 'name email phoneNumber')
       .populate('trip', 'fromDate toDate')
-      .sort({ scheduledDate: 1, startTime: 1 });
+      .sort({ scheduledDate: 1, startTime: 1 })
+      .lean();
     
-    console.log(`Returning ${tickets.length} tickets for provider ${provider._id}`);
-    res.json({ tickets });
+    // Normalize experience imageUrls
+    const baseUrl = getBaseUrlFromRequest(req);
+    const normalizedTickets = tickets.map(ticket => {
+      if (ticket.experience && ticket.experience.imageUrl) {
+        ticket.experience = normalizeExperience(ticket.experience, baseUrl);
+      }
+      return ticket;
+    });
+    
+    console.log(`Returning ${normalizedTickets.length} tickets for provider ${provider._id}`);
+    res.json({ tickets: normalizedTickets });
   } catch (error) {
     console.error('Error fetching provider tickets:', error);
     res.status(500).json({ message: 'Server error', error: error.message });

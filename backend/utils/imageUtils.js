@@ -36,7 +36,7 @@ function normalizeImageUrl(imageUrl, baseUrl = null) {
     return null;
   }
   
-  // Already a full URL
+  // Already a full URL - return as is
   if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
     return imageUrl;
   }
@@ -45,8 +45,17 @@ function normalizeImageUrl(imageUrl, baseUrl = null) {
   const cleanUrl = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
   const base = baseUrl || getBaseUrl();
   
-  // Remove double slashes
+  // Remove double slashes but preserve protocol double slash
   const finalUrl = `${base}${cleanUrl}`.replace(/([^:]\/)\/+/g, '$1');
+  
+  // Debug logging in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Image URL normalization:', {
+      original: imageUrl,
+      base: base,
+      normalized: finalUrl
+    });
+  }
   
   return finalUrl;
 }
@@ -174,25 +183,36 @@ function normalizeHotels(hotels, baseUrl = null) {
  * @returns {string} - Base URL
  */
 function getBaseUrlFromRequest(req) {
+  // Always try environment variable first (most reliable)
+  if (process.env.BACKEND_URL) {
+    return process.env.BACKEND_URL.replace('/api', '').replace(/\/$/, '');
+  }
+  
+  // In production, construct from request
   if (process.env.NODE_ENV === 'production') {
-    // In production, try to get from environment or construct from request
-    if (process.env.BACKEND_URL) {
-      return process.env.BACKEND_URL.replace('/api', '');
-    }
-    
-    // Construct from request
     if (req) {
-      const protocol = req.protocol || 'https';
-      const host = req.get('host');
+      // Check for X-Forwarded-Proto header (common in Render.com)
+      const protocol = req.get('x-forwarded-proto') || req.protocol || 'https';
+      const host = req.get('host') || req.get('x-forwarded-host');
+      
       if (host) {
-        return `${protocol}://${host}`;
+        // Remove port if it's the default port
+        const cleanHost = host.replace(':443', '').replace(':80', '');
+        return `${protocol}://${cleanHost}`;
       }
     }
     
-    return process.env.BACKEND_URL || 'https://your-backend.onrender.com';
+    // Last resort fallback
+    return 'https://your-backend.onrender.com';
   }
   
-  // Development
+  // Development - construct from request or use localhost
+  if (req) {
+    const protocol = req.protocol || 'http';
+    const host = req.get('host') || 'localhost:5000';
+    return `${protocol}://${host}`;
+  }
+  
   return 'http://localhost:5000';
 }
 
@@ -207,4 +227,5 @@ module.exports = {
   getBaseUrlFromRequest,
   getBaseUrl
 };
+
 

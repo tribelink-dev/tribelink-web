@@ -13,7 +13,7 @@ const { authenticate, requireUser } = require('../middleware/auth');
 const { filterExperiencesAI } = require('../services/aiAgent');
 const { matchUserToCulturalExperiences, getSeasonalCulturalRecommendations } = require('../services/culturalMatchingEngine');
 const { canExperienceBeScheduledForTrip } = require('../services/scheduler/availability/availabilityService');
-const { normalizeExperiences, getBaseUrlFromRequest } = require('../utils/imageUtils');
+const { normalizeExperiences, normalizeExperience, normalizeHotels, normalizeHotel, getBaseUrlFromRequest } = require('../utils/imageUtils');
 
 const router = express.Router();
 
@@ -542,6 +542,29 @@ router.post('/schedule', authenticate, requireUser, async (req, res) => {
     
     const { schedule, totalPrice, selectedExperiencesCount, availableHotels, mapData } = scheduleResult;
 
+    // Normalize image URLs in schedule and availableHotels before saving
+    const baseUrl = getBaseUrlFromRequest(req);
+    
+    // Normalize availableHotels images
+    const normalizedAvailableHotels = normalizeHotels(availableHotels || [], baseUrl);
+    
+    // Normalize experience images in schedule activities
+    const normalizedSchedule = schedule.map(day => {
+      if (day.activities && Array.isArray(day.activities)) {
+        day.activities = day.activities.map(activity => {
+          if (activity.experienceId && typeof activity.experienceId === 'object' && activity.experienceId.imageUrl) {
+            activity.experienceId = normalizeExperience(activity.experienceId, baseUrl);
+          }
+          return activity;
+        });
+      }
+      // Normalize hotel images if hotel is populated
+      if (day.hotel && typeof day.hotel === 'object' && day.hotel.images) {
+        day.hotel = normalizeHotel(day.hotel, baseUrl);
+      }
+      return day;
+    });
+
     // Create trip
     const trip = new Trip({
       user: user._id,
@@ -552,7 +575,7 @@ router.post('/schedule', authenticate, requireUser, async (req, res) => {
       district: tripLocations[0]?.district || district, // Keep first district for backward compatibility
       locations: tripLocations, // Store all locations
       preferences: user.preferences,
-      schedule,
+      schedule: normalizedSchedule,
       totalPrice
     });
 
@@ -583,10 +606,10 @@ router.post('/schedule', authenticate, requireUser, async (req, res) => {
     res.json({
       message: 'Trip scheduled successfully',
       tripId: trip._id,
-      schedule,
+      schedule: normalizedSchedule,
       totalPrice,
       selectedExperiencesCount,
-      availableHotels: availableHotels || [],
+      availableHotels: normalizedAvailableHotels,
       mapData: mapData || null,
       aiInsights: scheduleResult.aiInsights || [],
       optimizationScore: scheduleResult.optimizationScore || null,
@@ -1170,7 +1193,35 @@ router.get('/:tripId', authenticate, requireUser, async (req, res) => {
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    res.json({ trip });
+    // Normalize image URLs in trip data
+    const baseUrl = getBaseUrlFromRequest(req);
+    const tripObj = trip.toObject ? trip.toObject() : trip;
+    
+    // Normalize experience images in schedule activities
+    if (tripObj.schedule && Array.isArray(tripObj.schedule)) {
+      tripObj.schedule = tripObj.schedule.map(day => {
+        if (day.activities && Array.isArray(day.activities)) {
+          day.activities = day.activities.map(activity => {
+            if (activity.experienceId && activity.experienceId.imageUrl) {
+              activity.experienceId = normalizeExperience(activity.experienceId, baseUrl);
+            }
+            return activity;
+          });
+        }
+        // Normalize hotel images
+        if (day.hotel && day.hotel.images) {
+          day.hotel = normalizeHotel(day.hotel, baseUrl);
+        }
+        return day;
+      });
+    }
+    
+    // Normalize availableHotels if present
+    if (tripObj.availableHotels && Array.isArray(tripObj.availableHotels)) {
+      tripObj.availableHotels = normalizeHotels(tripObj.availableHotels, baseUrl);
+    }
+
+    res.json({ trip: tripObj });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -1344,26 +1395,30 @@ router.post('/recommendations', authenticate, requireUser, async (req, res) => {
     });
 
     // Sort by score and take top recommendations
+    const baseUrl = getBaseUrlFromRequest(req);
     const topRecommendations = scoredExperiences
       .sort((a, b) => b.score - a.score)
       .slice(0, 6)
-      .map(item => ({
-        _id: item.experience._id,
-        title: item.experience.title,
-        description: item.experience.description,
-        price: item.experience.price,
-        duration: item.experience.duration,
-        imageUrl: item.experience.imageUrl,
-        location: item.experience.location,
-        provider: item.experience.provider ? {
-          _id: item.experience.provider._id,
-          name: item.experience.provider.name,
-          rating: item.experience.provider.rating || 0
-        } : null,
-        availableDates: item.experience.availableDates,
-        score: item.score,
-        reasons: item.reasons.slice(0, 2) // Top 2 reasons
-      }));
+      .map(item => {
+        const exp = normalizeExperience(item.experience, baseUrl);
+        return {
+          _id: exp._id,
+          title: exp.title,
+          description: exp.description,
+          price: exp.price,
+          duration: exp.duration,
+          imageUrl: exp.imageUrl,
+          location: exp.location,
+          provider: item.experience.provider ? {
+            _id: item.experience.provider._id,
+            name: item.experience.provider.name,
+            rating: item.experience.provider.rating || 0
+          } : null,
+          availableDates: item.experience.availableDates,
+          score: item.score,
+          reasons: item.reasons.slice(0, 2) // Top 2 reasons
+        };
+      });
 
     res.json({
       recommendations: topRecommendations,
