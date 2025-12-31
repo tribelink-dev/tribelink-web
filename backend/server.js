@@ -29,7 +29,10 @@ const allowedOrigins = [
   'http://172.16.68.100:3000',
   process.env.FRONTEND_URL,
   'https://tribelink-app.vercel.app', // Explicitly allow Vercel frontend
-  'https://*.vercel.app' // Allow all Vercel preview deployments
+  'https://*.vercel.app', // Allow all Vercel preview deployments
+  // Allow Render frontend deployments
+  process.env.FRONTEND_RENDER_URL,
+  'https://*.onrender.com' // Allow all Render deployments
 ].filter(Boolean);
 
 app.use(cors({
@@ -51,10 +54,17 @@ app.use(cors({
         return;
       }
       
+      // Allow Render deployments (*.onrender.com)
+      if (origin.endsWith('.onrender.com')) {
+        callback(null, true);
+        return;
+      }
+      
       // Log blocked origin for debugging
       console.log('CORS blocked origin:', origin);
       console.log('Allowed origins:', allowedOrigins);
       console.log('FRONTEND_URL env:', process.env.FRONTEND_URL);
+      console.log('FRONTEND_RENDER_URL env:', process.env.FRONTEND_RENDER_URL);
       callback(new Error('Not allowed by CORS'));
     } else {
       // Development: allow all origins
