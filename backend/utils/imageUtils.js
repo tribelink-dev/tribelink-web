@@ -1,0 +1,210 @@
+/**
+ * Image URL normalization utilities
+ * Ensures all image URLs are properly formatted for frontend consumption
+ */
+
+/**
+ * Get the base URL for serving static files
+ * In production, this should be the Render backend URL
+ */
+function getBaseUrl() {
+  // In production (Render.com), use the environment variable or construct from request
+  if (process.env.NODE_ENV === 'production') {
+    // Try to get from environment variable first
+    if (process.env.BACKEND_URL) {
+      return process.env.BACKEND_URL.replace('/api', '');
+    }
+    // Fallback: construct from common Render patterns
+    // This will be set per-request in middleware
+    return process.env.BACKEND_URL || 'https://your-backend.onrender.com';
+  }
+  
+  // Development
+  return process.env.BACKEND_URL || 'http://localhost:5000';
+}
+
+/**
+ * Normalize a single image URL
+ * Converts relative paths to full URLs
+ * 
+ * @param {string} imageUrl - The image URL (can be relative or full)
+ * @param {string} baseUrl - Optional base URL (defaults to getBaseUrl())
+ * @returns {string|null} - Normalized URL or null if invalid
+ */
+function normalizeImageUrl(imageUrl, baseUrl = null) {
+  if (!imageUrl || typeof imageUrl !== 'string') {
+    return null;
+  }
+  
+  // Already a full URL
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    return imageUrl;
+  }
+  
+  // Handle relative paths
+  const cleanUrl = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
+  const base = baseUrl || getBaseUrl();
+  
+  // Remove double slashes
+  const finalUrl = `${base}${cleanUrl}`.replace(/([^:]\/)\/+/g, '$1');
+  
+  return finalUrl;
+}
+
+/**
+ * Normalize experience image URL
+ * Experiences store imageUrl as a string
+ * 
+ * @param {string} imageUrl - The experience image URL
+ * @param {string} baseUrl - Optional base URL
+ * @returns {string|null} - Normalized URL
+ */
+function normalizeExperienceImage(imageUrl, baseUrl = null) {
+  return normalizeImageUrl(imageUrl, baseUrl);
+}
+
+/**
+ * Normalize hotel images
+ * Hotels store images as an array of objects: [{url: string, isMain: boolean}]
+ * 
+ * @param {Array} images - Array of image objects
+ * @param {string} baseUrl - Optional base URL
+ * @returns {Array} - Array of normalized image objects
+ */
+function normalizeHotelImages(images, baseUrl = null) {
+  if (!images || !Array.isArray(images)) {
+    return [];
+  }
+  
+  return images.map(img => {
+    // Handle both object format and string format
+    if (typeof img === 'string') {
+      return {
+        url: normalizeImageUrl(img, baseUrl),
+        isMain: false
+      };
+    }
+    
+    if (typeof img === 'object' && img !== null) {
+      return {
+        url: normalizeImageUrl(img.url, baseUrl),
+        isMain: img.isMain || false
+      };
+    }
+    
+    return null;
+  }).filter(img => img !== null && img.url !== null);
+}
+
+/**
+ * Normalize experience object - adds normalized imageUrl
+ * 
+ * @param {Object} experience - Experience object
+ * @param {string} baseUrl - Optional base URL
+ * @returns {Object} - Experience with normalized imageUrl
+ */
+function normalizeExperience(experience, baseUrl = null) {
+  if (!experience) return experience;
+  
+  const normalized = { ...experience };
+  
+  // Normalize imageUrl if it exists
+  if (experience.imageUrl) {
+    normalized.imageUrl = normalizeExperienceImage(experience.imageUrl, baseUrl);
+  }
+  
+  return normalized;
+}
+
+/**
+ * Normalize hotel object - normalizes images array
+ * 
+ * @param {Object} hotel - Hotel object
+ * @param {string} baseUrl - Optional base URL
+ * @returns {Object} - Hotel with normalized images
+ */
+function normalizeHotel(hotel, baseUrl = null) {
+  if (!hotel) return hotel;
+  
+  const normalized = { ...hotel };
+  
+  // Normalize images array if it exists
+  if (hotel.images) {
+    normalized.images = normalizeHotelImages(hotel.images, baseUrl);
+  }
+  
+  return normalized;
+}
+
+/**
+ * Normalize an array of experiences
+ * 
+ * @param {Array} experiences - Array of experience objects
+ * @param {string} baseUrl - Optional base URL
+ * @returns {Array} - Array of normalized experiences
+ */
+function normalizeExperiences(experiences, baseUrl = null) {
+  if (!Array.isArray(experiences)) {
+    return [];
+  }
+  
+  return experiences.map(exp => normalizeExperience(exp, baseUrl));
+}
+
+/**
+ * Normalize an array of hotels
+ * 
+ * @param {Array} hotels - Array of hotel objects
+ * @param {string} baseUrl - Optional base URL
+ * @returns {Array} - Array of normalized hotels
+ */
+function normalizeHotels(hotels, baseUrl = null) {
+  if (!Array.isArray(hotels)) {
+    return [];
+  }
+  
+  return hotels.map(hotel => normalizeHotel(hotel, baseUrl));
+}
+
+/**
+ * Get base URL from request
+ * Useful in middleware to get the actual request URL
+ * 
+ * @param {Object} req - Express request object
+ * @returns {string} - Base URL
+ */
+function getBaseUrlFromRequest(req) {
+  if (process.env.NODE_ENV === 'production') {
+    // In production, try to get from environment or construct from request
+    if (process.env.BACKEND_URL) {
+      return process.env.BACKEND_URL.replace('/api', '');
+    }
+    
+    // Construct from request
+    if (req) {
+      const protocol = req.protocol || 'https';
+      const host = req.get('host');
+      if (host) {
+        return `${protocol}://${host}`;
+      }
+    }
+    
+    return process.env.BACKEND_URL || 'https://your-backend.onrender.com';
+  }
+  
+  // Development
+  return 'http://localhost:5000';
+}
+
+module.exports = {
+  normalizeImageUrl,
+  normalizeExperienceImage,
+  normalizeHotelImages,
+  normalizeExperience,
+  normalizeHotel,
+  normalizeExperiences,
+  normalizeHotels,
+  getBaseUrlFromRequest,
+  getBaseUrl
+};
+

@@ -3,6 +3,7 @@ const Host = require('../models/Host');
 const Experience = require('../models/Experience');
 const { authenticate, requireHost, requireUser } = require('../middleware/auth');
 const upload = require('../middleware/upload');
+const { normalizeExperiences, normalizeExperience, getBaseUrlFromRequest } = require('../utils/imageUtils');
 
 const router = express.Router();
 
@@ -49,8 +50,16 @@ router.get('/experiences', authenticate, requireHost, async (req, res) => {
   try {
     const host = await Host.findById(req.user._id).populate('experiences');
     
+    // Normalize image URLs before sending response
+    const baseUrl = getBaseUrlFromRequest(req);
+    const experiences = host.experiences || [];
+    const normalizedExperiences = normalizeExperiences(
+      experiences.map(exp => exp.toObject ? exp.toObject() : exp),
+      baseUrl
+    );
+    
     res.json({
-      experiences: host.experiences || []
+      experiences: normalizedExperiences
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -128,9 +137,13 @@ router.post('/experience', authenticate, requireHost, upload.single('image'), as
     host.experiences.push(experience._id);
     await host.save();
 
+    // Normalize image URL before sending response
+    const baseUrl = getBaseUrlFromRequest(req);
+    const normalizedExperience = normalizeExperience(experience.toObject ? experience.toObject() : experience, baseUrl);
+
     res.status(201).json({
       message: 'Experience created',
-      experience
+      experience: normalizedExperience
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -242,7 +255,11 @@ router.get('/experience/:experienceId', authenticate, requireHost, async (req, r
       location: formattedExperience.location
     });
 
-    res.json({ experience: formattedExperience });
+    // Normalize image URL before sending response
+    const baseUrl = getBaseUrlFromRequest(req);
+    const normalizedExperience = normalizeExperience(formattedExperience, baseUrl);
+
+    res.json({ experience: normalizedExperience });
   } catch (error) {
     console.error('Error fetching experience:', error);
     res.status(500).json({ 
@@ -377,9 +394,13 @@ router.put('/experience/:experienceId', authenticate, requireHost, upload.single
       savedLocation: updatedExperience.location
     });
 
+    // Normalize image URL before sending response
+    const baseUrl = getBaseUrlFromRequest(req);
+    const normalizedExperience = normalizeExperience(updatedExperience, baseUrl);
+
     res.json({
       message: 'Experience updated',
-      experience
+      experience: normalizedExperience
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });

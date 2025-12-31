@@ -13,6 +13,7 @@ const { authenticate, requireUser } = require('../middleware/auth');
 const { filterExperiencesAI } = require('../services/aiAgent');
 const { matchUserToCulturalExperiences, getSeasonalCulturalRecommendations } = require('../services/culturalMatchingEngine');
 const { canExperienceBeScheduledForTrip } = require('../services/scheduler/availability/availabilityService');
+const { normalizeExperiences, getBaseUrlFromRequest } = require('../utils/imageUtils');
 
 const router = express.Router();
 
@@ -330,9 +331,13 @@ router.get('/experiences/:district', async (req, res) => {
       })
     );
 
+    // Normalize image URLs before sending response
+    const baseUrl = getBaseUrlFromRequest(req);
+    const normalizedExperiences = normalizeExperiences(experiencesWithReviews, baseUrl);
+
     res.json({ 
-      experiences: experiencesWithReviews,
-      totalAvailable: experiencesWithReviews.length,
+      experiences: normalizedExperiences,
+      totalAvailable: normalizedExperiences.length,
       aiFiltered: false
     });
   } catch (error) {
@@ -448,11 +453,15 @@ router.get('/experiences/:district/ai-filtered', authenticate, requireUser, asyn
       })
     );
 
+    // Normalize image URLs before sending response
+    const baseUrl = getBaseUrlFromRequest(req);
+    const normalizedExperiences = normalizeExperiences(experiencesWithReviews, baseUrl);
+
     res.json({
-      experiences: experiencesWithReviews,
+      experiences: normalizedExperiences,
       aiFiltered: true,
       totalAvailable: allExperiences.length,
-      filteredTo: experiencesWithReviews.length,
+      filteredTo: normalizedExperiences.length,
       insights: filteredExperiences[0]?.aiInsights || 'AI-selected experiences based on your travel profile'
     });
   } catch (error) {

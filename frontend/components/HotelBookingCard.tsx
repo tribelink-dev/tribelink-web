@@ -34,64 +34,26 @@ interface HotelBookingCardProps {
 export default function HotelBookingCard({ hotel, isSelected, onSelect, date }: HotelBookingCardProps) {
   const [showDetails, setShowDetails] = useState(false);
 
-  // Get main image - improved handling with debugging
+  // Get main image - use centralized utility
   const getMainImage = () => {
-    console.log('=== Hotel Image Debug ===');
-    console.log('Hotel:', hotel.name);
-    console.log('Hotel images:', hotel.images);
-    
     if (!hotel.images || hotel.images.length === 0) {
-      console.log('No images found for hotel');
       return null;
     }
     
-    const imagesArray = Array.isArray(hotel.images) ? hotel.images : [];
-    console.log('Images array:', imagesArray);
-    
     // Find main image or use first image
-    const mainImageObj = imagesArray.find((img: any) => {
+    const mainImageObj = hotel.images.find((img: any) => {
       if (typeof img === 'object' && img !== null) {
         return img.isMain === true;
       }
       return false;
-    }) || imagesArray[0];
-    
-    console.log('Main image object:', mainImageObj);
+    }) || hotel.images[0];
     
     if (!mainImageObj) {
-      console.log('No main image object found');
       return null;
     }
     
-    // Extract URL from object or use string directly
-    let mainImage: string;
-    if (typeof mainImageObj === 'string') {
-      mainImage = mainImageObj;
-    } else if (typeof mainImageObj === 'object' && mainImageObj !== null) {
-      mainImage = (mainImageObj as any).url || '';
-    } else {
-      console.log('Invalid image format');
-      return null;
-    }
-    
-    console.log('Extracted image URL:', mainImage);
-    
-    if (!mainImage || mainImage.trim() === '') {
-      console.log('Empty image URL');
-      return null;
-    }
-    
-    // Already a full URL
-    if (mainImage.startsWith('http://') || mainImage.startsWith('https://')) {
-      console.log('Full URL detected:', mainImage);
-      return mainImage;
-    }
-    
-    // Use centralized utility for URL construction
-    const finalUrl = getImageUrl(mainImage);
-    console.log('Final constructed URL:', finalUrl);
-    console.log('=======================');
-    return finalUrl;
+    // Use centralized utility which handles both object and string formats
+    return getImageUrl(mainImageObj);
   };
 
   const imageUrl = getMainImage();

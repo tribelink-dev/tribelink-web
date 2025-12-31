@@ -7,6 +7,7 @@
 
 /**
  * Get the base API URL without the /api suffix
+ * This is used when we need to construct URLs from relative paths
  */
 export function getApiBaseUrl(): string {
   if (typeof window === 'undefined') {

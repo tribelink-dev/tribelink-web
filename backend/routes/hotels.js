@@ -3,6 +3,7 @@ const Hotel = require('../models/Hotel');
 const { authenticate, requireUser, requireHost } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 const { filterHotelsAI } = require('../services/aiAgent');
+const { normalizeHotels, normalizeHotel, getBaseUrlFromRequest } = require('../utils/imageUtils');
 
 const router = express.Router();
 
@@ -62,11 +63,15 @@ router.get('/ai-filtered', authenticate, requireUser, async (req, res) => {
       dateRange: fromDate && toDate ? { from: fromDate, to: toDate } : null
     });
 
+    // Normalize image URLs before sending response
+    const baseUrl = getBaseUrlFromRequest(req);
+    const normalizedHotels = normalizeHotels(filteredHotels, baseUrl);
+
     res.json({
-      hotels: filteredHotels,
+      hotels: normalizedHotels,
       aiFiltered: true,
       totalAvailable: allHotels.length,
-      filteredTo: filteredHotels.length
+      filteredTo: normalizedHotels.length
     });
   } catch (error) {
     console.error('Error in AI hotel filtering:', error);
@@ -139,8 +144,12 @@ router.get('/', async (req, res) => {
 
     const total = await Hotel.countDocuments(query);
 
+    // Normalize image URLs before sending response
+    const baseUrl = getBaseUrlFromRequest(req);
+    const normalizedHotels = normalizeHotels(hotels, baseUrl);
+
     res.json({
-      hotels,
+      hotels: normalizedHotels,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -165,7 +174,11 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Hotel not found' });
     }
 
-    res.json({ hotel });
+    // Normalize image URLs before sending response
+    const baseUrl = getBaseUrlFromRequest(req);
+    const normalizedHotel = normalizeHotel(hotel.toObject ? hotel.toObject() : hotel, baseUrl);
+
+    res.json({ hotel: normalizedHotel });
   } catch (error) {
     console.error('Error fetching hotel:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
