@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import api from '@/lib/api';
 import { INDIAN_STATES, DISTRICTS_BY_STATE } from '@/lib/indianStates';
+import { getImageUrl } from '@/lib/imageUtils';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
@@ -98,9 +99,8 @@ export default function EditExperiencePage() {
       });
       
       if (experience.imageUrl) {
-        const imageUrl = experience.imageUrl.startsWith('http') 
-          ? experience.imageUrl 
-          : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000'}${experience.imageUrl}`;
+        // Use centralized image utility for consistent URL handling
+        const imageUrl = getImageUrl(experience.imageUrl);
         setCurrentImageUrl(imageUrl);
       }
     } catch (err: any) {
@@ -219,7 +219,16 @@ export default function EditExperiencePage() {
       formDataToSend.append('title', formData.title);
       formDataToSend.append('description', formData.description);
       formDataToSend.append('location', JSON.stringify(formData.location));
-      formDataToSend.append('availableDates', JSON.stringify(formData.availableDates));
+      
+      // Format availableDates with time slots for backend (matching add page format)
+      const formattedDates = formData.availableDates.map((dateString: string) => ({
+        date: dateString,
+        startTime: '09:00', // Default start time
+        endTime: '17:00', // Default end time
+        available: true
+      }));
+      formDataToSend.append('availableDates', JSON.stringify(formattedDates));
+      
       formDataToSend.append('price', formData.price);
       formDataToSend.append('duration', formData.duration);
       formDataToSend.append('maxParticipants', formData.maxParticipants);
@@ -243,7 +252,17 @@ export default function EditExperiencePage() {
         router.push('/host/experiences');
       }, 2000);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to update experience. Please try again.');
+      console.error('Error updating experience:', err);
+      const errorMessage = err.response?.data?.message || 
+                          err.response?.data?.error || 
+                          err.message || 
+                          'Failed to update experience. Please try again.';
+      setError(errorMessage);
+      
+      // Log more details for debugging
+      if (err.response?.data) {
+        console.error('Error details:', err.response.data);
+      }
     } finally {
       setLoading(false);
     }
@@ -446,11 +465,19 @@ export default function EditExperiencePage() {
                       src={imagePreview || currentImageUrl || ''} 
                       alt="Preview" 
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Hide broken images and show placeholder
+                        e.currentTarget.style.display = 'none';
+                        const parent = e.currentTarget.parentElement;
+                        if (parent) {
+                          parent.innerHTML = '<div class="w-full h-64 bg-gradient-primary flex items-center justify-center"><span class="text-6xl">🎬</span></div>';
+                        }
+                      }}
                     />
                     <button
                       type="button"
                       onClick={handleRemoveImage}
-                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-colors"
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-colors z-10"
                     >
                       ×
                     </button>
