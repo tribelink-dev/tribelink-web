@@ -250,7 +250,7 @@ export default function ExperienceAnalyticsPage() {
                 <option value="all">All time</option>
               </select>
               <button
-                onClick={() => router.push('/provider/experiences')}
+                onClick={() => router.push('/host/dashboard')}
                 className="btn-secondary"
               >
                 ← Back to Dashboard

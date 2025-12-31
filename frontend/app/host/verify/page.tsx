@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { format } from 'date-fns';
 import { getImageUrl } from '@/lib/imageUtils';
+import HostSidebar from '@/components/HostSidebar';
 
 interface Ticket {
   _id: string;
@@ -180,18 +181,24 @@ export default function VerifyTicketsPage() {
 
   if (loading && tickets.length === 0) {
     return (
-      <div className="page-container flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-14 w-14 border-4 border-primary-500 border-t-transparent mb-6"></div>
-          <div className="text-xl font-medium text-gray-700">Loading tickets...</div>
+      <div className="min-h-screen bg-gray-50">
+        <HostSidebar />
+        <div className="lg:ml-72 flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-14 w-14 border-4 border-slate-600 border-t-transparent mb-6"></div>
+            <div className="text-xl font-medium text-gray-700">Loading tickets...</div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="page-container">
-      <div className="section-container max-w-7xl">
+    <div className="min-h-screen bg-gray-50">
+      <HostSidebar />
+      <div className="lg:ml-72">
+        <div className="p-6 md:p-8">
+          <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6">
@@ -454,7 +461,7 @@ export default function VerifyTicketsPage() {
             })}
           </div>
         )}
-      </div>
+        </div>
 
       {/* Search Modal */}
       {showSearchModal && (
@@ -512,6 +519,8 @@ export default function VerifyTicketsPage() {
           </div>
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 }

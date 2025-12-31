@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { DayPicker } from 'react-day-picker';
+import HostSidebar from '@/components/HostSidebar';
 
 interface AvailabilityEntry {
   date: string;
@@ -135,8 +136,11 @@ export default function AvailabilityPage() {
   nextMonth.setMonth(nextMonth.getMonth() + 2);
 
   return (
-    <div className="page-container">
-      <div className="section-container max-w-6xl">
+    <div className="min-h-screen bg-gray-50">
+      <HostSidebar />
+      <div className="lg:ml-72">
+        <div className="p-6 md:p-8">
+          <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
@@ -310,6 +314,8 @@ export default function AvailabilityPage() {
               </>
             )}
           </button>
+        </div>
+          </div>
         </div>
       </div>
     </div>

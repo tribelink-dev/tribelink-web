@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
+import HostSidebar from '@/components/HostSidebar';
 
 interface Booking {
   _id: string;
@@ -136,10 +137,13 @@ export default function HostAnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="page-container flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary-500 border-t-transparent mb-4"></div>
-          <div className="text-xl font-medium text-gray-700">Loading analytics...</div>
+      <div className="min-h-screen bg-gray-50">
+        <HostSidebar />
+        <div className="lg:ml-72 flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-slate-600 border-t-transparent mb-4"></div>
+            <div className="text-xl font-medium text-gray-700">Loading analytics...</div>
+          </div>
         </div>
       </div>
     );
@@ -148,8 +152,11 @@ export default function HostAnalyticsPage() {
   const analytics = calculateAnalytics();
 
   return (
-    <div className="page-container">
-      <div className="section-container max-w-7xl">
+    <div className="min-h-screen bg-gray-50">
+      <HostSidebar />
+      <div className="lg:ml-72">
+        <div className="p-6 md:p-8">
+          <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
@@ -288,6 +295,8 @@ export default function HostAnalyticsPage() {
             </button>
           </div>
         )}
+          </div>
+        </div>
       </div>
     </div>
   );

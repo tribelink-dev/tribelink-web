@@ -42,6 +42,9 @@ export default function AddExperiencePage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [rangeMode, setRangeMode] = useState(false);
+  const [rangeStart, setRangeStart] = useState<Date | undefined>(undefined);
+  const [rangeEnd, setRangeEnd] = useState<Date | undefined>(undefined);
 
   // Get districts for selected state
   const availableDistricts = formData.location.state ? (DISTRICTS_BY_STATE[formData.location.state] || []) : [];
@@ -83,21 +86,31 @@ export default function AddExperiencePage() {
     setImagePreview(null);
   };
 
+  // Helper function to get date string in local timezone (YYYY-MM-DD)
+  const getLocalDateString = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const handleDateSelect = (date: Date | undefined) => {
     if (!date) return;
     
-    const dateString = date.toISOString().split('T')[0];
-    const dateOnly = new Date(dateString);
+    // Use local date string to avoid timezone issues
+    const dateString = getLocalDateString(date);
+    // Create a new date object at midnight local time
+    const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     
     // Check if date is already selected
     const isSelected = selectedDates.some(d => 
-      d.toISOString().split('T')[0] === dateString
+      getLocalDateString(d) === dateString
     );
     
     if (isSelected) {
       // Remove date if already selected
       const newDates = selectedDates.filter(d => 
-        d.toISOString().split('T')[0] !== dateString
+        getLocalDateString(d) !== dateString
       );
       setSelectedDates(newDates);
       
@@ -162,7 +175,7 @@ export default function AddExperiencePage() {
 
   const handleRemoveDate = (dateString: string) => {
     setSelectedDates(selectedDates.filter(d => 
-      d.toISOString().split('T')[0] !== dateString
+      getLocalDateString(d) !== dateString
     ));
     
     const newSlots = { ...dateTimeSlots };
@@ -173,6 +186,202 @@ export default function AddExperiencePage() {
       ...formData,
       availableDates: formData.availableDates.filter(d => d.date !== dateString)
     });
+  };
+
+  // Helper function to add dates with default time slots
+  const addDatesWithDefaults = (dates: Date[]) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const validDates = dates.filter(d => {
+      const dateOnly = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      return dateOnly >= today;
+    });
+
+    const newDateStrings = validDates.map(d => getLocalDateString(d));
+    const existingDateStrings = selectedDates.map(d => getLocalDateString(d));
+    const datesToAdd = validDates.filter(d => {
+      const dateStr = getLocalDateString(d);
+      return !existingDateStrings.includes(dateStr);
+    });
+
+    if (datesToAdd.length === 0) return;
+
+    // Add new dates
+    const updatedDates = [...selectedDates, ...datesToAdd].sort((a, b) => a.getTime() - b.getTime());
+    setSelectedDates(updatedDates);
+
+    // Add time slots and available dates
+    const newSlots = { ...dateTimeSlots };
+    const newAvailableDates = [...formData.availableDates];
+
+    datesToAdd.forEach(date => {
+      const dateStr = getLocalDateString(date);
+      newSlots[dateStr] = { startTime: '09:00', endTime: '17:00' };
+      newAvailableDates.push({
+        date: dateStr,
+        startTime: '09:00',
+        endTime: '17:00',
+        available: true
+      });
+    });
+
+    setDateTimeSlots(newSlots);
+    setFormData({
+      ...formData,
+      availableDates: newAvailableDates.sort((a, b) => a.date.localeCompare(b.date))
+    });
+  };
+
+  // Quick selection functions
+  const selectDateRange = (type: string) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dates: Date[] = [];
+
+    switch (type) {
+      case 'weekends':
+        // All weekends (Saturdays and Sundays) for next 6 months
+        for (let i = 0; i < 180; i++) {
+          const date = new Date(today);
+          date.setDate(today.getDate() + i);
+          const dayOfWeek = date.getDay();
+          if (dayOfWeek === 0 || dayOfWeek === 6) { // Sunday or Saturday
+            dates.push(new Date(date));
+          }
+        }
+        break;
+
+      case 'weekdays':
+        // All weekdays (Monday-Friday) for next 6 months
+        for (let i = 0; i < 180; i++) {
+          const date = new Date(today);
+          date.setDate(today.getDate() + i);
+          const dayOfWeek = date.getDay();
+          if (dayOfWeek >= 1 && dayOfWeek <= 5) { // Monday to Friday
+            dates.push(new Date(date));
+          }
+        }
+        break;
+
+      case 'sundays':
+        // All Sundays for next 6 months
+        for (let i = 0; i < 180; i++) {
+          const date = new Date(today);
+          date.setDate(today.getDate() + i);
+          if (date.getDay() === 0) { // Sunday
+            dates.push(new Date(date));
+          }
+        }
+        break;
+
+      case 'saturdays':
+        // All Saturdays for next 6 months
+        for (let i = 0; i < 180; i++) {
+          const date = new Date(today);
+          date.setDate(today.getDate() + i);
+          if (date.getDay() === 6) { // Saturday
+            dates.push(new Date(date));
+          }
+        }
+        break;
+
+      case 'mondays':
+        // All Mondays for next 6 months
+        for (let i = 0; i < 180; i++) {
+          const date = new Date(today);
+          date.setDate(today.getDate() + i);
+          if (date.getDay() === 1) { // Monday
+            dates.push(new Date(date));
+          }
+        }
+        break;
+
+      case 'fridays':
+        // All Fridays for next 6 months
+        for (let i = 0; i < 180; i++) {
+          const date = new Date(today);
+          date.setDate(today.getDate() + i);
+          if (date.getDay() === 5) { // Friday
+            dates.push(new Date(date));
+          }
+        }
+        break;
+
+      case 'next30':
+        // Next 30 days
+        for (let i = 0; i < 30; i++) {
+          const date = new Date(today);
+          date.setDate(today.getDate() + i);
+          dates.push(new Date(date));
+        }
+        break;
+
+      case 'next60':
+        // Next 60 days
+        for (let i = 0; i < 60; i++) {
+          const date = new Date(today);
+          date.setDate(today.getDate() + i);
+          dates.push(new Date(date));
+        }
+        break;
+
+      case 'thismonth':
+        // All days in current month
+        const currentMonth = today.getMonth();
+        const currentYear = today.getFullYear();
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        for (let day = today.getDate(); day <= daysInMonth; day++) {
+          const date = new Date(currentYear, currentMonth, day);
+          dates.push(new Date(date));
+        }
+        break;
+
+      case 'nextmonth':
+        // All days in next month
+        const nextMonth = today.getMonth() + 1;
+        const nextYear = today.getFullYear();
+        if (nextMonth === 12) {
+          const daysInNextMonth = new Date(nextYear + 1, 1, 0).getDate();
+          for (let day = 1; day <= daysInNextMonth; day++) {
+            const date = new Date(nextYear + 1, 0, day);
+            dates.push(new Date(date));
+          }
+        } else {
+          const daysInNextMonth = new Date(nextYear, nextMonth + 1, 0).getDate();
+          for (let day = 1; day <= daysInNextMonth; day++) {
+            const date = new Date(nextYear, nextMonth, day);
+            dates.push(new Date(date));
+          }
+        }
+        break;
+    }
+
+    addDatesWithDefaults(dates);
+  };
+
+  // Apply date range
+  const applyDateRange = () => {
+    if (!rangeStart || !rangeEnd) return;
+    applyDateRangeWithDates(rangeStart, rangeEnd);
+  };
+
+  const applyDateRangeWithDates = (start: Date, end: Date) => {
+    const dates: Date[] = [];
+    const current = new Date(start);
+    current.setHours(0, 0, 0, 0);
+    const endDate = new Date(end);
+    endDate.setHours(0, 0, 0, 0);
+
+    while (current <= endDate) {
+      dates.push(new Date(current));
+      current.setDate(current.getDate() + 1);
+    }
+
+    addDatesWithDefaults(dates);
+    setRangeStart(undefined);
+    setRangeEnd(undefined);
+    setRangeMode(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -632,33 +841,202 @@ export default function AddExperiencePage() {
                 </div>
               </div>
 
-              {/* Modern Calendar */}
+              {/* Quick Selection Options */}
               <div className="bg-white rounded-xl p-4 md:p-6 shadow-medium border border-gray-200 mb-6">
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Quick Selection Options</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => selectDateRange('weekends')}
+                      className="px-3 py-2 text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-all hover:shadow-sm"
+                    >
+                      All Weekends
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => selectDateRange('weekdays')}
+                      className="px-3 py-2 text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-all hover:shadow-sm"
+                    >
+                      All Weekdays
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => selectDateRange('sundays')}
+                      className="px-3 py-2 text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-all hover:shadow-sm"
+                    >
+                      All Sundays
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => selectDateRange('saturdays')}
+                      className="px-3 py-2 text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-all hover:shadow-sm"
+                    >
+                      All Saturdays
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => selectDateRange('next30')}
+                      className="px-3 py-2 text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-all hover:shadow-sm"
+                    >
+                      Next 30 Days
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => selectDateRange('next60')}
+                      className="px-3 py-2 text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-all hover:shadow-sm"
+                    >
+                      Next 60 Days
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => selectDateRange('thismonth')}
+                      className="px-3 py-2 text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-all hover:shadow-sm"
+                    >
+                      This Month
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => selectDateRange('nextmonth')}
+                      className="px-3 py-2 text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-all hover:shadow-sm"
+                    >
+                      Next Month
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => selectDateRange('mondays')}
+                      className="px-3 py-2 text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-all hover:shadow-sm"
+                    >
+                      All Mondays
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => selectDateRange('fridays')}
+                      className="px-3 py-2 text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-all hover:shadow-sm"
+                    >
+                      All Fridays
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedDates([]);
+                        setFormData(prev => ({ ...prev, availableDates: [] }));
+                        setDateTimeSlots({});
+                      }}
+                      className="px-3 py-2 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-all hover:shadow-sm"
+                    >
+                      Clear All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRangeMode(!rangeMode)}
+                      className={`px-3 py-2 text-xs font-medium rounded-lg transition-all hover:shadow-sm ${
+                        rangeMode 
+                          ? 'bg-indigo-600 text-white border border-indigo-600 hover:bg-indigo-700' 
+                          : 'text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                      }`}
+                    >
+                      {rangeMode ? '✓ Range Mode' : 'Range Mode'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Date Range Picker (when range mode is enabled) */}
+                {rangeMode && (
+                  <div className="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Select Date Range
+                    </label>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <div className="flex-1">
+                        <label className="block text-xs text-gray-600 mb-1">Start Date</label>
+                        <input
+                          type="date"
+                          value={rangeStart ? getLocalDateString(rangeStart) : ''}
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              const date = new Date(e.target.value);
+                              setRangeStart(date);
+                            }
+                          }}
+                          min={getLocalDateString(new Date())}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-xs text-gray-600 mb-1">End Date</label>
+                        <input
+                          type="date"
+                          value={rangeEnd ? getLocalDateString(rangeEnd) : ''}
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              const date = new Date(e.target.value);
+                              setRangeEnd(date);
+                            }
+                          }}
+                          min={rangeStart ? getLocalDateString(rangeStart) : getLocalDateString(new Date())}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <button
+                          type="button"
+                          onClick={applyDateRange}
+                          disabled={!rangeStart || !rangeEnd}
+                          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium text-sm"
+                        >
+                          Apply Range
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Modern Calendar */}
                 {isClient && (
                   <DayPicker
-                    mode="multiple"
-                    selected={selectedDates}
+                    mode={rangeMode ? "range" : "multiple"}
+                    selected={rangeMode ? (rangeStart && rangeEnd ? { from: rangeStart, to: rangeEnd } : rangeStart ? { from: rangeStart } : undefined) : selectedDates}
                     onSelect={(dates) => {
-                      if (dates) {
-                        // Handle multiple date selection
-                        const dateStrings = dates.map(d => d.toISOString().split('T')[0]);
-                        const currentDateStrings = selectedDates.map(d => d.toISOString().split('T')[0]);
+                      if (rangeMode) {
+                        // Handle range selection
+                        if (dates && 'from' in dates) {
+                          if (dates.from && !dates.to) {
+                            setRangeStart(dates.from);
+                            setRangeEnd(undefined);
+                          } else if (dates.from && dates.to) {
+                            setRangeStart(dates.from);
+                            setRangeEnd(dates.to);
+                            // Auto-apply range when both dates are selected
+                            setTimeout(() => applyDateRangeWithDates(dates.from, dates.to), 100);
+                          }
+                        }
+                        return;
+                      }
+                      
+                      // Handle multiple date selection
+                      if (dates && Array.isArray(dates)) {
+                        // Handle multiple date selection using local date strings
+                        const dateStrings = dates.map(d => getLocalDateString(d));
+                        const currentDateStrings = selectedDates.map(d => getLocalDateString(d));
                         
                         // Find newly added dates
                         const newDates = dates.filter(d => {
-                          const dateStr = d.toISOString().split('T')[0];
+                          const dateStr = getLocalDateString(d);
                           return !currentDateStrings.includes(dateStr);
                         });
                         
                         // Find removed dates
                         const removedDates = selectedDates.filter(d => {
-                          const dateStr = d.toISOString().split('T')[0];
+                          const dateStr = getLocalDateString(d);
                           return !dateStrings.includes(dateStr);
                         });
                         
                         // Add new dates with default time slots
                         newDates.forEach(date => {
-                          const dateStr = date.toISOString().split('T')[0];
+                          const dateStr = getLocalDateString(date);
+                          // Create date at midnight local time
+                          const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
                           setDateTimeSlots(prev => ({
                             ...prev,
                             [dateStr]: { startTime: '09:00', endTime: '17:00' }
@@ -679,7 +1057,7 @@ export default function AddExperiencePage() {
                         
                         // Remove deleted dates
                         removedDates.forEach(date => {
-                          const dateStr = date.toISOString().split('T')[0];
+                          const dateStr = getLocalDateString(date);
                           setDateTimeSlots(prev => {
                             const newSlots = { ...prev };
                             delete newSlots[dateStr];
@@ -691,7 +1069,11 @@ export default function AddExperiencePage() {
                           }));
                         });
                         
-                        setSelectedDates(dates);
+                        // Update selectedDates with properly normalized dates
+                        const normalizedDates = dates.map(d => 
+                          new Date(d.getFullYear(), d.getMonth(), d.getDate())
+                        );
+                        setSelectedDates(normalizedDates);
                       }
                     }}
                     disabled={{ before: new Date(new Date().setHours(0, 0, 0, 0)) }}

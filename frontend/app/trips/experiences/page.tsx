@@ -635,11 +635,11 @@ export default function ExperiencesPage() {
                   }`}
                 >
                   {imageUrl ? (
-                    <div className="w-full h-48 bg-gray-100 flex items-center justify-center overflow-hidden">
+                    <div className="w-full aspect-video bg-gray-100 flex items-center justify-center overflow-hidden">
                       <img 
                         src={imageUrl} 
                         alt={experience.title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
                         onError={(e) => {
                           // Log error for debugging
                           console.error('[Image Load Error]', {
@@ -654,20 +654,20 @@ export default function ExperiencesPage() {
                           // Show placeholder if parent div exists
                           const parent = e.currentTarget.parentElement;
                           if (parent) {
-                            parent.innerHTML = '<div class="w-full h-48 bg-gradient-primary flex items-center justify-center"><span class="text-6xl">🎬</span></div>';
+                            parent.innerHTML = '<div class="w-full aspect-video bg-gradient-primary flex items-center justify-center"><span class="text-6xl">🎬</span></div>';
                           }
                         }}
                       />
                     </div>
                   ) : experience.contentUrl ? (
-                    <div className="w-full h-48 bg-gray-100 flex items-center justify-center overflow-hidden">
-                      <video className="w-full h-full object-cover" controls>
+                    <div className="w-full aspect-video bg-gray-100 flex items-center justify-center overflow-hidden">
+                      <video className="w-full h-full object-contain" controls>
                         <source src={experience.contentUrl} />
                         Your browser does not support video.
                       </video>
                     </div>
                   ) : (
-                    <div className="w-full h-48 bg-gradient-primary flex items-center justify-center">
+                    <div className="w-full aspect-video bg-gradient-primary flex items-center justify-center">
                       <span className="text-6xl">🎬</span>
                     </div>
                   )}

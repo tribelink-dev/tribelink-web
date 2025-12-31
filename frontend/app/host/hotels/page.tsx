@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { INDIAN_STATES, DISTRICTS_BY_STATE } from '@/lib/indianStates';
 import { getImageUrl } from '@/lib/imageUtils';
+import HostSidebar from '@/components/HostSidebar';
 
 interface Hotel {
   _id: string;
@@ -110,8 +111,11 @@ export default function HostHotelsPage() {
   }
 
   return (
-    <div className="page-container">
-      <div className="section-container max-w-7xl">
+    <div className="min-h-screen bg-gray-50">
+      <HostSidebar />
+      <div className="lg:ml-72">
+        <div className="p-6 md:p-8">
+          <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
             <h1 className="heading-secondary text-gray-900 mb-2">
@@ -196,24 +200,24 @@ export default function HostHotelsPage() {
               const imageUrl = mainImage ? getImageUrl(mainImage.url) : null;
               
               return (
-                <div key={hotel._id} className="card-professional card-hover overflow-hidden">
+                <div key={hotel._id} className="card-professional card-hover overflow-hidden flex flex-col">
                   {imageUrl ? (
-                    <div className="w-full h-48 bg-gray-100 flex items-center justify-center overflow-hidden">
+                    <div className="w-full aspect-video bg-gray-100 flex items-center justify-center overflow-hidden">
                       <img 
                         src={imageUrl} 
                         alt={hotel.name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
                       />
                     </div>
                   ) : (
-                    <div className="w-full h-48 bg-gradient-primary flex items-center justify-center">
+                    <div className="w-full aspect-video bg-gradient-primary flex items-center justify-center">
                       <span className="text-6xl">🏨</span>
                     </div>
                   )}
-                  <div className="p-6">
+                  <div className="p-6 flex-1 flex flex-col">
                     <h3 className="text-xl font-bold mb-2 text-gray-900">{hotel.name}</h3>
                     {hotel.description && (
-                      <p className="text-gray-600 text-sm mb-4 line-clamp-2 h-10">{hotel.description}</p>
+                      <p className="text-gray-600 text-sm mb-4 line-clamp-2 min-h-[2.5rem]">{hotel.description}</p>
                     )}
                     
                     <div className="space-y-2 mb-4 pb-4 border-b border-gray-200">
@@ -277,6 +281,8 @@ export default function HostHotelsPage() {
             })}
           </div>
         )}
+          </div>
+        </div>
       </div>
     </div>
   );
