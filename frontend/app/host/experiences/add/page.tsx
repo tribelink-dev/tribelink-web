@@ -994,11 +994,12 @@ export default function AddExperiencePage() {
 
                 {/* Modern Calendar */}
                 {isClient && (
-                  <DayPicker
-                    mode={rangeMode ? "range" : "multiple"}
-                    selected={rangeMode ? (rangeStart && rangeEnd ? { from: rangeStart, to: rangeEnd } : rangeStart ? { from: rangeStart } : undefined) : selectedDates}
-                    onSelect={(dates) => {
-                      if (rangeMode) {
+                  rangeMode ? (
+                    <DayPicker
+                      mode="range"
+                      required={false}
+                      selected={rangeStart && rangeEnd ? { from: rangeStart, to: rangeEnd } : rangeStart ? { from: rangeStart } : undefined}
+                      onSelect={(dates) => {
                         // Handle range selection
                         if (dates && 'from' in dates) {
                           if (dates.from && !dates.to) {
@@ -1011,102 +1012,137 @@ export default function AddExperiencePage() {
                             setTimeout(() => applyDateRangeWithDates(dates.from, dates.to), 100);
                           }
                         }
-                        return;
-                      }
-                      
-                      // Handle multiple date selection
-                      if (dates && Array.isArray(dates)) {
-                        // Handle multiple date selection using local date strings
-                        const dateStrings = dates.map(d => getLocalDateString(d));
-                        const currentDateStrings = selectedDates.map(d => getLocalDateString(d));
-                        
-                        // Find newly added dates
-                        const newDates = dates.filter(d => {
-                          const dateStr = getLocalDateString(d);
-                          return !currentDateStrings.includes(dateStr);
-                        });
-                        
-                        // Find removed dates
-                        const removedDates = selectedDates.filter(d => {
-                          const dateStr = getLocalDateString(d);
-                          return !dateStrings.includes(dateStr);
-                        });
-                        
-                        // Add new dates with default time slots
-                        newDates.forEach(date => {
-                          const dateStr = getLocalDateString(date);
-                          // Create date at midnight local time
-                          const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-                          setDateTimeSlots(prev => ({
-                            ...prev,
-                            [dateStr]: { startTime: '09:00', endTime: '17:00' }
-                          }));
-                          setFormData(prev => ({
-                            ...prev,
-                            availableDates: [
-                              ...prev.availableDates,
-                              {
-                                date: dateStr,
-                                startTime: '09:00',
-                                endTime: '17:00',
-                                available: true
-                              }
-                            ].sort((a, b) => a.date.localeCompare(b.date))
-                          }));
-                        });
-                        
-                        // Remove deleted dates
-                        removedDates.forEach(date => {
-                          const dateStr = getLocalDateString(date);
-                          setDateTimeSlots(prev => {
-                            const newSlots = { ...prev };
-                            delete newSlots[dateStr];
-                            return newSlots;
+                      }}
+                      disabled={{ before: new Date(new Date().setHours(0, 0, 0, 0)) }}
+                      numberOfMonths={typeof window !== 'undefined' && window.innerWidth >= 768 ? 2 : 1}
+                      className="rdp-calendar"
+                      classNames={{
+                        months: 'flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0',
+                        month: 'space-y-4',
+                        caption: 'flex justify-center pt-1 relative items-center mb-4',
+                        caption_label: 'text-lg font-bold text-gray-900',
+                        nav: 'space-x-1 flex items-center',
+                        nav_button: 'h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 hover:bg-primary-50 rounded-lg transition-all cursor-pointer',
+                        nav_button_previous: 'absolute left-1',
+                        nav_button_next: 'absolute right-1',
+                        table: 'w-full border-collapse space-y-1',
+                        head_row: 'flex mb-2',
+                        head_cell: 'text-gray-500 rounded-md w-10 font-semibold text-sm',
+                        row: 'flex w-full mt-2',
+                        cell: 'text-center text-sm p-0 relative',
+                        day: 'h-10 w-10 p-0 font-normal rounded-lg transition-all cursor-pointer',
+                        day_selected: 'bg-primary-500 text-white hover:bg-primary-600 hover:text-white focus:bg-primary-500 focus:text-white font-semibold',
+                        day_today: 'bg-blue-100 text-blue-900 font-semibold',
+                        day_outside: 'text-gray-400 opacity-50',
+                        day_disabled: 'text-gray-300 opacity-50 cursor-not-allowed',
+                        day_hidden: 'invisible',
+                      }}
+                      styles={{
+                        months: { display: 'flex', gap: '1rem' },
+                        month: { margin: 0 },
+                        caption: { position: 'relative', paddingTop: '0.5rem' },
+                        nav: { display: 'flex', gap: '0.25rem' },
+                      }}
+                    />
+                  ) : (
+                    <DayPicker
+                      mode="multiple"
+                      selected={selectedDates}
+                      onSelect={(dates) => {
+                        // Handle multiple date selection
+                        if (dates && Array.isArray(dates)) {
+                          // Handle multiple date selection using local date strings
+                          const dateStrings = dates.map(d => getLocalDateString(d));
+                          const currentDateStrings = selectedDates.map(d => getLocalDateString(d));
+                          
+                          // Find newly added dates
+                          const newDates = dates.filter(d => {
+                            const dateStr = getLocalDateString(d);
+                            return !currentDateStrings.includes(dateStr);
                           });
-                          setFormData(prev => ({
-                            ...prev,
-                            availableDates: prev.availableDates.filter(d => d.date !== dateStr)
-                          }));
-                        });
-                        
-                        // Update selectedDates with properly normalized dates
-                        const normalizedDates = dates.map(d => 
-                          new Date(d.getFullYear(), d.getMonth(), d.getDate())
-                        );
-                        setSelectedDates(normalizedDates);
-                      }
-                    }}
-                    disabled={{ before: new Date(new Date().setHours(0, 0, 0, 0)) }}
-                    numberOfMonths={typeof window !== 'undefined' && window.innerWidth >= 768 ? 2 : 1}
-                    className="rdp-calendar"
-                    classNames={{
-                      months: 'flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0',
-                      month: 'space-y-4',
-                      caption: 'flex justify-center pt-1 relative items-center mb-4',
-                      caption_label: 'text-lg font-bold text-gray-900',
-                      nav: 'space-x-1 flex items-center',
-                      nav_button: 'h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 hover:bg-primary-50 rounded-lg transition-all cursor-pointer',
-                      nav_button_previous: 'absolute left-1',
-                      nav_button_next: 'absolute right-1',
-                      table: 'w-full border-collapse space-y-1',
-                      head_row: 'flex mb-2',
-                      head_cell: 'text-gray-500 rounded-md w-10 font-semibold text-sm',
-                      row: 'flex w-full mt-2',
-                      cell: 'text-center text-sm p-0 relative',
-                      day: 'h-10 w-10 p-0 font-normal rounded-lg transition-all cursor-pointer',
-                      day_selected: 'bg-primary-500 text-white hover:bg-primary-600 hover:text-white focus:bg-primary-500 focus:text-white font-semibold',
-                      day_today: 'bg-blue-100 text-blue-900 font-semibold',
-                      day_outside: 'text-gray-400 opacity-50',
-                      day_disabled: 'text-gray-300 opacity-50 cursor-not-allowed',
-                      day_hidden: 'invisible',
-                    }}
-                    styles={{
-                      months: { display: 'flex', gap: '1rem' },
-                      month: { margin: 0 },
-                      caption: { position: 'relative', paddingTop: '0.5rem' },
-                      nav: { display: 'flex', gap: '0.25rem' },
-                    }}
-                  />
+                          
+                          // Find removed dates
+                          const removedDates = selectedDates.filter(d => {
+                            const dateStr = getLocalDateString(d);
+                            return !dateStrings.includes(dateStr);
+                          });
+                          
+                          // Add new dates with default time slots
+                          newDates.forEach(date => {
+                            const dateStr = getLocalDateString(date);
+                            // Create date at midnight local time
+                            const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+                            setDateTimeSlots(prev => ({
+                              ...prev,
+                              [dateStr]: { startTime: '09:00', endTime: '17:00' }
+                            }));
+                            setFormData(prev => ({
+                              ...prev,
+                              availableDates: [
+                                ...prev.availableDates,
+                                {
+                                  date: dateStr,
+                                  startTime: '09:00',
+                                  endTime: '17:00',
+                                  available: true
+                                }
+                              ].sort((a, b) => a.date.localeCompare(b.date))
+                            }));
+                          });
+                          
+                          // Remove deleted dates
+                          removedDates.forEach(date => {
+                            const dateStr = getLocalDateString(date);
+                            setDateTimeSlots(prev => {
+                              const newSlots = { ...prev };
+                              delete newSlots[dateStr];
+                              return newSlots;
+                            });
+                            setFormData(prev => ({
+                              ...prev,
+                              availableDates: prev.availableDates.filter(d => d.date !== dateStr)
+                            }));
+                          });
+                          
+                          // Update selectedDates with properly normalized dates
+                          const normalizedDates = dates.map(d => 
+                            new Date(d.getFullYear(), d.getMonth(), d.getDate())
+                          );
+                          setSelectedDates(normalizedDates);
+                        }
+                      }}
+                      disabled={{ before: new Date(new Date().setHours(0, 0, 0, 0)) }}
+                      numberOfMonths={typeof window !== 'undefined' && window.innerWidth >= 768 ? 2 : 1}
+                      className="rdp-calendar"
+                      classNames={{
+                        months: 'flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0',
+                        month: 'space-y-4',
+                        caption: 'flex justify-center pt-1 relative items-center mb-4',
+                        caption_label: 'text-lg font-bold text-gray-900',
+                        nav: 'space-x-1 flex items-center',
+                        nav_button: 'h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 hover:bg-primary-50 rounded-lg transition-all cursor-pointer',
+                        nav_button_previous: 'absolute left-1',
+                        nav_button_next: 'absolute right-1',
+                        table: 'w-full border-collapse space-y-1',
+                        head_row: 'flex mb-2',
+                        head_cell: 'text-gray-500 rounded-md w-10 font-semibold text-sm',
+                        row: 'flex w-full mt-2',
+                        cell: 'text-center text-sm p-0 relative',
+                        day: 'h-10 w-10 p-0 font-normal rounded-lg transition-all cursor-pointer',
+                        day_selected: 'bg-primary-500 text-white hover:bg-primary-600 hover:text-white focus:bg-primary-500 focus:text-white font-semibold',
+                        day_today: 'bg-blue-100 text-blue-900 font-semibold',
+                        day_outside: 'text-gray-400 opacity-50',
+                        day_disabled: 'text-gray-300 opacity-50 cursor-not-allowed',
+                        day_hidden: 'invisible',
+                      }}
+                      styles={{
+                        months: { display: 'flex', gap: '1rem' },
+                        month: { margin: 0 },
+                        caption: { position: 'relative', paddingTop: '0.5rem' },
+                        nav: { display: 'flex', gap: '0.25rem' },
+                      }}
+                    />
+                  )
                 )}
               </div>
 
