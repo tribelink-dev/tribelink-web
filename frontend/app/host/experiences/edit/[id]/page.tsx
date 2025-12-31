@@ -253,16 +253,31 @@ export default function EditExperiencePage() {
       }, 2000);
     } catch (err: any) {
       console.error('Error updating experience:', err);
-      const errorMessage = err.response?.data?.message || 
-                          err.response?.data?.error || 
-                          err.message || 
-                          'Failed to update experience. Please try again.';
-      setError(errorMessage);
+      console.error('Full error response:', err.response?.data);
       
-      // Log more details for debugging
+      let errorMessage = 'Failed to update experience. Please try again.';
+      
       if (err.response?.data) {
-        console.error('Error details:', err.response.data);
+        const errorData = err.response.data;
+        
+        // Handle validation errors with details
+        if (errorData.errors && Array.isArray(errorData.errors)) {
+          errorMessage = `Validation errors:\n${errorData.errors.join('\n')}`;
+        } else if (errorData.details && Array.isArray(errorData.details)) {
+          const detailMessages = errorData.details.map((d: any) => 
+            `${d.field || 'Field'}: ${d.message || d}`
+          ).join('\n');
+          errorMessage = `Validation errors:\n${detailMessages}`;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
       }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -307,7 +322,7 @@ export default function EditExperiencePage() {
           {error && (
             <div className="alert-error mb-6">
               <span className="text-lg">⚠️</span>
-              <span className="flex-1">{error}</span>
+              <span className="flex-1 whitespace-pre-line">{error}</span>
             </div>
           )}
 

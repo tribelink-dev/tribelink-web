@@ -48,21 +48,65 @@ router.post('/availability', authenticate, requireHost, async (req, res) => {
 // Get host's experiences
 router.get('/experiences', authenticate, requireHost, async (req, res) => {
   try {
+    console.log('[GET /hosts/experiences] User ID:', req.user._id);
+    
     const host = await Host.findById(req.user._id).populate('experiences');
     
+    if (!host) {
+      console.error('[GET /hosts/experiences] Host not found for user:', req.user._id);
+      return res.status(404).json({ message: 'Host not found' });
+    }
+    
+    console.log('[GET /hosts/experiences] Host found, experiences count:', host.experiences?.length || 0);
+    
     // Normalize image URLs before sending response
-    const baseUrl = getBaseUrlFromRequest(req);
+    let baseUrl;
+    try {
+      baseUrl = getBaseUrlFromRequest(req);
+      console.log('[GET /hosts/experiences] Base URL:', baseUrl);
+    } catch (urlError) {
+      console.error('[GET /hosts/experiences] Error getting base URL:', urlError);
+      baseUrl = null; // Continue without normalization if URL detection fails
+    }
+    
     const experiences = host.experiences || [];
-    const normalizedExperiences = normalizeExperiences(
-      experiences.map(exp => exp.toObject ? exp.toObject() : exp),
-      baseUrl
-    );
+    console.log('[GET /hosts/experiences] Raw experiences count:', experiences.length);
+    
+    // Convert Mongoose documents to plain objects
+    const experiencesArray = experiences.map(exp => {
+      try {
+        return exp.toObject ? exp.toObject() : exp;
+      } catch (convertError) {
+        console.error('[GET /hosts/experiences] Error converting experience to object:', convertError);
+        // Return as-is if conversion fails
+        return typeof exp === 'object' ? exp : {};
+      }
+    });
+    
+    console.log('[GET /hosts/experiences] Converted experiences count:', experiencesArray.length);
+    
+    // Normalize experiences
+    let normalizedExperiences;
+    try {
+      normalizedExperiences = normalizeExperiences(experiencesArray, baseUrl);
+      console.log('[GET /hosts/experiences] Normalized experiences count:', normalizedExperiences.length);
+    } catch (normalizeError) {
+      console.error('[GET /hosts/experiences] Error normalizing experiences:', normalizeError);
+      // Return experiences without normalization if it fails
+      normalizedExperiences = experiencesArray;
+    }
     
     res.json({
       experiences: normalizedExperiences
     });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('[GET /hosts/experiences] Unexpected error:', error);
+    console.error('[GET /hosts/experiences] Error stack:', error.stack);
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error.message,
+      ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+    });
   }
 });
 
@@ -309,14 +353,29 @@ router.delete('/experience/:experienceId', authenticate, requireHost, async (req
 // Update experience with image upload
 router.put('/experience/:experienceId', authenticate, requireHost, upload.single('image'), async (req, res) => {
   try {
+    console.log('=== Update Experience Request ===');
+    console.log('Experience ID:', req.params.experienceId);
+    console.log('User ID:', req.user._id);
+    console.log('Request body keys:', Object.keys(req.body));
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    console.log('Has file:', !!req.file);
+    
     const experience = await Experience.findOne({
       _id: req.params.experienceId,
       provider: req.user._id
     });
 
     if (!experience) {
+      console.log('Experience not found or not owned by user');
       return res.status(404).json({ message: 'Experience not found' });
     }
+
+    console.log('Current experience:', {
+      title: experience.title,
+      price: experience.price,
+      location: experience.location,
+      availableDatesCount: experience.availableDates?.length
+    });
 
     const {
       title,
@@ -328,57 +387,232 @@ router.put('/experience/:experienceId', authenticate, requireHost, upload.single
       duration,
       maxParticipants
     } = req.body;
+    
+    console.log('Parsed fields:', {
+      title: title,
+      hasDescription: !!description,
+      hasLocation: !!location,
+      hasAvailableDates: !!availableDates,
+      price: price,
+      duration: duration,
+      maxParticipants: maxParticipants
+    });
 
-    // Update fields
-    if (title) experience.title = title.trim();
-    if (description) experience.description = description.trim();
+    // Update fields - ensure required fields are never empty
+    if (title !== undefined && title !== null && title !== '') {
+      const trimmedTitle = String(title).trim();
+      if (trimmedTitle === '') {
+        return res.status(400).json({ message: 'Title cannot be empty' });
+      }
+      experience.title = trimmedTitle;
+    }
+    if (description !== undefined && description !== null && description !== '') {
+      const trimmedDescription = String(description).trim();
+      if (trimmedDescription === '') {
+        return res.status(400).json({ message: 'Description cannot be empty' });
+      }
+      experience.description = trimmedDescription;
+    }
     if (location) {
-      const locationData = typeof location === 'string' ? JSON.parse(location) : location;
-      experience.location = {
-        country: (locationData.country || experience.location.country || '').trim(),
-        state: (locationData.state || experience.location.state || '').trim(),
-        district: (locationData.district || experience.location.district || '').trim(),
-        coordinates: locationData.coordinates || experience.location.coordinates || {}
-      };
+      try {
+        const locationData = typeof location === 'string' ? JSON.parse(location) : location;
+        
+        // Ensure required location fields are present
+        const newCountry = (locationData.country || experience.location?.country || '').trim();
+        const newState = (locationData.state || experience.location?.state || '').trim();
+        const newDistrict = (locationData.district || experience.location?.district || '').trim();
+        
+        if (!newCountry || !newState || !newDistrict) {
+          return res.status(400).json({ 
+            message: 'Location must include country, state, and district',
+            received: { country: newCountry, state: newState, district: newDistrict }
+          });
+        }
+        
+        // Handle coordinates - ensure it's an object, not undefined
+        let coordinates = {};
+        if (locationData.coordinates && typeof locationData.coordinates === 'object') {
+          // Use provided coordinates if valid
+          coordinates = {
+            lat: locationData.coordinates.lat || null,
+            lng: locationData.coordinates.lng || null
+          };
+        } else if (experience.location?.coordinates && typeof experience.location.coordinates === 'object') {
+          // Preserve existing coordinates if new ones not provided
+          coordinates = {
+            lat: experience.location.coordinates.lat || null,
+            lng: experience.location.coordinates.lng || null
+          };
+        }
+        // If neither exists, coordinates remains empty object {}
+        
+        experience.location = {
+          country: newCountry,
+          state: newState,
+          district: newDistrict,
+          coordinates: coordinates
+        };
+        
+        console.log('Updated location:', experience.location);
+      } catch (parseError) {
+        console.error('Error parsing location:', parseError);
+        console.error('Location data received:', location);
+        return res.status(400).json({ 
+          message: 'Invalid location data format',
+          error: parseError.message 
+        });
+      }
     }
     if (availableDates) {
-      experience.availableDates = typeof availableDates === 'string' 
-        ? JSON.parse(availableDates).map(d => {
-            if (typeof d === 'string') {
-              return { date: new Date(d), available: true };
-            }
+      try {
+        const datesArray = typeof availableDates === 'string' ? JSON.parse(availableDates) : availableDates;
+        if (!Array.isArray(datesArray)) {
+          return res.status(400).json({ message: 'availableDates must be an array' });
+        }
+        experience.availableDates = datesArray.map(d => {
+          let dateObj;
+          if (typeof d === 'string') {
+            dateObj = new Date(d);
+          } else if (d && typeof d === 'object') {
+            dateObj = new Date(d.date || d);
+          } else {
+            dateObj = new Date(d);
+          }
+          
+          // Validate date
+          if (isNaN(dateObj.getTime())) {
+            throw new Error(`Invalid date: ${d}`);
+          }
+          
+          if (typeof d === 'string') {
+            return { date: dateObj, available: true };
+          }
+          if (d && typeof d === 'object') {
             return {
-              date: new Date(d.date || d),
+              date: dateObj,
               startTime: d.startTime || null,
               endTime: d.endTime || null,
               available: d.available !== false
             };
-          })
-        : availableDates.map(d => {
-            if (typeof d === 'string') {
-              return { date: new Date(d), available: true };
-            }
-            return {
-              date: new Date(d.date || d),
-              startTime: d.startTime || null,
-              endTime: d.endTime || null,
-              available: d.available !== false
-            };
-          });
+          }
+          return { date: dateObj, available: true };
+        });
+        // Mark as modified to ensure array is saved
+        experience.markModified('availableDates');
+      } catch (parseError) {
+        console.error('Error parsing availableDates:', parseError);
+        return res.status(400).json({ message: 'Invalid availableDates format', error: parseError.message });
+      }
     }
-    if (price) experience.price = price;
-    if (contentUrl !== undefined) experience.contentUrl = contentUrl || null;
-    if (duration) experience.duration = duration;
-    if (maxParticipants) experience.maxParticipants = maxParticipants;
+    if (price !== undefined && price !== null && price !== '') {
+      const priceNum = parseFloat(price);
+      if (isNaN(priceNum) || priceNum < 0) {
+        return res.status(400).json({ message: 'Price must be a valid positive number' });
+      }
+      experience.price = priceNum;
+    }
+    if (contentUrl !== undefined) {
+      experience.contentUrl = contentUrl && contentUrl.trim() !== '' ? contentUrl.trim() : null;
+    }
+    if (duration !== undefined && duration !== null && duration !== '') {
+      const durationNum = parseInt(duration);
+      if (isNaN(durationNum) || durationNum < 1) {
+        return res.status(400).json({ message: 'Duration must be a valid positive number' });
+      }
+      experience.duration = durationNum;
+    }
+    if (maxParticipants !== undefined && maxParticipants !== null && maxParticipants !== '') {
+      const maxParticipantsNum = parseInt(maxParticipants);
+      if (isNaN(maxParticipantsNum) || maxParticipantsNum < 1) {
+        return res.status(400).json({ message: 'Max participants must be a valid positive number' });
+      }
+      experience.maxParticipants = maxParticipantsNum;
+    }
     
     // Update image if new one is uploaded
     if (req.file) {
       experience.imageUrl = `/uploads/${req.file.filename}`;
     }
 
+    // Validate required fields before saving
+    if (!experience.title || experience.title.trim() === '') {
+      return res.status(400).json({ message: 'Title is required' });
+    }
+    if (!experience.description || experience.description.trim() === '') {
+      return res.status(400).json({ message: 'Description is required' });
+    }
+    if (!experience.location || !experience.location.country || !experience.location.state || !experience.location.district) {
+      return res.status(400).json({ message: 'Location (country, state, district) is required' });
+    }
+    if (!experience.price || experience.price < 0) {
+      return res.status(400).json({ message: 'Price is required and must be >= 0' });
+    }
+    if (!experience.availableDates || experience.availableDates.length === 0) {
+      return res.status(400).json({ message: 'At least one available date is required' });
+    }
+
+    // Ensure coordinates is always an object (not undefined) to prevent Mongoose casting errors
+    if (!experience.location.coordinates || typeof experience.location.coordinates !== 'object') {
+      experience.location.coordinates = {};
+    } else {
+      // Ensure it has the correct structure
+      experience.location.coordinates = {
+        lat: experience.location.coordinates.lat || null,
+        lng: experience.location.coordinates.lng || null
+      };
+    }
+
     // Mark location as modified to ensure nested object is saved
     experience.markModified('location');
-    await experience.save();
+    
+    // Mark availableDates as modified if it was updated
+    if (availableDates) {
+      experience.markModified('availableDates');
+    }
+    
+    // Save with validation
+    try {
+      console.log('Attempting to save experience:', {
+        title: experience.title,
+        price: experience.price,
+        location: experience.location,
+        availableDatesCount: experience.availableDates?.length,
+        duration: experience.duration,
+        maxParticipants: experience.maxParticipants
+      });
+      
+      await experience.save();
+      console.log('Experience saved successfully');
+    } catch (saveError) {
+      console.error('Mongoose save error:', saveError);
+      console.error('Error name:', saveError.name);
+      console.error('Error message:', saveError.message);
+      
+      // Handle mongoose validation errors
+      if (saveError.name === 'ValidationError') {
+        const errors = Object.values(saveError.errors).map((err) => ({
+          field: err.path,
+          message: err.message,
+          value: err.value
+        }));
+        console.error('Validation errors:', errors);
+        return res.status(400).json({ 
+          message: 'Validation error', 
+          errors: errors.map(e => e.message),
+          details: errors
+        });
+      }
+      
+      // Handle other mongoose errors
+      if (saveError.name === 'CastError') {
+        return res.status(400).json({ 
+          message: 'Invalid data format', 
+          error: saveError.message 
+        });
+      }
+      
+      throw saveError; // Re-throw if not a handled error
+    }
 
     // Verify the save by reloading
     const updatedExperience = await Experience.findById(experience._id).lean();
@@ -403,7 +637,15 @@ router.put('/experience/:experienceId', authenticate, requireHost, upload.single
       experience: normalizedExperience
     });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Error updating experience:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Request body:', req.body);
+    console.error('Request params:', req.params);
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error.message,
+      ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+    });
   }
 });
 

@@ -48,10 +48,30 @@ export default function HostExperiencesPage() {
 
   const fetchExperiences = async () => {
     try {
+      setError('');
       const response = await api.get('/hosts/experiences');
+      console.log('[Host Experiences] Response received:', response.data);
       setExperiences(response.data.experiences || []);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load experiences');
+      console.error('[Host Experiences] Error fetching experiences:', err);
+      console.error('[Host Experiences] Error response:', err.response?.data);
+      console.error('[Host Experiences] Error status:', err.response?.status);
+      console.error('[Host Experiences] Error message:', err.message);
+      
+      let errorMessage = 'Failed to load experiences';
+      
+      if (err.response?.data) {
+        errorMessage = err.response.data.message || err.response.data.error || errorMessage;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      // Add more context for network errors
+      if (!err.response) {
+        errorMessage += ' (Network error - check if backend is running)';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

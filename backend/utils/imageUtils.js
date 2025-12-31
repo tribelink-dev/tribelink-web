@@ -114,14 +114,26 @@ function normalizeHotelImages(images, baseUrl = null) {
 function normalizeExperience(experience, baseUrl = null) {
   if (!experience) return experience;
   
-  const normalized = { ...experience };
-  
-  // Normalize imageUrl if it exists
-  if (experience.imageUrl) {
-    normalized.imageUrl = normalizeExperienceImage(experience.imageUrl, baseUrl);
+  try {
+    const normalized = { ...experience };
+    
+    // Normalize imageUrl if it exists
+    if (experience.imageUrl) {
+      try {
+        normalized.imageUrl = normalizeExperienceImage(experience.imageUrl, baseUrl);
+      } catch (imgError) {
+        console.error('[normalizeExperience] Error normalizing imageUrl:', imgError);
+        // Keep original imageUrl if normalization fails
+        normalized.imageUrl = experience.imageUrl;
+      }
+    }
+    
+    return normalized;
+  } catch (error) {
+    console.error('[normalizeExperience] Error normalizing experience:', error);
+    // Return original experience if normalization fails
+    return experience;
   }
-  
-  return normalized;
 }
 
 /**
@@ -153,10 +165,19 @@ function normalizeHotel(hotel, baseUrl = null) {
  */
 function normalizeExperiences(experiences, baseUrl = null) {
   if (!Array.isArray(experiences)) {
+    console.warn('[normalizeExperiences] Input is not an array:', typeof experiences);
     return [];
   }
   
-  return experiences.map(exp => normalizeExperience(exp, baseUrl));
+  return experiences.map((exp, index) => {
+    try {
+      return normalizeExperience(exp, baseUrl);
+    } catch (error) {
+      console.error(`[normalizeExperiences] Error normalizing experience at index ${index}:`, error);
+      // Return original experience if normalization fails
+      return exp;
+    }
+  });
 }
 
 /**
