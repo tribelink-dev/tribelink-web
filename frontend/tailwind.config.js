@@ -10,6 +10,12 @@ module.exports = {
       colors: {
         background: 'var(--background)',
         foreground: 'var(--foreground)',
+        // Company website colors
+        'deep-jungle': '#1A2F2B',
+        'terracotta': '#E07A5F',
+        'clay': '#D4C5B0',
+        'sand': '#F2E8DC',
+        'off-white': '#F9F7F2',
         primary: {
           50: '#e0f7fa',
           100: '#b2ebf2',
@@ -204,7 +210,8 @@ module.exports = {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        sans: ['Montserrat', 'Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        serif: ['Cormorant Garamond', 'serif'],
       },
       boxShadow: {
         'soft': '0 2px 8px rgba(0, 0, 0, 0.08)',

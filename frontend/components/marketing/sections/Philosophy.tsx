@@ -1,0 +1,184 @@
+'use client';
+
+import { motion, useScroll, useTransform } from 'framer-motion';
+import { useRef } from 'react';
+import { Sparkles, Heart, Users, MapPin } from 'lucide-react';
+
+const PhilosophyFeature = ({ number, title, text, image, reverse = false, icon }: { number: string; title: string; text: string; image: string; reverse?: boolean; icon: React.ReactNode }) => {
+    const ref = useRef<HTMLDivElement>(null);
+    const { scrollYProgress } = useScroll({
+        target: ref,
+        offset: ["start end", "end start"]
+    });
+
+    const imageY = useTransform(scrollYProgress, [0, 1], [50, -50]);
+    const opacity = useTransform(scrollYProgress, [0, 0.3, 0.7, 1], [0, 1, 1, 0]);
+
+    return (
+        <motion.div 
+            ref={ref}
+            style={{ opacity }}
+            className={`flex flex-col ${reverse ? 'md:flex-row-reverse' : 'md:flex-row'} items-center gap-12 md:gap-24 my-32`}
+        >
+            <motion.div
+                initial={{ opacity: 0, x: reverse ? 50 : -50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, margin: "-100px" }}
+                transition={{ duration: 0.8 }}
+                className="flex-1 w-full"
+                style={{ y: imageY }}
+            >
+                <div className="relative aspect-[4/5] md:aspect-square w-full max-w-md mx-auto overflow-hidden rounded-3xl group cursor-pointer">
+                    <div className="absolute inset-0 bg-gradient-to-t from-deep-jungle/60 via-transparent to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <img 
+                        src={image} 
+                        alt={title} 
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                        loading="lazy" 
+                    />
+                    <div className="absolute inset-0 border-2 border-terracotta/20 rounded-3xl group-hover:border-terracotta/40 transition-colors duration-300" />
+                    <motion.div
+                        initial={{ scale: 0, rotate: -180 }}
+                        whileInView={{ scale: 1, rotate: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: 0.3, type: "spring" }}
+                        className="absolute top-4 right-4 w-12 h-12 bg-terracotta/90 backdrop-blur-sm rounded-full flex items-center justify-center text-white z-20"
+                    >
+                        {icon}
+                    </motion.div>
+                </div>
+            </motion.div>
+
+            <motion.div
+                initial={{ opacity: 0, x: reverse ? -50 : 50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, margin: "-100px" }}
+                transition={{ duration: 0.8 }}
+                className="flex-1 text-center md:text-left"
+            >
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.2 }}
+                >
+                    <span className="font-serif text-8xl text-terracotta/10 block mb-4 leading-none">{number}</span>
+                    <h3 className="text-3xl md:text-5xl font-serif text-deep-jungle mb-6 relative">
+                        {title}
+                        <motion.div
+                            initial={{ width: 0 }}
+                            whileInView={{ width: '60px' }}
+                            viewport={{ once: true }}
+                            transition={{ delay: 0.5, duration: 0.6 }}
+                            className="absolute bottom-0 left-0 h-1 bg-terracotta"
+                        />
+                    </h3>
+                    <p className="text-deep-jungle/70 text-lg md:text-xl leading-relaxed max-w-md mx-auto md:mx-0 font-light">
+                        {text}
+                    </p>
+                </motion.div>
+            </motion.div>
+        </motion.div>
+    );
+};
+
+const Philosophy = () => {
+    const sectionRef = useRef<HTMLElement>(null);
+    const { scrollYProgress } = useScroll({
+        target: sectionRef,
+        offset: ["start end", "end start"]
+    });
+
+    const backgroundY = useTransform(scrollYProgress, [0, 1], [0, 100]);
+
+    return (
+        <section ref={sectionRef} id="philosophy" className="py-32 px-6 bg-gradient-to-b from-off-white via-white to-off-white overflow-hidden relative">
+            {/* Decorative Background Elements */}
+            <motion.div
+                style={{ y: backgroundY }}
+                className="absolute top-0 left-0 w-full h-full pointer-events-none"
+            >
+                <div className="absolute top-20 left-10 w-72 h-72 bg-terracotta/5 rounded-full blur-3xl" />
+                <div className="absolute bottom-20 right-10 w-96 h-96 bg-clay/5 rounded-full blur-3xl" />
+            </motion.div>
+
+            <div className="container mx-auto max-w-6xl relative z-10">
+                <div className="text-center max-w-4xl mx-auto mb-32">
+                    <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.8 }}
+                    >
+                        <motion.p
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            whileInView={{ opacity: 1, scale: 1 }}
+                            viewport={{ once: true }}
+                            className="text-terracotta tracking-widest text-sm font-medium uppercase mb-6 inline-block px-4 py-2 bg-terracotta/10 rounded-full"
+                        >
+                            Rooted in Reality
+                        </motion.p>
+                        <h2 className="text-5xl md:text-7xl font-serif text-deep-jungle mb-8 leading-tight">
+                            High Tech.
+                            <br />
+                            <span className="text-terracotta italic">Deep Touch.</span>
+                        </h2>
+                        <p className="text-xl md:text-2xl text-deep-jungle/80 leading-relaxed font-light">
+                            We live in a miraculous era. Artificial Intelligence helps us solve problems and social media keeps us informed.
+                            But amidst the speed of the digital age,{' '}
+                            <span className="text-terracotta italic font-medium">the human heart still beats at the rhythm of nature.</span>
+                        </p>
+                    </motion.div>
+                </div>
+
+                <PhilosophyFeature
+                    number="01"
+                    title="Authentic, Not Staged"
+                    text="You won't find performances put on for tourists. You will find daily rhythms, local crafts, and genuine conversations. Real life, unfolding in real time."
+                    image="/assets/theyyam_main.jpg"
+                    icon={<Sparkles size={24} />}
+                />
+
+                <PhilosophyFeature
+                    number="02"
+                    title="Regional, Not Generic"
+                    text="Every region has a soul. We connect you with the guardians of that soul—the elders, the artisans, and the locals who know the land best."
+                    image="/assets/pottery_main.jpg"
+                    reverse
+                    icon={<MapPin size={24} />}
+                />
+
+                <PhilosophyFeature
+                    number="03"
+                    title="Community, Not Crowd"
+                    text="Walk with a tribe that values presence. Share your stories later, but live them fully now. This is about depth, not breadth—connection, not consumption."
+                    image="/assets/community1.jpg"
+                    icon={<Users size={24} />}
+                />
+
+                {/* Philosophy Quote Section */}
+                <motion.div
+                    initial={{ opacity: 0, y: 50 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.8 }}
+                    className="mt-32 text-center max-w-4xl mx-auto"
+                >
+                    <div className="relative bg-gradient-to-br from-deep-jungle to-deep-jungle/90 p-12 md:p-16 rounded-3xl overflow-hidden">
+                        <div className="absolute inset-0 bg-[url('/assets/kolam.jpg')] opacity-10 bg-cover bg-center" />
+                        <div className="relative z-10">
+                            <Heart className="w-12 h-12 text-terracotta mx-auto mb-6" />
+                            <blockquote className="font-serif text-2xl md:text-3xl text-white leading-relaxed italic mb-6">
+                                "Travel is not about the destination. It's about the people you meet, the stories you hear, and the wisdom you carry home."
+                            </blockquote>
+                            <p className="text-white/80 text-lg">— The Tribelink Philosophy</p>
+                        </div>
+                    </div>
+                </motion.div>
+            </div>
+        </section>
+    );
+};
+
+export default Philosophy;
+

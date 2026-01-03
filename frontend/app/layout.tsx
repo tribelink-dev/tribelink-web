@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
-import Navbar from "@/components/Navbar";
+import ConditionalLayout from "@/components/ConditionalLayout";
 import EmergencySOS from "@/components/EmergencySOS";
 
 export const metadata: Metadata = {
@@ -18,12 +18,12 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <AuthProvider>
-          <Navbar />
-          {children}
+          <ConditionalLayout>
+            {children}
+          </ConditionalLayout>
           <EmergencySOS />
         </AuthProvider>
       </body>
     </html>
   );
 }
-

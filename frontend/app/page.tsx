@@ -3,62 +3,56 @@
 import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { getProviderDashboard } from '@/lib/providerUtils';
+import Hero from '@/components/marketing/sections/Hero';
+import Philosophy from '@/components/marketing/sections/Philosophy';
+import Experiences from '@/components/marketing/sections/Experiences';
+import CulturalImmersion from '@/components/marketing/sections/CulturalImmersion';
+import Stories from '@/components/marketing/sections/Stories';
+import Contact from '@/components/marketing/sections/Contact';
 
 export default function Home() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
+    const { user, loading } = useAuth();
+    const router = useRouter();
 
-  useEffect(() => {
-    if (!loading) {
-      // Check if user is a host
-      if (typeof window !== 'undefined') {
-        const userType = localStorage.getItem('userType');
-        const hostData = localStorage.getItem('host');
-        
-        if (userType === 'host' && hostData) {
-          // Redirect host to their dashboard
-          try {
-            const host = JSON.parse(hostData);
-            const providerType = host.providerType || 'EXPERIENCE_HOST';
-            const dashboardRoute = getProviderDashboard(providerType);
-            router.push(dashboardRoute);
-            return;
-          } catch (e) {
-            // Fallback to default host dashboard
-            router.push('/host/dashboard');
-            return;
-          }
+    // Only redirect authenticated users, show marketing page to everyone else
+    useEffect(() => {
+        if (!loading && user) {
+            // Check if user is a host
+            if (typeof window !== 'undefined') {
+                const userType = localStorage.getItem('userType');
+                const hostData = localStorage.getItem('host');
+                
+                if (userType === 'host' && hostData) {
+                    try {
+                        const host = JSON.parse(hostData);
+                        const providerType = host.providerType || 'EXPERIENCE_HOST';
+                        // Import dynamically to avoid circular dependency
+                        import('@/lib/providerUtils').then(({ getProviderDashboard }) => {
+                            const dashboardRoute = getProviderDashboard(providerType);
+                            router.push(dashboardRoute);
+                        });
+                        return;
+                    } catch (e) {
+                        router.push('/host/dashboard');
+                        return;
+                    }
+                }
+            }
+            
+            // Regular user flow - redirect to dashboard
+            router.push('/dashboard');
         }
-      }
-      
-      // Regular user flow
-      if (!user) {
-        router.push('/login');
-      } else {
-        // Redirect to dashboard instead of KYT
-        router.push('/dashboard');
-      }
-    }
-  }, [user, loading, router]);
+    }, [user, loading, router]);
 
-  if (loading) {
+    // Show marketing page for unauthenticated users or while loading
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-tourism">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-white border-t-transparent mb-6"></div>
-          <div className="text-2xl font-semibold text-white">Loading your adventure...</div>
+        <div className="min-h-screen bg-off-white selection:bg-terracotta selection:text-white">
+            <Hero />
+            <Philosophy />
+            <Experiences />
+            <CulturalImmersion />
+            <Stories />
+            <Contact />
         </div>
-      </div>
     );
-  }
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-tourism">
-      <div className="text-center">
-        <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent mb-4"></div>
-        <div className="text-xl font-semibold text-white">Redirecting...</div>
-      </div>
-    </div>
-  );
 }
