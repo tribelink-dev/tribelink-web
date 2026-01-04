@@ -67,17 +67,6 @@ const Button = React.forwardRef<HTMLButtonElement | HTMLAnchorElement, ButtonPro
             );
         }
 
-        // Filter out conflicting props that framer-motion handles differently
-        const {
-            onDrag,
-            onDragStart,
-            onDragEnd,
-            onAnimationStart,
-            onAnimationEnd,
-            onAnimationIteration,
-            ...motionProps
-        } = props;
-
         return (
             <motion.button
                 ref={ref as React.Ref<HTMLButtonElement>}
@@ -85,7 +74,7 @@ const Button = React.forwardRef<HTMLButtonElement | HTMLAnchorElement, ButtonPro
                 whileTap={!disabled ? { scale: 0.95 } : {}}
                 disabled={disabled}
                 className={commonClasses}
-                {...motionProps}
+                {...(props as any)}
             >
                 {buttonContent}
             </motion.button>
