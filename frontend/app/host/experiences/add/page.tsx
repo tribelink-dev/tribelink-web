@@ -8,6 +8,7 @@ import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import { format } from 'date-fns';
 import LocationPicker from '@/components/LocationPicker';
+import CategorySelector from '@/components/CategorySelector';
 
 interface DateWithTimeSlots {
   date: string; // ISO date string (YYYY-MM-DD)
@@ -22,6 +23,8 @@ export default function AddExperiencePage() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    category: null as string | null,
+    subcategory: null as string | null,
     location: {
       country: 'India',
       state: '',
@@ -391,10 +394,10 @@ export default function AddExperiencePage() {
     setLoading(true);
 
     // Validation
-    if (!formData.title || !formData.description || !formData.location.country || 
-        !formData.location.state || !formData.location.district || !formData.price || 
-        formData.availableDates.length === 0) {
-      setError('Please fill all required fields and add at least one available date');
+    if (!formData.title || !formData.description || !formData.category || !formData.subcategory ||
+        !formData.location.country || !formData.location.state || !formData.location.district || 
+        !formData.price || formData.availableDates.length === 0) {
+      setError('Please fill all required fields including category and subcategory, and add at least one available date');
       setLoading(false);
       return;
     }
@@ -420,6 +423,8 @@ export default function AddExperiencePage() {
       const formDataToSend = new FormData();
       formDataToSend.append('title', formData.title);
       formDataToSend.append('description', formData.description);
+      formDataToSend.append('category', formData.category);
+      formDataToSend.append('subcategory', formData.subcategory);
       formDataToSend.append('location', JSON.stringify(formData.location));
       // Format availableDates with time slots for backend
       const formattedDates = formData.availableDates.map(d => ({
@@ -451,6 +456,8 @@ export default function AddExperiencePage() {
       setFormData({
         title: '',
         description: '',
+        category: null,
+        subcategory: null,
         location: {
           country: 'India',
           state: '',
@@ -582,6 +589,30 @@ export default function AddExperiencePage() {
                     />
                   </div>
                 </div>
+              </div>
+
+              {/* Category Section */}
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border-2 border-purple-200 shadow-soft">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center shadow-medium">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900">Experience Category</h2>
+                    <p className="text-sm text-gray-600">Select the category and subcategory that best describes your experience</p>
+                  </div>
+                </div>
+
+                <CategorySelector
+                  selectedCategory={formData.category}
+                  selectedSubcategory={formData.subcategory}
+                  onCategoryChange={(category, subcategory) => {
+                    setFormData({ ...formData, category, subcategory });
+                  }}
+                  error={error && (!formData.category || !formData.subcategory) ? 'Please select a category and subcategory' : undefined}
+                />
               </div>
 
               {/* Location Section */}

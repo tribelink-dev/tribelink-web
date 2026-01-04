@@ -72,6 +72,24 @@ const experienceSchema = new mongoose.Schema({
     type: Number,
     default: 10
   },
+  category: {
+    type: String,
+    enum: [
+      'Living with the Land',
+      'Stories of the Past',
+      'The Soul',
+      'The Unseen',
+      'Creative Pulse',
+      'Water & Flow',
+      'Gastronomy & Ancestral Flavors',
+      'Regional Exclusives'
+    ],
+    required: true
+  },
+  subcategory: {
+    type: String,
+    required: true
+  },
   averageRating: {
     type: Number,
     default: 0,

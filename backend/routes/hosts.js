@@ -116,6 +116,8 @@ router.post('/experience', authenticate, requireHost, upload.single('image'), as
     const {
       title,
       description,
+      category,
+      subcategory,
       location,
       availableDates,
       price,
@@ -124,9 +126,23 @@ router.post('/experience', authenticate, requireHost, upload.single('image'), as
       maxParticipants
     } = req.body;
 
-    if (!title || !description || !location || !availableDates || !price) {
-      return res.status(400).json({ message: 'Required fields missing' });
+    if (!title || !description || !category || !subcategory || !location || !availableDates || !price) {
+      return res.status(400).json({ message: 'Required fields missing including category and subcategory' });
     }
+
+    // Map category ID to category name for enum validation
+    const categoryMap = {
+      'living-with-the-land': 'Living with the Land',
+      'stories-of-the-past': 'Stories of the Past',
+      'the-soul': 'The Soul',
+      'the-unseen': 'The Unseen',
+      'creative-pulse': 'Creative Pulse',
+      'water-flow': 'Water & Flow',
+      'gastronomy': 'Gastronomy & Ancestral Flavors',
+      'regional-exclusives': 'Regional Exclusives'
+    };
+
+    const categoryName = categoryMap[category] || category;
 
     // Parse location if it's a string
     const locationData = typeof location === 'string' ? JSON.parse(location) : location;
@@ -142,6 +158,8 @@ router.post('/experience', authenticate, requireHost, upload.single('image'), as
     const experience = new Experience({
       title: title.trim(),
       description: description.trim(),
+      category: categoryName,
+      subcategory: subcategory.trim(),
       provider: req.user._id,
       location: normalizedLocation,
       availableDates: typeof availableDates === 'string' 
@@ -381,6 +399,8 @@ router.put('/experience/:experienceId', authenticate, requireHost, upload.single
     const {
       title,
       description,
+      category,
+      subcategory,
       location,
       availableDates,
       price,
@@ -413,6 +433,24 @@ router.put('/experience/:experienceId', authenticate, requireHost, upload.single
         return res.status(400).json({ message: 'Description cannot be empty' });
       }
       experience.description = trimmedDescription;
+    }
+    if (category !== undefined && category !== null && category !== '') {
+      // Map category ID to category name for enum validation
+      const categoryMap = {
+        'living-with-the-land': 'Living with the Land',
+        'stories-of-the-past': 'Stories of the Past',
+        'the-soul': 'The Soul',
+        'the-unseen': 'The Unseen',
+        'creative-pulse': 'Creative Pulse',
+        'water-flow': 'Water & Flow',
+        'gastronomy': 'Gastronomy & Ancestral Flavors',
+        'regional-exclusives': 'Regional Exclusives'
+      };
+      const categoryName = categoryMap[category] || category;
+      experience.category = categoryName;
+    }
+    if (subcategory !== undefined && subcategory !== null && subcategory !== '') {
+      experience.subcategory = String(subcategory).trim();
     }
     if (location) {
       try {
@@ -542,6 +580,12 @@ router.put('/experience/:experienceId', authenticate, requireHost, upload.single
     }
     if (!experience.description || experience.description.trim() === '') {
       return res.status(400).json({ message: 'Description is required' });
+    }
+    if (!experience.category) {
+      return res.status(400).json({ message: 'Category is required' });
+    }
+    if (!experience.subcategory) {
+      return res.status(400).json({ message: 'Subcategory is required' });
     }
     if (!experience.location || !experience.location.country || !experience.location.state || !experience.location.district) {
       return res.status(400).json({ message: 'Location (country, state, district) is required' });

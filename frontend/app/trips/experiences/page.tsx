@@ -21,6 +21,8 @@ interface Experience {
   _id: string;
   title: string;
   description: string;
+  category?: string;
+  subcategory?: string;
   price: number;
   imageUrl?: string;
   contentUrl?: string;
@@ -698,6 +700,20 @@ export default function ExperiencesPage() {
                         )}
                       </div>
                     </div>
+                    {(experience.category || experience.subcategory) && (
+                      <div className="mb-3 flex flex-wrap gap-2">
+                        {experience.category && (
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 border border-purple-200">
+                            {experience.category}
+                          </span>
+                        )}
+                        {experience.subcategory && (
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
+                            {experience.subcategory}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     {experience.culturalMetadata && (
                       <div className="flex flex-wrap gap-2 mb-2">
                         {experience.culturalMetadata.heritage && (

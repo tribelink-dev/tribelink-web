@@ -13,6 +13,8 @@ interface Experience {
   _id: string;
   title: string;
   description: string;
+  category?: string;
+  subcategory?: string;
   price: number;
   duration: number;
   maxParticipants: number;
@@ -327,6 +329,21 @@ export default function HostExperiencesPage() {
                       <div className="p-6 flex-1 flex flex-col">
                         <h3 className="text-xl font-bold mb-2 text-gray-900 line-clamp-1">{experience.title}</h3>
                         <p className="text-gray-600 text-sm mb-4 line-clamp-2 min-h-[2.5rem]">{experience.description}</p>
+                        
+                        {(experience.category || experience.subcategory) && (
+                          <div className="mb-3 flex flex-wrap gap-2">
+                            {experience.category && (
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 border border-purple-200">
+                                {experience.category}
+                              </span>
+                            )}
+                            {experience.subcategory && (
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
+                                {experience.subcategory}
+                              </span>
+                            )}
+                          </div>
+                        )}
                         
                         <div className="space-y-2 mb-4 pb-4 border-b border-gray-200">
                           <div className="flex items-center gap-2 text-sm text-gray-600">
