@@ -290,7 +290,8 @@ async function scheduleTripWithAI({
   state,
   district,
   locations,
-  guideId = null
+  guideId = null,
+  guidePricingMode = 'daily'
 }) {
   console.log('🤖 AI Scheduler (Gumo.ai-like) starting...');
   
@@ -307,6 +308,7 @@ async function scheduleTripWithAI({
         district,
         locations,
         guideId,
+        guidePricingMode,
         aiSchedulerFunction: generateAISchedule
       });
     } catch (error) {
@@ -324,7 +326,8 @@ async function scheduleTripWithAI({
     state,
     district,
     locations,
-    guideId
+    guideId,
+    guidePricingMode
   });
 }
 

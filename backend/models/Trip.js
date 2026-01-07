@@ -80,6 +80,20 @@ const tripSchema = new mongoose.Schema({
       ref: 'Host',
       default: null
     },
+    guideHours: {
+      calculated: {
+        type: Number,
+        default: 0
+      },
+      adjusted: {
+        type: Number,
+        default: null
+      },
+      final: {
+        type: Number,
+        default: 0
+      }
+    },
     cab: {
       type: Boolean,
       default: false
@@ -88,6 +102,11 @@ const tripSchema = new mongoose.Schema({
       type: String
     }]
   }],
+  guidePricingMode: {
+    type: String,
+    enum: ['daily', 'hourly'],
+    default: 'daily'
+  },
   totalPrice: {
     type: Number,
     required: true,

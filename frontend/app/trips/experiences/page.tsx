@@ -308,7 +308,8 @@ export default function ExperiencesPage() {
       return;
     }
     
-    router.push('/trips/schedule');
+    // Route to guide selection page instead of directly to schedule
+    router.push('/trips/guides/select');
   };
 
   const handleOpenReview = (experience: Experience) => {

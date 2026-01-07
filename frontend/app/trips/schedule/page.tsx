@@ -6,6 +6,7 @@ import api from '@/lib/api';
 import TripMap from '@/components/TripMap';
 import HotelBookingCard from '@/components/HotelBookingCard';
 import ChauffeurSelectionCard from '@/components/ChauffeurSelectionCard';
+import GuidePricingSelector, { PricingMode } from '@/components/GuidePricingSelector';
 import { useAuth } from '@/lib/auth';
 import { getImageUrl } from '@/lib/imageUtils';
 
@@ -107,6 +108,7 @@ interface TripData {
     totalCabDays: number;
     hasGuide: boolean;
   };
+  guidePricingMode?: 'daily' | 'hourly';
 }
 
 // District coordinates fallback (Kerala districts)
@@ -221,13 +223,27 @@ export default function SchedulePage() {
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [recommendations, setRecommendations] = useState<{ [dayIndex: number]: any[] }>({});
   const [loadingRecommendations, setLoadingRecommendations] = useState<{ [dayIndex: number]: boolean }>({});
+  const [guidePricingMode, setGuidePricingMode] = useState<PricingMode>('daily');
+  const [selectedGuideInfo, setSelectedGuideInfo] = useState<any>(null);
 
   useEffect(() => {
     const tripId = searchParams.get('tripId');
+    
+    // Get guideId from query params or sessionStorage
+    const guideIdFromQuery = searchParams.get('guideId');
+    const guideIdFromStorage = typeof window !== 'undefined' ? sessionStorage.getItem('selectedGuideId') : null;
+    
+    if (guideIdFromQuery || guideIdFromStorage) {
+      setGuideId(guideIdFromQuery || guideIdFromStorage || '');
+      // Clear from sessionStorage after reading
+      if (guideIdFromStorage) {
+        sessionStorage.removeItem('selectedGuideId');
+      }
+    }
+    
     if (tripId) {
       fetchTrip(tripId);
     } else {
-      fetchAvailableGuides();
       setTimeout(() => {
         createSchedule();
       }, 500);
@@ -286,6 +302,11 @@ export default function SchedulePage() {
           hotel: day.hotel?._id || day.hotel || null,
           hotelSelected: day.hotelSelected || false,
           guide: day.guide?._id || day.guide || null,
+          guideHours: day.guideHours || {
+            calculated: 0,
+            adjusted: null,
+            final: 0
+          },
           cab: day.cab || false,
           chauffeur: day.chauffeur || false,
           foodOrders: day.foodOrders || []
@@ -471,31 +492,6 @@ export default function SchedulePage() {
     }
   };
 
-  const handleGuideChange = async (newGuideId: string) => {
-    setGuideId(newGuideId);
-    if (tripData) {
-      await createSchedule();
-    }
-  };
-
-  const fetchAvailableGuides = async () => {
-    try {
-      const tripDataStr = sessionStorage.getItem('tripData');
-      if (!tripDataStr) return;
-
-      const trip = JSON.parse(tripDataStr);
-      const response = await api.get('/hosts/available', {
-        params: {
-          fromDate: trip.fromDate,
-          toDate: trip.toDate,
-          role: 'Guide'
-        }
-      });
-      setAvailableGuides(response.data.hosts || []);
-    } catch (err) {
-      // No guides available
-    }
-  };
 
   const createSchedule = async () => {
     try {
@@ -520,7 +516,8 @@ export default function SchedulePage() {
         state: locations[0]?.state || trip.state,
         district: locations[0]?.district || trip.district,
         locations: locations, // Pass all locations
-        guideId: guideId || null
+        guideId: guideId || null,
+        guidePricingMode: guidePricingMode
       });
 
       // Debug: Log the response to see what we're getting
@@ -582,6 +579,11 @@ export default function SchedulePage() {
           hotel: day.hotel?._id || day.hotel || null,
           hotelSelected: day.hotelSelected || false,
           guide: day.guide?._id || day.guide || null,
+          guideHours: day.guideHours || {
+            calculated: 0,
+            adjusted: null,
+            final: 0
+          },
           cab: day.cab || false,
           chauffeur: day.chauffeur || false,
           foodOrders: day.foodOrders || []
@@ -627,9 +629,20 @@ export default function SchedulePage() {
         priceBreakdown.chauffeur += 30 * transformedSchedule.length;
       }
       
-      // Calculate guide cost ($50 per day if guide exists)
+      // Calculate guide cost based on pricing mode
       if (guideId && transformedSchedule.length > 0) {
-        priceBreakdown.guide = 50 * transformedSchedule.length;
+        if (guidePricingMode === 'hourly' && selectedGuideInfo) {
+          // Calculate hourly cost
+          let totalGuideHours = 0;
+          transformedSchedule.forEach((day: ScheduleDay) => {
+            const hours = day.guideHours?.final || day.guideHours?.calculated || 0;
+            totalGuideHours += hours;
+          });
+          priceBreakdown.guide = (selectedGuideInfo.hourlyRate || 15) * totalGuideHours;
+        } else {
+          // Daily pricing
+          priceBreakdown.guide = 50 * transformedSchedule.length;
+        }
       }
       
       // Calculate statistics from schedule
@@ -642,6 +655,26 @@ export default function SchedulePage() {
         totalCabDays: transformedSchedule.filter((day: ScheduleDay) => day.cab).length,
         hasGuide: !!guideId || transformedSchedule.some((day: ScheduleDay) => day.guide)
       };
+
+      // Fetch guide info if guideId is set
+      if (guideId) {
+        try {
+          const tripDataStr = sessionStorage.getItem('tripData');
+          const trip = tripDataStr ? JSON.parse(tripDataStr) : {};
+          const guideResponse = await api.get(`/hosts/guides/available`, {
+            params: {
+              fromDate: trip.fromDate || response.data.fromDate,
+              toDate: trip.toDate || response.data.toDate
+            }
+          });
+          const guide = guideResponse.data.guides?.find((g: any) => g._id === guideId);
+          if (guide) {
+            setSelectedGuideInfo(guide);
+          }
+        } catch (err) {
+          console.error('Error fetching guide info:', err);
+        }
+      }
 
       setTripData({
         tripId: response.data.tripId,
@@ -657,8 +690,15 @@ export default function SchedulePage() {
         locations: response.data.locations || [],
         preferences: response.data.preferences || {},
         priceBreakdown: priceBreakdown,
-        statistics: statistics
+        statistics: statistics,
+        guidePricingMode: response.data.guidePricingMode || guidePricingMode
       });
+      
+      // Set guide pricing mode from response
+      if (response.data.guidePricingMode) {
+        setGuidePricingMode(response.data.guidePricingMode);
+      }
+      
       sessionStorage.setItem('tripId', response.data.tripId);
       
       // Refresh user data to get updated tokens (1 token deducted)
@@ -1004,35 +1044,33 @@ export default function SchedulePage() {
           </div>
         )}
 
-        {/* Modern Guide Selection */}
-        {availableGuides.length > 0 && (
-          <div className="mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
-            <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-200/50 shadow-xl p-6 lg:p-8 hover:shadow-2xl transition-all duration-300">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">Optional: Select a Travel Guide</h2>
-                  <p className="text-sm text-gray-600">Enhance your journey with local expertise</p>
-                </div>
-              </div>
-              <select
-                value={guideId}
-                onChange={(e) => handleGuideChange(e.target.value)}
-                disabled={creatingSchedule}
-                className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-              >
-                <option value="">No guide</option>
-                {availableGuides.map(guide => (
-                  <option key={guide._id} value={guide._id}>
-                    {guide.name} ⭐ {guide.rating.toFixed(1)} Rating
-                  </option>
-                ))}
-              </select>
-            </div>
+        {/* Guide Pricing Mode Selector - Only show if guide is selected */}
+        {guideId && selectedGuideInfo && tripData && (
+          <div className="mb-8">
+            <GuidePricingSelector
+              selectedMode={guidePricingMode}
+              onModeChange={async (mode) => {
+                setGuidePricingMode(mode);
+                // Update pricing mode on backend if trip exists
+                if (tripData.tripId) {
+                  try {
+                    await api.put(`/trips/${tripData.tripId}/guide-pricing-mode`, {
+                      guidePricingMode: mode
+                    });
+                    // Refresh schedule to get updated pricing
+                    createSchedule();
+                  } catch (err) {
+                    console.error('Error updating pricing mode:', err);
+                  }
+                }
+              }}
+              guideHourlyRate={selectedGuideInfo.hourlyRate || 15}
+              estimatedHours={tripData.schedule.reduce((sum: number, day: ScheduleDay) => {
+                const hours = day.guideHours?.final || day.guideHours?.calculated || 0;
+                return sum + hours;
+              }, 0) / (tripData.schedule.length || 1)}
+              dailyRate={50}
+            />
           </div>
         )}
 
@@ -1867,16 +1905,33 @@ export default function SchedulePage() {
                       {/* Additional Services */}
                       {day.guide && (
                         <div className="bg-white rounded-2xl border border-gray-200 p-5 mt-6">
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
-                              <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                              </svg>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
+                                <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                              </div>
+                              <div className="flex-1">
+                                <div className="text-xs text-gray-500 font-medium mb-0.5">Travel Guide</div>
+                                <div className="text-sm font-semibold text-gray-900">
+                                  {typeof day.guide === 'object' ? day.guide.name : 'Local Guide'}
+                                </div>
+                                {guidePricingMode === 'hourly' && day.guideHours && (
+                                  <div className="text-xs text-gray-600 mt-1">
+                                    {day.guideHours.final || day.guideHours.calculated || 0} hours
+                                    {selectedGuideInfo && (
+                                      <span className="ml-2 text-primary-600 font-semibold">
+                                        ${((day.guideHours.final || day.guideHours.calculated || 0) * (selectedGuideInfo.hourlyRate || 15)).toFixed(2)}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                            <div className="flex-1">
-                              <div className="text-xs text-gray-500 font-medium mb-0.5">Travel Guide</div>
-                              <div className="text-sm font-semibold text-gray-900">{day.guide.name || 'Local Guide'}</div>
-                            </div>
+                            {guidePricingMode === 'daily' && (
+                              <div className="text-sm font-semibold text-primary-600">$50/day</div>
+                            )}
                           </div>
                         </div>
                       )}

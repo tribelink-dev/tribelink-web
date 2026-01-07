@@ -192,9 +192,76 @@ function buildMapData(schedule, hotels, orderedLocations) {
 }
 
 /**
- * Calculate total price for schedule
+ * Calculate guide hours for a day based on activities
+ * Applies minimum 4 hours policy and rounds up partial hours
  */
-function calculateTotalPrice(schedule, hotels, guide, preferences) {
+function calculateGuideHours(daySchedule) {
+  let totalHours = 0;
+  
+  // Sum all activity durations
+  if (daySchedule.activities && daySchedule.activities.length > 0) {
+    daySchedule.activities.forEach(activity => {
+      // Use duration if available, otherwise calculate from start/end time
+      if (activity.duration) {
+        totalHours += activity.duration;
+      } else if (activity.startTime && activity.endTime) {
+        // Calculate duration from time strings (HH:mm format)
+        const start = parseTime(activity.startTime);
+        const end = parseTime(activity.endTime);
+        const duration = (end - start) / (1000 * 60 * 60); // Convert to hours
+        if (duration > 0) {
+          totalHours += duration;
+        }
+      }
+    });
+  }
+  
+  // Apply minimum 4 hours policy
+  if (totalHours < 4) {
+    totalHours = 4;
+  }
+  
+  // Round up partial hours (e.g., 2.5 → 3, 3.1 → 4)
+  totalHours = Math.ceil(totalHours);
+  
+  return totalHours;
+}
+
+/**
+ * Helper function to parse time string (HH:mm) to Date object
+ */
+function parseTime(timeStr) {
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  const date = new Date();
+  date.setHours(hours, minutes, 0, 0);
+  return date;
+}
+
+/**
+ * Get guide hourly rate based on rating tiers
+ */
+function getGuideHourlyRate(guide) {
+  if (!guide) return 0;
+  
+  // Use the getHourlyRate method if available (from Provider model)
+  if (typeof guide.getHourlyRate === 'function') {
+    return guide.getHourlyRate();
+  }
+  
+  // Fallback calculation if method not available
+  const rating = guide.rating || 0;
+  
+  if (rating >= 5.0) return 20;  // $20/hour
+  if (rating >= 4.0) return 15;  // $15/hour
+  if (rating >= 3.0) return 12;  // $12/hour
+  return 10;  // $10/hour for <3.0
+}
+
+/**
+ * Calculate total price for schedule
+ * Supports both daily and hourly guide pricing modes
+ */
+function calculateTotalPrice(schedule, hotels, guide, preferences, guidePricingMode = 'daily') {
   let totalPrice = 0;
 
   // Add experience prices
@@ -216,7 +283,18 @@ function calculateTotalPrice(schedule, hotels, guide, preferences) {
 
   // Add guide price (if selected)
   if (guide) {
-    totalPrice += 50 * schedule.length; // $50 per day for guide
+    if (guidePricingMode === 'hourly') {
+      // Calculate hourly pricing
+      const hourlyRate = getGuideHourlyRate(guide);
+      schedule.forEach((day) => {
+        // Use final hours if available, otherwise calculate
+        const hours = day.guideHours?.final || day.guideHours?.calculated || calculateGuideHours(day);
+        totalPrice += hourlyRate * hours;
+      });
+    } else {
+      // Daily pricing (default)
+      totalPrice += 50 * schedule.length; // $50 per day for guide
+    }
   }
 
   // Add cab cost (if luxury transport)
@@ -239,7 +317,8 @@ async function scheduleTrip({
   state,
   district,
   locations,
-  guideId = null
+  guideId = null,
+  guidePricingMode = 'daily'
 }) {
   const from = new Date(fromDate);
   const to = new Date(toDate);
@@ -374,12 +453,28 @@ async function scheduleTrip({
     
     console.log(`Day ${dayIndex + 1} summary: ${dayPlan.activities.length} activities scheduled`);
     
+    // Calculate guide hours for this day if guide is assigned
+    let guideHours = {
+      calculated: 0,
+      adjusted: null,
+      final: 0
+    };
+    
+    if (guide) {
+      const calculatedHours = calculateGuideHours({
+        activities: dayPlan.activities
+      });
+      guideHours.calculated = calculatedHours;
+      guideHours.final = calculatedHours;
+    }
+    
     // Add day to schedule
     schedule.push({
       date: new Date(date),
       activities: dayPlan.activities,
       hotel: hotel,
       guide: guide ? guide._id : null,
+      guideHours: guideHours,
       cab: preferences.transport === 'luxury',
       foodOrders: []
     });
@@ -392,7 +487,7 @@ async function scheduleTrip({
   }
 
   // Calculate total price
-  const totalPrice = calculateTotalPrice(schedule, hotels, guide, preferences);
+  const totalPrice = calculateTotalPrice(schedule, hotels, guide, preferences, guidePricingMode);
 
   // Build map data
   const mapData = buildMapData(schedule, hotels, orderedLocations);
@@ -465,6 +560,8 @@ module.exports = {
   fetchHotels,
   checkGuideAvailability,
   buildMapData,
-  calculateTotalPrice
+  calculateTotalPrice,
+  calculateGuideHours,
+  getGuideHourlyRate
 };
 

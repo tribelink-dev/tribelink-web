@@ -473,6 +473,184 @@ router.get('/experiences/:district/ai-filtered', authenticate, requireUser, asyn
   }
 });
 
+// Automatic planning endpoint - Uses Pathfinder to select personalized experiences
+router.post('/plan/automatic', authenticate, requireUser, async (req, res) => {
+  try {
+    const {
+      locations, // Array of {state, district}
+      country,
+      fromDate,
+      toDate
+    } = req.body;
+
+    if (!fromDate || !toDate || !country) {
+      return res.status(400).json({ message: 'Travel dates and country are required' });
+    }
+
+    // Handle multiple locations or single location
+    const tripLocations = locations && Array.isArray(locations) && locations.length > 0
+      ? locations
+      : [{ state: req.body.state, district: req.body.district }].filter(loc => loc.state && loc.district);
+
+    if (tripLocations.length === 0) {
+      return res.status(400).json({ message: 'At least one location (state and district) is required' });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user.preferences || !user.preferences.travelStyle) {
+      return res.status(400).json({ message: 'Please complete KYT questionnaire first' });
+    }
+
+    // Check if user has tokens
+    if (!user.tokens || user.tokens < 1) {
+      return res.status(400).json({ 
+        message: 'Insufficient tokens. You need at least 1 token to plan a trip. Complete a trip to earn more tokens!' 
+      });
+    }
+
+    // Fetch all available experiences for the locations
+    const from = new Date(fromDate);
+    const to = new Date(toDate);
+    
+    // Build query for all locations
+    const locationQueries = tripLocations.map(loc => ({
+      'location.country': country,
+      'location.state': { $regex: new RegExp(`^${loc.state.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+      'location.district': { $regex: new RegExp(`^${loc.district.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+      availableDates: {
+        $elemMatch: {
+          date: { $gte: from, $lte: to },
+          available: true
+        }
+      }
+    }));
+
+    // Find experiences matching any location
+    let allExperiences = await Experience.find({
+      $or: locationQueries
+    })
+      .populate('provider', 'name rating')
+      .sort({ _id: 1 })
+      .lean();
+
+    // Ensure all experiences have valid provider data
+    allExperiences = allExperiences.map(exp => {
+      if (!exp.provider || !exp.provider.name) {
+        exp.provider = { name: 'Unknown Host', rating: 0 };
+      }
+      return exp;
+    });
+
+    // If no experiences match date filter, get all experiences from locations (backward compatibility)
+    if (allExperiences.length === 0) {
+      const fallbackQueries = tripLocations.map(loc => ({
+        'location.country': country,
+        'location.state': { $regex: new RegExp(`^${loc.state.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+        'location.district': { $regex: new RegExp(`^${loc.district.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+      }));
+
+      allExperiences = await Experience.find({
+        $or: fallbackQueries
+      })
+        .populate('provider', 'name rating')
+        .sort({ _id: 1 })
+        .lean();
+
+      // Ensure all fallback experiences have valid provider data
+      allExperiences = allExperiences.map(exp => {
+        if (!exp.provider || !exp.provider.name) {
+          exp.provider = { name: 'Unknown Host', rating: 0 };
+        }
+        return exp;
+      });
+    }
+
+    if (allExperiences.length === 0) {
+      return res.status(404).json({ 
+        message: 'No experiences found for the selected locations and dates',
+        experiences: []
+      });
+    }
+
+    // Use Pathfinder (AI Agent) to filter experiences to top personalized matches
+    // Target: 2-3 experiences per location, or 5-8 total for multi-location trips
+    const targetCount = tripLocations.length === 1 ? 3 : Math.min(8, Math.max(5, tripLocations.length * 2));
+    
+    console.log(`[Automatic Planning] Filtering ${allExperiences.length} experiences to ${targetCount} using Pathfinder`);
+    
+    let filteredExperiences;
+    try {
+      filteredExperiences = await filterExperiencesAI(
+        req.user._id,
+        allExperiences,
+        {
+          locations: tripLocations,
+          dateRange: { from: fromDate, to: toDate },
+          targetCount
+        }
+      );
+      console.log(`[Automatic Planning] Pathfinder returned ${filteredExperiences.length} experiences`);
+    } catch (filterError) {
+      console.error('[Automatic Planning] Pathfinder error:', filterError);
+      // Fallback: return top experiences by basic criteria
+      filteredExperiences = allExperiences.slice(0, targetCount);
+      console.log(`[Automatic Planning] Using fallback: ${filteredExperiences.length} experiences`);
+    }
+
+    // Normalize experiences
+    const baseUrl = getBaseUrlFromRequest(req);
+    const normalizedExperiences = normalizeExperiences(filteredExperiences, baseUrl);
+
+    // Get reviews for filtered experiences
+    const experienceIds = normalizedExperiences.map(exp => exp._id);
+    const reviews = await Review.find({
+      experience: { $in: experienceIds }
+    })
+      .populate('user', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
+
+    // Attach reviews to experiences and ensure provider is properly formatted
+    const experiencesWithReviews = normalizedExperiences.map(exp => {
+      const expReviews = reviews.filter(r => r.experience.toString() === exp._id.toString());
+      const ratings = expReviews.map(r => r.rating);
+      const averageRating = ratings.length > 0 
+        ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length 
+        : 0;
+      
+      // Ensure provider is properly formatted
+      const provider = exp.provider || { name: 'Unknown Host', rating: 0 };
+      
+      return {
+        ...exp,
+        provider: {
+          name: provider.name || 'Unknown Host',
+          rating: provider.rating || 0,
+          _id: provider._id || null
+        },
+        recentReviews: expReviews.slice(0, 3),
+        reviewCount: expReviews.length,
+        averageRating: Math.round(averageRating * 10) / 10
+      };
+    });
+
+    res.json({
+      message: 'Personalized experiences selected successfully',
+      experiences: experiencesWithReviews,
+      totalAvailable: allExperiences.length,
+      selectedCount: experiencesWithReviews.length,
+      locations: tripLocations
+    });
+  } catch (error) {
+    console.error('Automatic planning error:', error);
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error.message 
+    });
+  }
+});
+
 // Create trip schedule
 router.post('/schedule', authenticate, requireUser, async (req, res) => {
   try {
@@ -483,7 +661,8 @@ router.post('/schedule', authenticate, requireUser, async (req, res) => {
       state,
       district,
       locations, // Array of {state, district} for multi-city trips
-      guideId
+      guideId,
+      guidePricingMode = 'daily'
     } = req.body;
 
     if (!fromDate || !toDate || !country) {
@@ -530,7 +709,8 @@ router.post('/schedule', authenticate, requireUser, async (req, res) => {
         state: tripLocations[0]?.state || state,
         district: tripLocations[0]?.district || district,
         locations: tripLocations, // Pass locations array
-        guideId
+        guideId,
+        guidePricingMode
       });
     } catch (scheduleError) {
       console.error('Scheduler error:', scheduleError);
@@ -576,7 +756,8 @@ router.post('/schedule', authenticate, requireUser, async (req, res) => {
       locations: tripLocations, // Store all locations
       preferences: user.preferences,
       schedule: normalizedSchedule,
-      totalPrice
+      totalPrice,
+      guidePricingMode
     });
 
     await trip.save();
@@ -630,6 +811,172 @@ router.post('/schedule', authenticate, requireUser, async (req, res) => {
       error: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
+  }
+});
+
+// Update guide hours for a specific day
+router.put('/:tripId/schedule/:dayIndex/guide-hours', authenticate, requireUser, async (req, res) => {
+  try {
+    const { tripId, dayIndex } = req.params;
+    const { hours } = req.body;
+
+    if (!hours || hours < 0) {
+      return res.status(400).json({ message: 'Valid hours value is required' });
+    }
+
+    const trip = await Trip.findById(tripId);
+
+    if (!trip) {
+      return res.status(404).json({ message: 'Trip not found' });
+    }
+
+    // Verify trip belongs to user
+    if (trip.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    const dayIdx = parseInt(dayIndex);
+    if (dayIdx < 0 || dayIdx >= trip.schedule.length) {
+      return res.status(400).json({ message: 'Invalid day index' });
+    }
+
+    const day = trip.schedule[dayIdx];
+
+    // Ensure guideHours object exists
+    if (!day.guideHours) {
+      day.guideHours = {
+        calculated: 0,
+        adjusted: null,
+        final: 0
+      };
+    }
+
+    // Calculate current hours if not already calculated
+    if (day.guideHours.calculated === 0) {
+      const { calculateGuideHours } = require('../services/scheduler/core/scheduler');
+      day.guideHours.calculated = calculateGuideHours(day);
+    }
+
+    // Validate: hours must be >= calculated hours (can only increase, not decrease below calculated)
+    if (hours < day.guideHours.calculated) {
+      return res.status(400).json({ 
+        message: `Hours cannot be less than calculated hours (${day.guideHours.calculated})` 
+      });
+    }
+
+    // Update adjusted and final hours
+    day.guideHours.adjusted = hours;
+    day.guideHours.final = hours;
+
+    // Recalculate trip total price
+    const { calculateTotalPrice, getGuideHourlyRate } = require('../services/scheduler/core/scheduler');
+    const Host = require('../models/Host');
+    
+    let guide = null;
+    if (day.guide) {
+      guide = await Host.findById(day.guide);
+    }
+
+    const totalPrice = calculateTotalPrice(
+      trip.schedule,
+      [], // Hotels not needed for recalculation
+      guide,
+      trip.preferences || {},
+      trip.guidePricingMode || 'daily'
+    );
+
+    trip.totalPrice = totalPrice;
+    await trip.save();
+
+    res.json({
+      message: 'Guide hours updated successfully',
+      dayIndex: dayIdx,
+      guideHours: day.guideHours,
+      totalPrice: trip.totalPrice
+    });
+  } catch (error) {
+    console.error('Error updating guide hours:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Switch guide pricing mode (daily/hourly)
+router.put('/:tripId/guide-pricing-mode', authenticate, requireUser, async (req, res) => {
+  try {
+    const { tripId } = req.params;
+    const { guidePricingMode } = req.body;
+
+    if (!guidePricingMode || !['daily', 'hourly'].includes(guidePricingMode)) {
+      return res.status(400).json({ message: 'guidePricingMode must be "daily" or "hourly"' });
+    }
+
+    const trip = await Trip.findById(tripId);
+
+    if (!trip) {
+      return res.status(404).json({ message: 'Trip not found' });
+    }
+
+    // Verify trip belongs to user
+    if (trip.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Update pricing mode
+    trip.guidePricingMode = guidePricingMode;
+
+    // Recalculate all guide costs
+    const { calculateTotalPrice, calculateGuideHours, getGuideHourlyRate } = require('../services/scheduler/core/scheduler');
+    const Host = require('../models/Host');
+
+    // Recalculate guide hours for all days if switching to hourly
+    if (guidePricingMode === 'hourly') {
+      for (const day of trip.schedule) {
+        if (day.guide) {
+          // Calculate hours if not already calculated
+          if (!day.guideHours || day.guideHours.calculated === 0) {
+            const calculatedHours = calculateGuideHours(day);
+            if (!day.guideHours) {
+              day.guideHours = {
+                calculated: calculatedHours,
+                adjusted: null,
+                final: calculatedHours
+              };
+            } else {
+              day.guideHours.calculated = calculatedHours;
+              day.guideHours.final = day.guideHours.adjusted || calculatedHours;
+            }
+          }
+        }
+      }
+    }
+
+    // Get guide for price calculation
+    let guide = null;
+    const firstDayWithGuide = trip.schedule.find(day => day.guide);
+    if (firstDayWithGuide && firstDayWithGuide.guide) {
+      guide = await Host.findById(firstDayWithGuide.guide);
+    }
+
+    // Recalculate total price
+    const totalPrice = calculateTotalPrice(
+      trip.schedule,
+      [], // Hotels not needed for recalculation
+      guide,
+      trip.preferences || {},
+      guidePricingMode
+    );
+
+    trip.totalPrice = totalPrice;
+    await trip.save();
+
+    res.json({
+      message: 'Guide pricing mode updated successfully',
+      guidePricingMode: trip.guidePricingMode,
+      totalPrice: trip.totalPrice
+    });
+  } catch (error) {
+    console.error('Error updating guide pricing mode:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 

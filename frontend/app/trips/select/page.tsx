@@ -9,6 +9,7 @@ import { useAuth } from '@/lib/auth';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import { format } from 'date-fns';
+import PlanningModeSelector, { PlanningMode } from '@/components/PlanningModeSelector';
 
 interface Location {
   state: string;
@@ -25,6 +26,7 @@ export default function TripSelectPage() {
   const [error, setError] = useState('');
   const [hasNoTokens, setHasNoTokens] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [planningMode, setPlanningMode] = useState<PlanningMode>('manual');
 
   useEffect(() => {
     setIsClient(true);
@@ -152,17 +154,26 @@ export default function TripSelectPage() {
         fromDate,
         toDate,
         country: 'India',
-        locations: validLocations
+        locations: validLocations,
+        planningMode
       };
       
       sessionStorage.setItem('tripData', JSON.stringify(tripData));
       
-      // Build query params for experiences page
-      const locationParams = validLocations.map((loc, idx) => 
-        `state${idx}=${encodeURIComponent(loc.state)}&district${idx}=${encodeURIComponent(loc.district)}`
-      ).join('&');
-      
-      router.push(`/trips/experiences?country=India&from=${fromDate}&to=${toDate}&${locationParams}`);
+      // Route based on planning mode
+      if (planningMode === 'automatic') {
+        // Build query params for automatic planning page
+        const locationParams = validLocations.map((loc, idx) => 
+          `state${idx}=${encodeURIComponent(loc.state)}&district${idx}=${encodeURIComponent(loc.district)}`
+        ).join('&');
+        router.push(`/trips/plan/automatic?country=India&from=${fromDate}&to=${toDate}&${locationParams}`);
+      } else {
+        // Build query params for experiences page (manual mode)
+        const locationParams = validLocations.map((loc, idx) => 
+          `state${idx}=${encodeURIComponent(loc.state)}&district${idx}=${encodeURIComponent(loc.district)}`
+        ).join('&');
+        router.push(`/trips/experiences?country=India&from=${fromDate}&to=${toDate}&${locationParams}`);
+      }
     } catch (err: any) {
       setError('Failed to proceed. Please try again.');
       setLoading(false);
@@ -209,6 +220,14 @@ export default function TripSelectPage() {
           </div>
 
           <div className="content-card shadow-large border-0">
+            {/* Planning Mode Selector */}
+            <div className="mb-8">
+              <PlanningModeSelector
+                selectedMode={planningMode}
+                onModeChange={setPlanningMode}
+              />
+            </div>
+
             {/* Token Warning - Enhanced Design */}
           {hasNoTokens || (user && (!user.tokens || user.tokens === 0)) ? (
             <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-300 rounded-xl p-6 md:p-8 mb-8 shadow-medium">

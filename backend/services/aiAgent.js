@@ -247,10 +247,12 @@ function analyzeTravelPatterns(trips) {
 async function filterExperiencesAI(userId, experiences, context = {}) {
   if (!USE_AI || experiences.length === 0) {
     // Fallback: return top 3 by basic scoring
+    console.log('[Pathfinder] AI disabled or no experiences, using fallback');
     return experiences.slice(0, 3);
   }
 
   try {
+    console.log(`[Pathfinder] Starting AI filtering for ${experiences.length} experiences`);
     // Sort experiences consistently by _id to ensure deterministic ordering
     const sortedExperiences = [...experiences].sort((a, b) => {
       const idA = a._id?.toString() || a._id || '';
@@ -309,6 +311,7 @@ Return ONLY valid JSON:
   "insights": "A brief, conversational explanation from Pathfinder about why these experiences were curated for this traveler"
 }`;
 
+    console.log('[Pathfinder] Calling OpenAI API...');
     const response = await axios.post(
       'https://api.openai.com/v1/chat/completions',
       {
@@ -330,9 +333,11 @@ Return ONLY valid JSON:
         headers: {
           'Authorization': `Bearer ${OPENAI_API_KEY}`,
           'Content-Type': 'application/json'
-        }
+        },
+        timeout: 30000 // 30 second timeout
       }
     );
+    console.log('[Pathfinder] OpenAI API response received');
 
     const content = response.data.choices[0].message.content.trim();
     const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/) || content.match(/\{[\s\S]*\}/);
@@ -362,9 +367,27 @@ Return ONLY valid JSON:
 
     return selectedExperiences;
   } catch (error) {
-    console.error('AI experience filtering error:', error.message);
+    console.error('[Pathfinder] AI experience filtering error:', error.message);
+    console.error('[Pathfinder] Error details:', error.response?.data || error);
+    
+    // Check if it's a timeout error
+    if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+      console.log('[Pathfinder] Request timeout, falling back to rule-based filtering');
+    } else if (error.response?.status === 401 || error.response?.status === 403) {
+      console.log('[Pathfinder] API key issue, falling back to rule-based filtering');
+    }
+    
     // Fallback to rule-based filtering
-    return filterExperiencesRuleBased(userId, experiences, await buildUserProfile(userId));
+    try {
+      const userProfile = await buildUserProfile(userId);
+      const fallbackResults = await filterExperiencesRuleBased(userId, experiences, userProfile);
+      console.log(`[Pathfinder] Fallback returned ${fallbackResults.length} experiences`);
+      return fallbackResults;
+    } catch (fallbackError) {
+      console.error('[Pathfinder] Fallback filtering also failed:', fallbackError);
+      // Last resort: return top 3 experiences
+      return experiences.slice(0, 3);
+    }
   }
 }
 

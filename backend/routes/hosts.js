@@ -246,6 +246,77 @@ router.get('/available', async (req, res) => {
   }
 });
 
+// Get available guides filtered by location, availability, and sorted by rating
+router.get('/guides/available', async (req, res) => {
+  try {
+    const { fromDate, toDate, state, district, country = 'India' } = req.query;
+
+    if (!fromDate || !toDate) {
+      return res.status(400).json({ message: 'Date range (fromDate, toDate) is required' });
+    }
+
+    const from = new Date(fromDate);
+    const to = new Date(toDate);
+
+    // Build query for guides
+    const query = {
+      providerType: 'GUIDE',
+      availability: {
+        $elemMatch: {
+          date: { $gte: from, $lte: to },
+          available: true
+        }
+      }
+    };
+
+    // If location filters are provided, we'll filter guides based on their service areas
+    // Note: This assumes guides can serve multiple locations. If guides have location fields,
+    // we would filter by those. For now, we'll return all available guides and let frontend
+    // handle location-based filtering if needed, or we can add location fields to guides later.
+
+    const guides = await Host.find(query)
+      .select('-password -googleId')
+      .sort({ rating: -1 }) // Sort by rating (highest first)
+      .limit(50)
+      .lean();
+
+    // Calculate hourly rate for each guide and format response
+    const guidesWithRates = guides.map(guide => {
+      // Calculate hourly rate based on rating
+      const rating = guide.rating || 0;
+      let hourlyRate = 10; // Default
+      if (rating >= 5.0) hourlyRate = 20;
+      else if (rating >= 4.0) hourlyRate = 15;
+      else if (rating >= 3.0) hourlyRate = 12;
+
+      // Use custom hourlyRate if set
+      if (guide.hourlyRate && guide.hourlyRate > 0) {
+        hourlyRate = guide.hourlyRate;
+      }
+
+      return {
+        _id: guide._id,
+        name: guide.name,
+        email: guide.email,
+        phoneNumber: guide.phoneNumber,
+        rating: guide.rating || 0,
+        ratingCount: guide.ratingCount || 0,
+        profilePicture: guide.profilePicture,
+        hourlyRate: hourlyRate,
+        availability: guide.availability || []
+      };
+    });
+
+    res.json({
+      guides: guidesWithRates,
+      count: guidesWithRates.length
+    });
+  } catch (error) {
+    console.error('Error fetching available guides:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Get single experience by ID
 router.get('/experience/:experienceId', authenticate, requireHost, async (req, res) => {
   try {
@@ -692,6 +763,49 @@ router.put('/experience/:experienceId', authenticate, requireHost, upload.single
       error: error.message,
       ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
     });
+  }
+});
+
+// Get assigned trips for a guide
+router.get('/guides/trips/:guideId', authenticate, async (req, res) => {
+  try {
+    const { guideId } = req.params;
+    const Trip = require('../models/Trip');
+
+    // Verify guide exists
+    const host = await Host.findById(guideId);
+    if (!host || host.providerType !== 'GUIDE') {
+      return res.status(404).json({ message: 'Guide not found' });
+    }
+
+    // Get trips where this guide is assigned in the schedule
+    const trips = await Trip.find({
+      'schedule.guide': guideId,
+      paymentStatus: { $in: ['Pending', 'Completed'] } // Only active trips
+    })
+    .populate('user', 'name email phoneNumber')
+    .populate('schedule.hotel', 'name address')
+    .populate('schedule.guide', 'name')
+    .sort({ fromDate: 1 }); // Sort by start date
+
+    res.json({
+      trips: trips.map(trip => ({
+        _id: trip._id,
+        user: trip.user,
+        fromDate: trip.fromDate,
+        toDate: trip.toDate,
+        country: trip.country,
+        state: trip.state,
+        district: trip.district,
+        locations: trip.locations,
+        schedule: trip.schedule,
+        totalPrice: trip.totalPrice,
+        paymentStatus: trip.paymentStatus
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching guide trips:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 

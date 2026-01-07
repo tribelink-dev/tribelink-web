@@ -82,7 +82,12 @@ const providerSchema = new mongoose.Schema({
         default: true
       }
     }]
-  }]
+  }],
+  // Optional custom hourly rate (overrides tiered calculation)
+  hourlyRate: {
+    type: Number,
+    default: null
+  }
 }, {
   timestamps: true
 });
@@ -94,6 +99,26 @@ providerSchema.index({ phoneNumber: 1 });
 providerSchema.index({ providerType: 1 });
 // Compound index for provider type + rating (common query pattern)
 providerSchema.index({ providerType: 1, rating: -1 });
+
+/**
+ * Get hourly rate for guide based on rating tiers
+ * Returns custom hourlyRate if set, otherwise calculates based on rating
+ * @returns {Number} Hourly rate in USD
+ */
+providerSchema.methods.getHourlyRate = function() {
+  // If custom hourly rate is set, use it
+  if (this.hourlyRate && this.hourlyRate > 0) {
+    return this.hourlyRate;
+  }
+  
+  // Calculate based on rating tiers
+  const rating = this.rating || 0;
+  
+  if (rating >= 5.0) return 20;  // $20/hour
+  if (rating >= 4.0) return 15;  // $15/hour
+  if (rating >= 3.0) return 12;  // $12/hour
+  return 10;  // $10/hour for <3.0
+};
 
 // Register as both 'Provider' and 'Host' for backward compatibility
 const Provider = mongoose.model('Provider', providerSchema);
