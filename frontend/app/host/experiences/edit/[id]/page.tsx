@@ -111,7 +111,7 @@ export default function EditExperiencePage() {
       
       if (experience.imageUrl) {
         // Use centralized image utility for consistent URL handling
-        const imageUrl = getImageUrl(experience.imageUrl ?? undefined);
+        const imageUrl = getImageUrl(experience.imageUrl ?? undefined) ?? undefined;
         setCurrentImageUrl(imageUrl);
       }
     } catch (err: any) {

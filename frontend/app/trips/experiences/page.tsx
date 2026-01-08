@@ -623,7 +623,7 @@ export default function ExperiencesPage() {
                 return aAvailable ? -1 : 1;
               })
               .map((experience) => {
-              const imageUrl = getImageUrl(experience.imageUrl ?? undefined);
+              const imageUrl = getImageUrl(experience.imageUrl ?? undefined) ?? undefined;
               const isAvailable = experience.availabilityStatus?.available !== false;
               const hasDateFilter = !!(from && to);
               return (

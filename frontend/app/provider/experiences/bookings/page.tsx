@@ -333,7 +333,7 @@ export default function ExperienceBookingsPage() {
         ) : (
           <div className="space-y-4">
             {filteredBookings.map((booking) => {
-              const imageUrl = getImageUrl(booking.experience?.imageUrl ?? undefined);
+              const imageUrl = getImageUrl(booking.experience?.imageUrl ?? undefined) ?? undefined;
               const scheduledDateTime = new Date(booking.scheduledDate);
               const isUpcoming = scheduledDateTime >= new Date();
               

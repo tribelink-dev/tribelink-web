@@ -322,7 +322,7 @@ export default function MyTicketsPage() {
         ) : (
           <div className="space-y-4">
             {filteredTickets.map((ticket) => {
-              const imageUrl = getImageUrl(ticket.experience?.imageUrl ?? undefined);
+              const imageUrl = getImageUrl(ticket.experience?.imageUrl ?? undefined) ?? undefined;
               const scheduledDateTime = new Date(ticket.scheduledDate);
               const [hours, minutes] = ticket.startTime.split(':');
               scheduledDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);

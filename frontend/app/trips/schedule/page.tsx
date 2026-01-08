@@ -1539,7 +1539,7 @@ export default function SchedulePage() {
                             
                             // Get raw image URL (can be string, array, or object)
                             const rawImageUrl = getImageFromActivity() || getImageFromExperience();
-                            const activityImageUrl = rawImageUrl ? getImageUrl(rawImageUrl) : null;
+                            const activityImageUrl = rawImageUrl ? getImageUrl(rawImageUrl) ?? undefined : undefined;
                             
                             // Debug logging - log first activity to troubleshoot
                             if (actIdx === 0) {

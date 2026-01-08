@@ -296,7 +296,7 @@ export default function HostExperiencesPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredExperiences.map((experience) => {
-                  const imageUrl = getImageUrl(experience.imageUrl ?? undefined);
+                  const imageUrl = getImageUrl(experience.imageUrl ?? undefined) ?? undefined;
                   return (
                     <div key={experience._id} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 flex flex-col">
                       {imageUrl ? (

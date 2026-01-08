@@ -57,7 +57,7 @@ export default function HotelBookingCard({ hotel, isSelected, onSelect, date }: 
     const imageInput = typeof mainImageObj === 'string' 
       ? (mainImageObj ?? undefined)
       : mainImageObj;
-    return getImageUrl(imageInput);
+    return getImageUrl(imageInput) ?? undefined;
   };
 
   const imageUrl = getMainImage();
