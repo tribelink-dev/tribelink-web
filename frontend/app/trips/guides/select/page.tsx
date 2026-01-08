@@ -201,7 +201,7 @@ export default function GuideSelectionPage() {
                       <div className="relative h-48 bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center">
                         {guide.profilePicture ? (
                           <img
-                            src={getImageUrl(guide.profilePicture)}
+                            src={getImageUrl(guide.profilePicture ?? undefined)}
                             alt={guide.name}
                             className="w-full h-full object-cover"
                           />
