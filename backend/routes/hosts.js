@@ -767,15 +767,16 @@ router.put('/experience/:experienceId', authenticate, requireHost, upload.single
 });
 
 // Get assigned trips for a guide
-router.get('/guides/trips/:guideId', authenticate, async (req, res) => {
+// Get trips for the authenticated guide (using their own ID)
+router.get('/guides/trips/me', authenticate, requireHost, async (req, res) => {
   try {
-    const { guideId } = req.params;
+    const guideId = req.user._id.toString();
     const Trip = require('../models/Trip');
 
-    // Verify guide exists
+    // Verify guide exists and is a GUIDE type
     const host = await Host.findById(guideId);
     if (!host || host.providerType !== 'GUIDE') {
-      return res.status(404).json({ message: 'Guide not found' });
+      return res.status(403).json({ message: 'Only guides can access this endpoint' });
     }
 
     // Get trips where this guide is assigned in the schedule
@@ -805,6 +806,147 @@ router.get('/guides/trips/:guideId', authenticate, async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching guide trips:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get all available experiences for guides to select
+router.get('/guides/experiences/available', authenticate, requireHost, async (req, res) => {
+  try {
+    const Experience = require('../models/Experience');
+    const { state, district, category, search } = req.query;
+    
+    const host = await Host.findById(req.user._id);
+    if (!host || host.providerType !== 'GUIDE') {
+      return res.status(403).json({ message: 'Only guides can access this endpoint' });
+    }
+
+    // Build query
+    const query = {};
+    if (state) query['location.state'] = state;
+    if (district) query['location.district'] = district;
+    if (category) query.category = category;
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const experiences = await Experience.find(query)
+      .populate('provider', 'name rating')
+      .select('-__v')
+      .sort({ rating: -1, createdAt: -1 })
+      .limit(100);
+
+    // Get guide's already selected experiences
+    const selectedIds = host.servicedExperiences?.map(id => id.toString()) || [];
+
+    const formattedExperiences = experiences.map(exp => ({
+      _id: exp._id,
+      title: exp.title,
+      description: exp.description,
+      category: exp.category,
+      subcategory: exp.subcategory,
+      location: exp.location,
+      price: exp.price,
+      duration: exp.duration,
+      imageUrl: exp.imageUrl,
+      rating: exp.rating || 0,
+      ratingCount: exp.ratingCount || 0,
+      provider: exp.provider,
+      isSelected: selectedIds.includes(exp._id.toString())
+    }));
+
+    res.json({ experiences: formattedExperiences });
+  } catch (error) {
+    console.error('Error fetching available experiences:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get guide's selected serviced experiences
+router.get('/guides/experiences', authenticate, requireHost, async (req, res) => {
+  try {
+    const host = await Host.findById(req.user._id).populate('servicedExperiences');
+    
+    if (!host || host.providerType !== 'GUIDE') {
+      return res.status(403).json({ message: 'Only guides can access this endpoint' });
+    }
+
+    res.json({ 
+      servicedExperiences: host.servicedExperiences || [],
+      count: host.servicedExperiences?.length || 0
+    });
+  } catch (error) {
+    console.error('Error fetching serviced experiences:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Add experience to guide's serviced experiences
+router.post('/guides/experiences/:experienceId', authenticate, requireHost, async (req, res) => {
+  try {
+    const { experienceId } = req.params;
+    const Experience = require('../models/Experience');
+    
+    const host = await Host.findById(req.user._id);
+    if (!host || host.providerType !== 'GUIDE') {
+      return res.status(403).json({ message: 'Only guides can access this endpoint' });
+    }
+
+    // Verify experience exists
+    const experience = await Experience.findById(experienceId);
+    if (!experience) {
+      return res.status(404).json({ message: 'Experience not found' });
+    }
+
+    // Check if already added
+    if (host.servicedExperiences?.some(id => id.toString() === experienceId)) {
+      return res.status(400).json({ message: 'Experience already added to serviced experiences' });
+    }
+
+    // Add to serviced experiences
+    if (!host.servicedExperiences) {
+      host.servicedExperiences = [];
+    }
+    host.servicedExperiences.push(experienceId);
+    await host.save();
+
+    res.json({ 
+      message: 'Experience added to serviced experiences',
+      servicedExperiences: host.servicedExperiences
+    });
+  } catch (error) {
+    console.error('Error adding serviced experience:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Remove experience from guide's serviced experiences
+router.delete('/guides/experiences/:experienceId', authenticate, requireHost, async (req, res) => {
+  try {
+    const { experienceId } = req.params;
+    
+    const host = await Host.findById(req.user._id);
+    if (!host || host.providerType !== 'GUIDE') {
+      return res.status(403).json({ message: 'Only guides can access this endpoint' });
+    }
+
+    // Remove from serviced experiences
+    if (host.servicedExperiences) {
+      host.servicedExperiences = host.servicedExperiences.filter(
+        id => id.toString() !== experienceId
+      );
+      await host.save();
+    }
+
+    res.json({ 
+      message: 'Experience removed from serviced experiences',
+      servicedExperiences: host.servicedExperiences || []
+    });
+  } catch (error) {
+    console.error('Error removing serviced experience:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

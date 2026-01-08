@@ -67,6 +67,11 @@ const providerSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Experience'
   }],
+  // Only for GUIDE providers - experiences they can service
+  servicedExperiences: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Experience'
+  }],
   // Availability for all provider types
   availability: [{
     date: Date,

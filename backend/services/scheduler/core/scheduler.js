@@ -379,8 +379,23 @@ async function scheduleTrip({
   // Fetch hotels
   const hotels = await fetchHotels(tripLocations, country, preferences);
 
+  // Intelligent guide matching - if no guide specified, find best match
+  let finalGuideId = guideId;
+  if (!finalGuideId) {
+    const { selectBestGuide } = require('../../guideMatching');
+    try {
+      finalGuideId = await selectBestGuide(experienceIds, tripLocations, fromDate, toDate);
+      if (finalGuideId) {
+        console.log(`🤖 Auto-selected best matching guide: ${finalGuideId}`);
+      }
+    } catch (error) {
+      console.error('Error in intelligent guide matching:', error);
+      // Continue without guide if matching fails
+    }
+  }
+
   // Check guide availability
-  const guide = await checkGuideAvailability(guideId, fromDate, toDate);
+  const guide = await checkGuideAvailability(finalGuideId, fromDate, toDate);
 
   // Build schedule day by day
   const schedule = [];

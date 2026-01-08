@@ -1,14 +1,16 @@
 // Utility function to get dashboard route based on provider type
-// All providers now use the unified /host/dashboard
 export function getProviderDashboard(providerType: string): string {
-  // Unified dashboard for all provider types
-  return '/host/dashboard';
-  
-  // Legacy provider-specific dashboards (kept for reference)
-  // case 'EXPERIENCE_HOST': return '/provider/experiences';
-  // case 'GUIDE': return '/provider/guides';
-  // case 'ACCOMMODATION_PROVIDER': return '/provider/hotels';
-  // case 'DRIVER_PARTNER': return '/provider/drivers';
+  switch (providerType) {
+    case 'GUIDE':
+      return '/provider/guides';
+    case 'DRIVER_PARTNER':
+      return '/provider/drivers';
+    case 'ACCOMMODATION_PROVIDER':
+      return '/provider/hotels';
+    case 'EXPERIENCE_HOST':
+    default:
+      return '/host/dashboard';
+  }
 }
 
 // Get welcome message based on provider type

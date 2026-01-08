@@ -697,6 +697,21 @@ router.post('/schedule', authenticate, requireUser, async (req, res) => {
       return res.status(400).json({ message: 'Bucketlist is empty. Add experiences first.' });
     }
 
+    // Intelligent guide matching - if no guide specified, find best match
+    let finalGuideId = guideId;
+    if (!finalGuideId) {
+      const { selectBestGuide } = require('../services/guideMatching');
+      try {
+        finalGuideId = await selectBestGuide(experienceIds, tripLocations, fromDate, toDate);
+        if (finalGuideId) {
+          console.log(`🤖 Auto-selected best matching guide for trip`);
+        }
+      } catch (error) {
+        console.error('Error in intelligent guide matching:', error);
+        // Continue without guide if matching fails
+      }
+    }
+
     // Schedule trip using AI-powered scheduler (Gumo.ai-like)
     let scheduleResult;
     try {
@@ -709,7 +724,7 @@ router.post('/schedule', authenticate, requireUser, async (req, res) => {
         state: tripLocations[0]?.state || state,
         district: tripLocations[0]?.district || district,
         locations: tripLocations, // Pass locations array
-        guideId,
+        guideId: finalGuideId,
         guidePricingMode
       });
     } catch (scheduleError) {
