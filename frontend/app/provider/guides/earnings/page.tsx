@@ -343,6 +343,9 @@ export default function GuideEarningsPage() {
               <div className="flex items-end justify-between gap-4 h-64">
                 {displayData.map((item, index) => {
                   const height = (item.amount / maxEarnings) * 100;
+                  const label = period === 'month' 
+                    ? (item as { month: string; amount: number }).month 
+                    : (item as { week: string; amount: number }).week;
                   return (
                     <motion.div
                       key={index}
@@ -363,7 +366,7 @@ export default function GuideEarningsPage() {
                         />
                       </motion.div>
                       <div className="text-xs text-slate-400 font-semibold text-center">
-                        {period === 'month' ? item.month : item.week}
+                        {label}
                       </div>
                       <div className="text-xs text-emerald-400 font-bold opacity-0 group-hover:opacity-100 transition-opacity">
                         ₹{item.amount.toFixed(2)}
