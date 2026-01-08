@@ -197,7 +197,7 @@ export default function HostHotelsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredHotels.map((hotel) => {
               const mainImage = hotel.images?.find(img => img.isMain) || hotel.images?.[0];
-              const imageUrl = mainImage ? getImageUrl(mainImage.url) : null;
+              const imageUrl = mainImage ? getImageUrl(mainImage.url ?? undefined) : null;
               
               return (
                 <div key={hotel._id} className="card-professional card-hover overflow-hidden flex flex-col">

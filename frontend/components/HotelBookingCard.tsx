@@ -53,7 +53,11 @@ export default function HotelBookingCard({ hotel, isSelected, onSelect, date }: 
     }
     
     // Use centralized utility which handles both object and string formats
-    return getImageUrl(mainImageObj);
+    // Convert null to undefined to satisfy TypeScript type checking
+    const imageInput = typeof mainImageObj === 'string' 
+      ? (mainImageObj ?? undefined)
+      : mainImageObj;
+    return getImageUrl(imageInput);
   };
 
   const imageUrl = getMainImage();

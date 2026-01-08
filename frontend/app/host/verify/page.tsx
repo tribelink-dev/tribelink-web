@@ -314,7 +314,7 @@ export default function VerifyTicketsPage() {
         ) : (
           <div className="space-y-4">
             {filteredTickets.map((ticket) => {
-              const imageUrl = getImageUrl(ticket.experience?.imageUrl);
+              const imageUrl = getImageUrl(ticket.experience?.imageUrl ?? undefined);
               const canVerify = isTicketValidForVerification(ticket);
               const scheduledDateTime = new Date(ticket.scheduledDate);
               const [hours, minutes] = ticket.startTime.split(':');

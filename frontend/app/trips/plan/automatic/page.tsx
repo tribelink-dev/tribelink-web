@@ -343,7 +343,7 @@ export default function AutomaticPlanningPage() {
                   {experience.imageUrl && (
                     <div className="relative h-48 w-full overflow-hidden">
                       <img
-                        src={getImageUrl(experience.imageUrl)}
+                        src={getImageUrl(experience.imageUrl ?? undefined)}
                         alt={experience.title}
                         className="w-full h-full object-cover"
                       />
