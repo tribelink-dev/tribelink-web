@@ -52,6 +52,11 @@ interface ScheduleDay {
   hotel?: string;
   hotelSelected?: boolean;
   guide?: any;
+  guideHours?: {
+    calculated?: number;
+    adjusted?: number | null;
+    final?: number;
+  };
   cab: boolean;
   chauffeur?: boolean;
 }
