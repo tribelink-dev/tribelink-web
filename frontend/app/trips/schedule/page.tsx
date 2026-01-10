@@ -9,6 +9,7 @@ import ChauffeurSelectionCard from '@/components/ChauffeurSelectionCard';
 import GuidePricingSelector, { PricingMode } from '@/components/GuidePricingSelector';
 import { useAuth } from '@/lib/auth';
 import { getImageUrl } from '@/lib/imageUtils';
+import PreferenceModal from '@/components/PreferenceModal';
 
 interface Activity {
   experienceId: string | any;
@@ -230,6 +231,8 @@ export default function SchedulePage() {
   const [loadingRecommendations, setLoadingRecommendations] = useState<{ [dayIndex: number]: boolean }>({});
   const [guidePricingMode, setGuidePricingMode] = useState<PricingMode>('daily');
   const [selectedGuideInfo, setSelectedGuideInfo] = useState<any>(null);
+  const [showPreferenceModal, setShowPreferenceModal] = useState(false);
+  const [pendingAction, setPendingAction] = useState<(() => Promise<void>) | null>(null);
 
   useEffect(() => {
     const tripId = searchParams.get('tripId');
@@ -499,6 +502,13 @@ export default function SchedulePage() {
 
 
   const createSchedule = async () => {
+    // Check if user has preferences
+    if (!user?.preferences?.travelStyle) {
+      setPendingAction(() => createSchedule);
+      setShowPreferenceModal(true);
+      return;
+    }
+
     try {
       setCreatingSchedule(true);
       const tripDataStr = sessionStorage.getItem('tripData');
@@ -735,7 +745,14 @@ export default function SchedulePage() {
       
       setError('');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to create schedule');
+      const errorMessage = err.response?.data?.message || 'Failed to create schedule';
+      // Check if error is about missing preferences
+      if (errorMessage.includes('KYT questionnaire') || errorMessage.includes('preferences')) {
+        setPendingAction(() => createSchedule);
+        setShowPreferenceModal(true);
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
       setCreatingSchedule(false);
@@ -2051,6 +2068,40 @@ export default function SchedulePage() {
           </React.Fragment>
         )}
       </div>
+
+      {/* Preference Modal */}
+      <PreferenceModal
+        isOpen={showPreferenceModal}
+        onClose={() => {
+          setShowPreferenceModal(false);
+          setPendingAction(null);
+        }}
+        onSuccess={async () => {
+          // Refresh user data to get updated preferences
+          try {
+            const userResponse = await api.get('/user/me');
+            if (userResponse.data.user && typeof window !== 'undefined') {
+              const storedUser = localStorage.getItem('user');
+              if (storedUser) {
+                const userData = JSON.parse(storedUser);
+                userData.preferences = userResponse.data.user.preferences;
+                localStorage.setItem('user', JSON.stringify(userData));
+              }
+            }
+          } catch (err) {
+            console.error('Error refreshing user data:', err);
+          }
+          
+          // Retry the pending action
+          if (pendingAction) {
+            const action = pendingAction;
+            setPendingAction(null);
+            setTimeout(async () => {
+              await action();
+            }, 100);
+          }
+        }}
+      />
     </div>
   );
 }

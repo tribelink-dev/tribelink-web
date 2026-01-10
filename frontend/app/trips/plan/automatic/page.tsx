@@ -6,6 +6,7 @@ import api from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { getImageUrl } from '@/lib/imageUtils';
 import { motion, AnimatePresence } from 'framer-motion';
+import PreferenceModal from '@/components/PreferenceModal';
 
 interface Experience {
   _id: string;
@@ -44,6 +45,13 @@ export default function AutomaticPlanningPage() {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [country, setCountry] = useState('');
+  const [showPreferenceModal, setShowPreferenceModal] = useState(false);
+  const [pendingActionParams, setPendingActionParams] = useState<{
+    locs: Location[];
+    countryParam: string;
+    fromParam: string;
+    toParam: string;
+  } | null>(null);
 
   useEffect(() => {
     // Parse query parameters
@@ -90,6 +98,14 @@ export default function AutomaticPlanningPage() {
     fromParam: string,
     toParam: string
   ) => {
+    // Check if user has preferences
+    if (!user?.preferences?.travelStyle) {
+      setPendingActionParams({ locs, countryParam, fromParam, toParam });
+      setShowPreferenceModal(true);
+      setLoading(false);
+      return;
+    }
+
     try {
       setPlanning(true);
       setLoading(false); // Switch from initial loading to planning state
@@ -126,7 +142,13 @@ export default function AutomaticPlanningPage() {
     } catch (err: any) {
       console.error('Automatic planning error:', err);
       const errorMessage = err.response?.data?.message || err.message || 'Failed to generate automatic plan. Please try again.';
-      setError(errorMessage);
+      // Check if error is about missing preferences
+      if (errorMessage.includes('KYT questionnaire') || errorMessage.includes('preferences')) {
+        setPendingActionParams({ locs, countryParam, fromParam, toParam });
+        setShowPreferenceModal(true);
+      } else {
+        setError(errorMessage);
+      }
       setLoading(false);
       setPlanning(false);
     }
@@ -398,6 +420,40 @@ export default function AutomaticPlanningPage() {
           </div>
         </div>
       </div>
+
+      {/* Preference Modal */}
+      <PreferenceModal
+        isOpen={showPreferenceModal}
+        onClose={() => {
+          setShowPreferenceModal(false);
+          setPendingActionParams(null);
+        }}
+        onSuccess={async () => {
+          // Refresh user data to get updated preferences
+          try {
+            const userResponse = await api.get('/user/me');
+            if (userResponse.data.user && typeof window !== 'undefined') {
+              const storedUser = localStorage.getItem('user');
+              if (storedUser) {
+                const userData = JSON.parse(storedUser);
+                userData.preferences = userResponse.data.user.preferences;
+                localStorage.setItem('user', JSON.stringify(userData));
+              }
+            }
+          } catch (err) {
+            console.error('Error refreshing user data:', err);
+          }
+          
+          // Retry the pending action
+          if (pendingActionParams) {
+            const params = pendingActionParams;
+            setPendingActionParams(null);
+            setTimeout(async () => {
+              await startAutomaticPlanning(params.locs, params.countryParam, params.fromParam, params.toParam);
+            }, 100);
+          }
+        }}
+      />
     </div>
   );
 }
