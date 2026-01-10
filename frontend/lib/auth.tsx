@@ -10,6 +10,11 @@ interface User {
   phoneNumber?: string;
   name: string;
   tokens?: number;
+  preferences?: {
+    travelStyle?: string;
+    pace?: string;
+    transport?: string;
+  };
 }
 
 interface AuthContextType {
@@ -46,7 +51,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             email: response.data.user.email,
             phoneNumber: response.data.user.phoneNumber,
             name: response.data.user.name,
-            tokens: response.data.user.tokens
+            tokens: response.data.user.tokens,
+            preferences: response.data.user.preferences
           };
           setUser(updatedUser);
           if (typeof window !== 'undefined') {
