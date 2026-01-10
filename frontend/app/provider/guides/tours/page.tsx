@@ -21,8 +21,8 @@ interface GuidedTour {
   duration: number;
   maxParticipants: number;
   imageUrl?: string;
-  rating: number;
-  ratingCount: number;
+  rating?: number;
+  ratingCount?: number;
   availableDates: Array<{
     date: string;
     startTime?: string;
@@ -201,8 +201,8 @@ export default function GuidedToursPage() {
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-1">
                         <span className="text-yellow-400">⭐</span>
-                        <span className="text-white font-semibold">{tour.rating.toFixed(1)}</span>
-                        <span className="text-slate-400 text-sm">({tour.ratingCount})</span>
+                        <span className="text-white font-semibold">{(tour.rating || 0).toFixed(1)}</span>
+                        <span className="text-slate-400 text-sm">({tour.ratingCount || 0})</span>
                       </div>
                       <div className="text-slate-400 text-sm">
                         {tour.duration}h

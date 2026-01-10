@@ -83,56 +83,72 @@ export default function NewGuidedTourPage() {
     }
   };
 
-  const getLocalDateString = (date: Date): string => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
+  const getLocalDateString = (date: Date | string | undefined): string => {
+    if (!date) return '';
+    // Handle string dates
+    if (typeof date === 'string') {
+      return date.split('T')[0]; // Extract YYYY-MM-DD from ISO string
+    }
+    // Ensure it's a Date object
+    const dateObj = date instanceof Date ? date : new Date(date);
+    if (isNaN(dateObj.getTime())) {
+      return '';
+    }
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   };
 
-  const handleDateSelect = (date: Date | undefined) => {
-    if (!date) return;
-    
-    const dateString = getLocalDateString(date);
-    const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    
-    const isSelected = selectedDates.some(d => getLocalDateString(d) === dateString);
-    
-    if (isSelected) {
-      const newDates = selectedDates.filter(d => getLocalDateString(d) !== dateString);
-      setSelectedDates(newDates);
-      
-      const newSlots = { ...dateTimeSlots };
-      delete newSlots[dateString];
-      setDateTimeSlots(newSlots);
-      
-      setFormData({
-        ...formData,
-        availableDates: formData.availableDates.filter(d => d.date !== dateString)
-      });
-    } else {
-      const newDates = [...selectedDates, dateOnly].sort((a, b) => a.getTime() - b.getTime());
-      setSelectedDates(newDates);
-      
-      const newSlots = {
-        ...dateTimeSlots,
-        [dateString]: { startTime: '09:00', endTime: '17:00' }
-      };
-      setDateTimeSlots(newSlots);
-      
-      setFormData({
-        ...formData,
-        availableDates: [
-          ...formData.availableDates,
-          {
-            date: dateString,
-            startTime: '09:00',
-            endTime: '17:00',
-            available: true
-          }
-        ].sort((a, b) => a.date.localeCompare(b.date))
-      });
+  const handleDateSelect = (dates: Date | Date[] | undefined) => {
+    if (!dates) {
+      setSelectedDates([]);
+      setFormData({ ...formData, availableDates: [] });
+      return;
     }
+    
+    // DayPicker in multiple mode returns the full array of selected dates
+    const datesArray = Array.isArray(dates) ? dates : [dates];
+    
+    // Filter out invalid dates
+    const validDates = datesArray
+      .filter(date => date instanceof Date && !isNaN(date.getTime()))
+      .map(date => {
+        const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        return dateOnly;
+      });
+    
+    // Update selectedDates
+    setSelectedDates(validDates);
+    
+    // Update availableDates in formData
+    const newAvailableDates = validDates.map(date => {
+      const dateString = getLocalDateString(date);
+      // Check if this date already exists in formData
+      const existing = formData.availableDates.find(d => d.date === dateString);
+      return existing || {
+        date: dateString,
+        startTime: '09:00',
+        endTime: '17:00',
+        available: true
+      };
+    }).sort((a, b) => a.date.localeCompare(b.date));
+    
+    // Update dateTimeSlots
+    const newSlots: { [date: string]: { startTime: string; endTime: string } } = {};
+    newAvailableDates.forEach(d => {
+      newSlots[d.date] = {
+        startTime: d.startTime || '09:00',
+        endTime: d.endTime || '17:00'
+      };
+    });
+    setDateTimeSlots(newSlots);
+    
+    // Update formData
+    setFormData({
+      ...formData,
+      availableDates: newAvailableDates
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -141,10 +157,50 @@ export default function NewGuidedTourPage() {
     setSuccess(false);
     setLoading(true);
 
-    if (!formData.title || !formData.description || !formData.category || !formData.subcategory ||
-        !formData.location.country || !formData.location.state || !formData.location.district || 
-        !formData.price || formData.availableDates.length === 0) {
-      setError('Please fill all required fields and add at least one available date');
+    // Detailed validation with specific error messages
+    const errors: string[] = [];
+    
+    console.log('Form data validation:', {
+      title: formData.title,
+      description: formData.description,
+      category: formData.category,
+      subcategory: formData.subcategory,
+      location: formData.location,
+      price: formData.price,
+      availableDates: formData.availableDates,
+      availableDatesLength: formData.availableDates?.length
+    });
+    
+    if (!formData.title || formData.title.trim() === '') {
+      errors.push('Tour title is required');
+    }
+    if (!formData.description || formData.description.trim() === '') {
+      errors.push('Description is required');
+    }
+    if (!formData.category) {
+      errors.push('Category is required');
+    }
+    if (!formData.subcategory) {
+      errors.push('Subcategory is required');
+    }
+    if (!formData.location.country || formData.location.country.trim() === '') {
+      errors.push('Country is required');
+    }
+    if (!formData.location.state || formData.location.state.trim() === '') {
+      errors.push('State is required');
+    }
+    if (!formData.location.district || formData.location.district.trim() === '') {
+      errors.push('District is required');
+    }
+    if (!formData.price || formData.price.trim() === '' || parseFloat(formData.price) <= 0 || isNaN(parseFloat(formData.price))) {
+      errors.push('Valid price is required (must be a number greater than 0)');
+    }
+    if (!formData.availableDates || formData.availableDates.length === 0) {
+      errors.push('At least one available date is required - please select dates from the calendar');
+    }
+    
+    if (errors.length > 0) {
+      setError(`Please fix the following: ${errors.join(', ')}`);
       setLoading(false);
       return;
     }
