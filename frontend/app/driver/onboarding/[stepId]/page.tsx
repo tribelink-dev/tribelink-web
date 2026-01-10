@@ -158,8 +158,30 @@ export default function DriverOnboardingStepPage() {
         return;
       }
 
+      // Validate and normalize _id
+      if (!parsedHost._id) {
+        console.error('Host data missing _id:', parsedHost);
+        router.push('/host/login');
+        return;
+      }
+      
+      // Ensure _id is a string (handle different formats)
+      let hostId: string;
+      if (typeof parsedHost._id === 'string') {
+        hostId = parsedHost._id;
+      } else if (parsedHost._id && typeof parsedHost._id === 'object' && parsedHost._id.$oid) {
+        // Handle MongoDB extended JSON format
+        hostId = parsedHost._id.$oid;
+      } else if (parsedHost._id?.toString) {
+        hostId = parsedHost._id.toString();
+      } else {
+        hostId = String(parsedHost._id);
+      }
+      
+      // Update parsedHost with normalized _id
+      parsedHost._id = hostId;
       setHost(parsedHost);
-      fetchDriverProfile(parsedHost._id);
+      fetchDriverProfile(hostId);
     }
   }, [router]);
 
@@ -258,7 +280,39 @@ export default function DriverOnboardingStepPage() {
     setUploading(true);
 
     try {
-      const providerId = host._id;
+      // Ensure providerId is valid
+      if (!host || !host._id) {
+        setError('Invalid session. Please log in again.');
+        setUploading(false);
+        setTimeout(() => {
+          router.push('/host/login');
+        }, 2000);
+        return;
+      }
+      
+      // Normalize providerId to string
+      let providerId: string;
+      if (typeof host._id === 'string') {
+        providerId = host._id;
+      } else if (host._id && typeof host._id === 'object' && host._id.$oid) {
+        providerId = host._id.$oid;
+      } else if (host._id?.toString) {
+        providerId = host._id.toString();
+      } else {
+        providerId = String(host._id);
+      }
+      
+      // Only validate format if it's clearly invalid (not just check strict format)
+      // Allow the backend to do the final validation
+      if (!providerId || providerId.length === 0) {
+        console.error('Empty providerId:', providerId);
+        setError('Invalid provider ID. Please log in again.');
+        setUploading(false);
+        setTimeout(() => {
+          router.push('/host/login');
+        }, 2000);
+        return;
+      }
 
       // Handle file uploads
       if (stepConfig.isProfilePicture) {
@@ -291,6 +345,17 @@ export default function DriverOnboardingStepPage() {
           return;
         }
 
+        // Validate required form fields
+        if (stepConfig.formFields) {
+          for (const field of stepConfig.formFields) {
+            if (field.required && (!formData[field.name] || !formData[field.name].trim())) {
+              setError(`Please fill in ${field.label}`);
+              setUploading(false);
+              return;
+            }
+          }
+        }
+
         const formDataToSend = new FormData();
         formDataToSend.append('document', file);
         formDataToSend.append('documentType', stepConfig.documentType);
@@ -299,17 +364,36 @@ export default function DriverOnboardingStepPage() {
         // Add form fields if any
         if (stepConfig.formFields) {
           stepConfig.formFields.forEach(field => {
-            if (field.name !== 'languages' && formData[field.name]) {
-              formDataToSend.append(field.name, formData[field.name]);
+            if (field.name !== 'languages' && formData[field.name] && formData[field.name].trim()) {
+              formDataToSend.append(field.name, formData[field.name].trim());
             }
           });
         }
 
-        await api.post(`/drivers/documents/${providerId}`, formDataToSend, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
+        // Log what we're sending (for debugging)
+        console.log('Sending document upload:', {
+          providerId: providerId,
+          providerIdType: typeof providerId,
+          providerIdLength: providerId?.length,
+          documentType: stepConfig.documentType,
+          fileName: file.name,
+          fileSize: file.size,
+          formFields: stepConfig.formFields?.map(f => ({ name: f.name, value: formData[f.name] }))
         });
+
+        // Validate providerId format before sending
+        if (!providerId || typeof providerId !== 'string' || providerId.length !== 24) {
+          console.error('Invalid providerId:', providerId);
+          setError('Invalid provider ID. Please log in again.');
+          setUploading(false);
+          setTimeout(() => {
+            router.push('/host/login');
+          }, 2000);
+          return;
+        }
+
+        // Don't set Content-Type header - let axios set it automatically with boundary
+        await api.post(`/drivers/documents/${providerId}`, formDataToSend);
 
         // Update profile with form data if needed
         const updateData: any = {};
@@ -370,7 +454,42 @@ export default function DriverOnboardingStepPage() {
 
     } catch (err: any) {
       console.error('Error submitting:', err);
-      setError(err.response?.data?.message || 'Failed to save. Please try again.');
+      console.error('Error response:', err.response);
+      console.error('Error data:', err.response?.data);
+      
+      // Handle authentication errors
+      if (err.isAuthError || err.response?.status === 401) {
+        setError('Your session has expired. Please log in again.');
+        // The API interceptor will handle redirecting to login
+        setUploading(false);
+        return;
+      }
+      
+      const errorResponse = err.response?.data;
+      let errorMessage = 'Failed to save. Please try again.';
+      
+      if (errorResponse) {
+        // Use the detailed message from backend
+        if (errorResponse.message) {
+          errorMessage = errorResponse.message;
+        } else if (errorResponse.error) {
+          errorMessage = errorResponse.error;
+        }
+        
+        // If there are field-specific errors, include them
+        if (errorResponse.details) {
+          const fieldErrors = Object.values(errorResponse.details).map((detail: any) => detail.message).filter(Boolean);
+          if (fieldErrors.length > 0) {
+            errorMessage += ': ' + fieldErrors.join(', ');
+          }
+        }
+      } else if (err.message) {
+        // Network error or other error
+        errorMessage = err.message;
+      }
+      
+      console.error('Final error message:', errorMessage);
+      setError(errorMessage);
     } finally {
       setUploading(false);
     }

@@ -1,9 +1,82 @@
 const express = require('express');
 const Review = require('../models/Review');
 const Experience = require('../models/Experience');
+const Ticket = require('../models/Ticket');
+const Trip = require('../models/Trip');
 const { authenticate, requireUser } = require('../middleware/auth');
 
 const router = express.Router();
+
+// Check if user can review an experience
+router.get('/:experienceId/can-review', authenticate, requireUser, async (req, res) => {
+  try {
+    const { experienceId } = req.params;
+    const userId = req.user._id;
+
+    // Check if experience exists
+    const experience = await Experience.findById(experienceId);
+    if (!experience) {
+      return res.status(404).json({ message: 'Experience not found', canReview: false });
+    }
+
+    // Check if user already reviewed this experience
+    const existingReview = await Review.findOne({
+      experience: experienceId,
+      user: userId
+    });
+
+    if (existingReview) {
+      return res.json({ 
+        canReview: false, 
+        reason: 'You have already reviewed this experience',
+        hasExistingReview: true
+      });
+    }
+
+    // Check if user has a ticket for this experience
+    const ticket = await Ticket.findOne({
+      experience: experienceId,
+      user: userId,
+      status: { $in: ['active', 'verified'] }
+    });
+
+    if (ticket) {
+      return res.json({ 
+        canReview: true, 
+        reason: 'You have booked this experience',
+        hasBooking: true,
+        ticketId: ticket._id
+      });
+    }
+
+    // Check if user has this experience in any completed trip schedule
+    const trips = await Trip.find({
+      user: userId,
+      'schedule.activities.experienceId': experienceId
+    }).select('_id fromDate toDate');
+
+    if (trips.length > 0) {
+      // Check if any trip is completed (toDate is in the past)
+      const completedTrip = trips.find(trip => new Date(trip.toDate) < new Date());
+      if (completedTrip) {
+        return res.json({ 
+          canReview: true, 
+          reason: 'You have completed a trip with this experience',
+          hasBooking: true,
+          tripId: completedTrip._id
+        });
+      }
+    }
+
+    return res.json({ 
+      canReview: false, 
+      reason: 'You must book and complete this experience before reviewing',
+      hasBooking: false
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message, canReview: false });
+  }
+});
 
 // Create a review
 router.post('/:experienceId', authenticate, requireUser, async (req, res) => {
@@ -31,13 +104,45 @@ router.post('/:experienceId', authenticate, requireUser, async (req, res) => {
       return res.status(400).json({ message: 'You have already reviewed this experience' });
     }
 
+    // Verify user has booked this experience
+    const ticket = await Ticket.findOne({
+      experience: experienceId,
+      user: req.user._id,
+      status: { $in: ['active', 'verified'] }
+    });
+
+    // If no ticket, check if experience is in a completed trip
+    let hasBooking = !!ticket;
+    let bookingTripId = tripId || null;
+
+    if (!hasBooking) {
+      const trips = await Trip.find({
+        user: req.user._id,
+        'schedule.activities.experienceId': experienceId
+      });
+
+      const completedTrip = trips.find(t => new Date(t.toDate) < new Date());
+      if (completedTrip) {
+        hasBooking = true;
+        bookingTripId = completedTrip._id;
+      }
+    } else {
+      bookingTripId = ticket.trip;
+    }
+
+    if (!hasBooking) {
+      return res.status(403).json({ 
+        message: 'You must book and complete this experience before reviewing it' 
+      });
+    }
+
     // Create review
     const review = new Review({
       experience: experienceId,
       user: req.user._id,
       rating,
       comment: comment || '',
-      trip: tripId || null
+      trip: bookingTripId
     });
 
     await review.save();

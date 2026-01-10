@@ -6,6 +6,7 @@ import api from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { getImageUrl } from '@/lib/imageUtils';
 import ExperienceDetailModal from '@/components/ExperienceDetailModal';
+import ReviewModal from '@/components/ReviewModal';
 
 interface Review {
   _id: string;
@@ -844,6 +845,7 @@ export default function ExperiencesPage() {
       {showReviewModal && selectedExperience && (
         <ReviewModal
           experience={selectedExperience}
+          isOpen={showReviewModal}
           onClose={() => {
             setShowReviewModal(false);
             setSelectedExperience(null);
@@ -901,192 +903,4 @@ export default function ExperiencesPage() {
   );
 }
 
-// Review Modal Component
-function ReviewModal({ 
-  experience, 
-  onClose, 
-  onReviewAdded 
-}: { 
-  experience: Experience; 
-  onClose: () => void;
-  onReviewAdded: () => void;
-}) {
-  const [rating, setRating] = useState(5);
-  const [comment, setComment] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [reviews, setReviews] = useState<Review[]>(experience.recentReviews || []);
-  const [loadingReviews, setLoadingReviews] = useState(false);
-  const [showReviewForm, setShowReviewForm] = useState(false);
-
-  useEffect(() => {
-    fetchReviews();
-  }, [experience._id]);
-
-  const fetchReviews = async () => {
-    try {
-      setLoadingReviews(true);
-      const response = await api.get(`/experiences/${experience._id}`);
-      setReviews(response.data.reviews || []);
-    } catch (err) {
-      // Handle error silently
-    } finally {
-      setLoadingReviews(false);
-    }
-  };
-
-  const handleSubmitReview = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    try {
-      await api.post(`/experiences/${experience._id}`, {
-        rating,
-        comment: comment.trim()
-      });
-
-      setComment('');
-      setRating(5);
-      setShowReviewForm(false);
-      await fetchReviews();
-      onReviewAdded();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to submit review');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
-          <h2 className="heading-secondary mb-0">Reviews for {experience.title}</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
-          >
-            ×
-          </button>
-        </div>
-
-        <div className="p-6">
-          {showReviewForm ? (
-            <form onSubmit={handleSubmitReview} className="mb-6">
-              {error && (
-                <div className="alert-error mb-4">
-                  <span className="text-lg">⚠️</span>
-                  <span className="flex-1">{error}</span>
-                </div>
-              )}
-              
-              <div className="mb-4">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Your Rating
-                </label>
-                <div className="flex gap-2">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      onClick={() => setRating(star)}
-                      className={`text-3xl transition-all ${
-                        star <= rating ? 'text-yellow-400' : 'text-gray-300'
-                      }`}
-                    >
-                      ★
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Your Review
-                </label>
-                <textarea
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  rows={4}
-                  placeholder="Share your experience..."
-                  className="input-field"
-                />
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowReviewForm(false)}
-                  className="btn-secondary flex-1"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="btn-primary flex-1 disabled:opacity-50"
-                >
-                  {loading ? 'Submitting...' : 'Submit Review'}
-                </button>
-              </div>
-            </form>
-          ) : (
-            <button
-              onClick={() => setShowReviewForm(true)}
-              className="btn-primary w-full mb-6"
-            >
-              Write a Review
-            </button>
-          )}
-
-          {loadingReviews ? (
-            <div className="text-center py-8">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary-500 border-t-transparent"></div>
-            </div>
-          ) : reviews.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <p className="text-lg mb-2">No reviews yet</p>
-              <p className="text-sm">Be the first to review this experience!</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {reviews.map((review) => (
-                <div key={review._id} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <p className="font-semibold text-gray-900">{review.user.name}</p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(review.createdAt).toLocaleDateString('en-US', {
-                          month: 'long',
-                          day: 'numeric',
-                          year: 'numeric'
-                        })}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {[...Array(5)].map((_, i) => (
-                        <span
-                          key={i}
-                          className={`text-lg ${
-                            i < review.rating ? 'text-yellow-400' : 'text-gray-300'
-                          }`}
-                        >
-                          ★
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  {review.comment && (
-                    <p className="text-gray-700 text-sm mt-2">{review.comment}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 

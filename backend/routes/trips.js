@@ -290,10 +290,16 @@ router.get('/experiences/:district', async (req, res) => {
                 };
               }
               
+              // Calculate review count from actual reviews
+              const totalReviews = await Review.countDocuments({ experience: exp._id });
+              
+              // Convert to plain object and ensure reviewCount is set correctly
+              const expObj = exp.toObject ? exp.toObject() : { ...exp };
               const experienceObj = {
-                ...exp,
+                ...expObj,
                 provider: providerInfo,
                 recentReviews: reviews || [],
+                reviewCount: totalReviews, // Use actual count from database (override any stale value)
                 availabilityStatus
               };
           
@@ -315,6 +321,14 @@ router.get('/experiences/:district', async (req, res) => {
             };
           }
           
+          // Get review count even if review fetch failed
+          let reviewCount = 0;
+          try {
+            reviewCount = await Review.countDocuments({ experience: exp._id });
+          } catch (countErr) {
+            console.error(`Error counting reviews for experience ${exp._id}:`, countErr);
+          }
+          
           return {
             ...exp,
             provider: exp.provider ? {
@@ -325,6 +339,7 @@ router.get('/experiences/:district', async (req, res) => {
               rating: 0
             },
             recentReviews: [],
+            reviewCount: reviewCount, // Include review count even on error
             availabilityStatus
           };
         }
@@ -612,12 +627,15 @@ router.post('/plan/automatic', authenticate, requireUser, async (req, res) => {
       .lean();
 
     // Attach reviews to experiences and ensure provider is properly formatted
-    const experiencesWithReviews = normalizedExperiences.map(exp => {
+    const experiencesWithReviews = await Promise.all(normalizedExperiences.map(async (exp) => {
       const expReviews = reviews.filter(r => r.experience.toString() === exp._id.toString());
       const ratings = expReviews.map(r => r.rating);
       const averageRating = ratings.length > 0 
         ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length 
         : 0;
+      
+      // Get actual review count from database (more reliable than filtered array length)
+      const actualReviewCount = await Review.countDocuments({ experience: exp._id });
       
       // Ensure provider is properly formatted
       const provider = exp.provider || { name: 'Unknown Host', rating: 0 };
@@ -630,10 +648,10 @@ router.post('/plan/automatic', authenticate, requireUser, async (req, res) => {
           _id: provider._id || null
         },
         recentReviews: expReviews.slice(0, 3),
-        reviewCount: expReviews.length,
+        reviewCount: actualReviewCount, // Use actual count from database
         averageRating: Math.round(averageRating * 10) / 10
       };
-    });
+    }));
 
     res.json({
       message: 'Personalized experiences selected successfully',

@@ -169,10 +169,10 @@ export default function TripSelectPage() {
         router.push(`/trips/plan/automatic?country=India&from=${fromDate}&to=${toDate}&${locationParams}`);
       } else {
         // Build query params for experiences page (manual mode)
-        const locationParams = validLocations.map((loc, idx) => 
-          `state${idx}=${encodeURIComponent(loc.state)}&district${idx}=${encodeURIComponent(loc.district)}`
-        ).join('&');
-        router.push(`/trips/experiences?country=India&from=${fromDate}&to=${toDate}&${locationParams}`);
+      const locationParams = validLocations.map((loc, idx) => 
+        `state${idx}=${encodeURIComponent(loc.state)}&district${idx}=${encodeURIComponent(loc.district)}`
+      ).join('&');
+      router.push(`/trips/experiences?country=India&from=${fromDate}&to=${toDate}&${locationParams}`);
       }
     } catch (err: any) {
       setError('Failed to proceed. Please try again.');

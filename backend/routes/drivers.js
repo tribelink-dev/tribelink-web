@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Provider = require('../models/Provider');
 const DriverProvider = require('../models/DriverProvider');
 const Trip = require('../models/Trip');
@@ -330,6 +331,22 @@ router.post('/documents/:providerId', authenticate, requireHost, handleUpload(up
   try {
     const { providerId } = req.params;
     const { documentType, documentName, licenseNumber, registrationNumber } = req.body;
+    
+    // Validate providerId is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(providerId)) {
+      return res.status(400).json({ 
+        message: 'Invalid provider ID format',
+        error: 'Provider ID must be a valid MongoDB ObjectId'
+      });
+    }
+
+    console.log('Document upload request:', {
+      providerId,
+      documentType,
+      hasFile: !!req.file,
+      licenseNumber: licenseNumber ? 'provided' : 'missing',
+      registrationNumber: registrationNumber ? 'provided' : 'missing'
+    });
 
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' });
@@ -337,6 +354,17 @@ router.post('/documents/:providerId', authenticate, requireHost, handleUpload(up
 
     if (!documentType || !['License', 'Insurance', 'Registration', 'Other'].includes(documentType)) {
       return res.status(400).json({ message: 'Valid document type is required (License, Insurance, Registration, Other)' });
+    }
+
+    // Validate license number for License documents
+    if (documentType === 'License') {
+      const trimmedLicenseNumber = licenseNumber ? licenseNumber.trim() : '';
+      if (!trimmedLicenseNumber || trimmedLicenseNumber.length === 0) {
+        return res.status(400).json({ 
+          message: 'License number is required when uploading a license document',
+          field: 'licenseNumber'
+        });
+      }
     }
 
     // Verify provider exists and user owns it
@@ -355,9 +383,10 @@ router.post('/documents/:providerId', authenticate, requireHost, handleUpload(up
     if (!driverProfile) {
       // Create new driver profile with required fields
       // For licenseNumber: use provided value if it's a License document, otherwise use placeholder
-      const defaultLicenseNumber = (documentType === 'License' && licenseNumber) 
-        ? licenseNumber 
-        : 'PENDING_UPLOAD';
+      let defaultLicenseNumber = 'PENDING_UPLOAD';
+      if (documentType === 'License' && licenseNumber && licenseNumber.trim()) {
+        defaultLicenseNumber = licenseNumber.trim();
+      }
       
       driverProfile = new DriverProvider({
         providerId,
@@ -373,12 +402,30 @@ router.post('/documents/:providerId', authenticate, requireHost, handleUpload(up
     // Create document entry
     // Cloudinary returns full URL in req.file.path, local storage uses filename
     const documentUrl = req.file.path || `/uploads/${req.file.filename}`;
+    
+    // Ensure we have all required fields for document entry
+    if (!documentUrl) {
+      console.error('No document URL generated from file upload');
+      return res.status(500).json({ 
+        message: 'Failed to process uploaded file',
+        error: 'Document URL not generated'
+      });
+    }
+    
     const documentEntry = {
-      name: documentName || req.file.originalname,
+      name: documentName || req.file.originalname || 'document',
       url: documentUrl,
       type: documentType,
       uploadedAt: new Date()
     };
+    
+    console.log('Document entry created:', {
+      name: documentEntry.name,
+      url: documentEntry.url,
+      type: documentEntry.type,
+      hasUrl: !!documentEntry.url,
+      hasName: !!documentEntry.name
+    });
 
     // Ensure documents array exists
     if (!driverProfile.documents) {
@@ -389,18 +436,28 @@ router.post('/documents/:providerId', authenticate, requireHost, handleUpload(up
     if (documentType === 'License') {
       // For license, also update licenseDocument field and licenseNumber
       driverProfile.licenseDocument = documentUrl;
-      if (licenseNumber) {
-        driverProfile.licenseNumber = licenseNumber;
+      // Update licenseNumber - we already validated it exists above
+      if (licenseNumber && typeof licenseNumber === 'string') {
+        const trimmedLicenseNumber = licenseNumber.trim();
+        if (trimmedLicenseNumber && trimmedLicenseNumber.length > 0) {
+          driverProfile.licenseNumber = trimmedLicenseNumber;
+        } else {
+          // This shouldn't happen due to validation above, but handle it safely
+          driverProfile.licenseNumber = driverProfile.licenseNumber || 'PENDING_UPLOAD';
+        }
+      } else {
+        // This shouldn't happen due to validation above, but handle it safely
+        driverProfile.licenseNumber = driverProfile.licenseNumber || 'PENDING_UPLOAD';
       }
       // Remove existing license documents and add new one
       driverProfile.documents = driverProfile.documents.filter(doc => doc.type !== 'License');
     } else if (documentType === 'Registration') {
       // Update registration number if provided
-      if (registrationNumber) {
+      if (registrationNumber && registrationNumber.trim()) {
         if (!driverProfile.vehicleDetails) {
           driverProfile.vehicleDetails = {};
         }
-        driverProfile.vehicleDetails.registrationNumber = registrationNumber;
+        driverProfile.vehicleDetails.registrationNumber = registrationNumber.trim();
       }
       // Remove existing registration documents and add new one
       driverProfile.documents = driverProfile.documents.filter(doc => doc.type !== 'Registration');
@@ -410,24 +467,82 @@ router.post('/documents/:providerId', authenticate, requireHost, handleUpload(up
     }
 
     driverProfile.documents.push(documentEntry);
-    await driverProfile.save();
-
-    res.json({
-      message: 'Document uploaded successfully',
-      document: documentEntry,
-      driverProfile
-    });
+    
+    // Validate and save
+    try {
+      await driverProfile.validate();
+      await driverProfile.save();
+      
+      console.log('Document uploaded successfully:', documentType);
+      res.json({
+        message: 'Document uploaded successfully',
+        document: documentEntry,
+        driverProfile
+      });
+    } catch (saveError) {
+      console.error('Error saving driver profile:', saveError);
+      console.error('Save error name:', saveError.name);
+      console.error('Save error message:', saveError.message);
+      
+      // Handle validation errors specifically
+      if (saveError.name === 'ValidationError') {
+        const validationErrors = Object.values(saveError.errors || {}).map((err) => ({
+          field: err.path,
+          message: err.message,
+          value: err.value
+        }));
+        console.error('Validation errors:', validationErrors);
+        return res.status(400).json({ 
+          message: 'Validation error: ' + validationErrors.map(e => e.message).join(', '),
+          error: saveError.message,
+          fields: validationErrors.map(e => e.field),
+          details: validationErrors
+        });
+      }
+      
+      // Handle CastError (invalid data format)
+      if (saveError.name === 'CastError') {
+        console.error('CastError details:', {
+          path: saveError.path,
+          value: saveError.value,
+          kind: saveError.kind,
+          message: saveError.message
+        });
+        return res.status(400).json({ 
+          message: `Invalid data format for field "${saveError.path}". Expected ${saveError.kind}, got ${typeof saveError.value}`,
+          error: saveError.message,
+          field: saveError.path,
+          value: saveError.value,
+          expectedType: saveError.kind
+        });
+      }
+      
+      // Re-throw to be caught by outer catch
+      throw saveError;
+    }
   } catch (error) {
     console.error('Error uploading document:', error);
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
     console.error('Error stack:', error.stack);
+    
     // If it's a validation error, provide more details
     if (error.name === 'ValidationError') {
+      const errorFields = Object.keys(error.errors || {});
+      const errorMessages = Object.values(error.errors || {}).map((err) => err.message);
+      console.error('Validation error details:', {
+        fields: errorFields,
+        messages: errorMessages,
+        errors: error.errors
+      });
       return res.status(400).json({ 
-        message: 'Validation error', 
+        message: errorMessages.length > 0 ? errorMessages.join(', ') : 'Validation error',
         error: error.message,
+        fields: errorFields,
         details: error.errors 
       });
     }
+    
     // If it's a multer error
     if (error.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({ 
@@ -435,9 +550,29 @@ router.post('/documents/:providerId', authenticate, requireHost, handleUpload(up
         error: error.message 
       });
     }
+    
+    // If it's a CastError (MongoDB type error)
+    if (error.name === 'CastError') {
+      console.error('CastError details:', {
+        path: error.path,
+        value: error.value,
+        kind: error.kind,
+        message: error.message
+      });
+      return res.status(400).json({ 
+        message: `Invalid data format for field "${error.path}". Expected ${error.kind}, but received ${typeof error.value === 'object' ? JSON.stringify(error.value) : error.value}`,
+        error: error.message,
+        field: error.path,
+        value: error.value,
+        expectedType: error.kind
+      });
+    }
+    
+    // Generic server error
     res.status(500).json({ 
-      message: 'Server error', 
-      error: error.message,
+      message: 'Server error: ' + (error.message || 'Unknown error occurred'),
+      error: error.message || 'Unknown error',
+      errorType: error.name || 'Unknown',
       ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
     });
   }

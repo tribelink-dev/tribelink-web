@@ -69,9 +69,15 @@ export default function HostSignupPage() {
         localStorage.setItem('userType', 'host');
       }
 
-      // Redirect to provider-specific dashboard
-      const dashboardRoute = getProviderDashboard(host.providerType || 'EXPERIENCE_HOST');
-      router.push(dashboardRoute);
+      // Redirect based on provider type
+      if (host.providerType === 'DRIVER_PARTNER') {
+        // Redirect drivers to the new integrated signup flow
+        router.push('/driver/signup');
+      } else {
+        // Redirect other providers to their dashboards
+        const dashboardRoute = getProviderDashboard(host.providerType || 'EXPERIENCE_HOST');
+        router.push(dashboardRoute);
+      }
     } catch (err: any) {
       console.error('Signup error:', err);
       const errorMessage = err.response?.data?.message || 

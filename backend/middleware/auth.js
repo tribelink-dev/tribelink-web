@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Host = require('../models/Host');
+const Provider = require('../models/Provider');
 
 const authenticate = async (req, res, next) => {
   try {
@@ -21,7 +22,15 @@ const authenticate = async (req, res, next) => {
       return next();
     }
 
-    // If not user, try host
+    // Try Provider model (for DRIVER_PARTNER, EXPERIENCE_HOST, GUIDE, etc.)
+    const provider = await Provider.findById(decoded.userId);
+    if (provider) {
+      req.user = provider;
+      req.userType = 'host'; // Keep 'host' for backward compatibility
+      return next();
+    }
+
+    // If not provider, try legacy Host model (for backward compatibility)
     const host = await Host.findById(decoded.userId);
     if (host) {
       req.user = host;
@@ -31,7 +40,32 @@ const authenticate = async (req, res, next) => {
 
     return res.status(401).json({ message: 'Invalid token.' });
   } catch (error) {
-    res.status(401).json({ message: 'Invalid token.' });
+    console.error('Authentication error:', error.message);
+    console.error('Error name:', error.name);
+    console.error('Token provided:', !!token);
+    
+    if (error.name === 'JsonWebTokenError') {
+      console.error('JWT Error - Token is malformed or invalid');
+      return res.status(401).json({ 
+        message: 'Invalid token. Token is malformed. Please log in again.',
+        error: 'JsonWebTokenError',
+        code: 'INVALID_TOKEN'
+      });
+    }
+    if (error.name === 'TokenExpiredError') {
+      console.error('Token has expired');
+      return res.status(401).json({ 
+        message: 'Invalid token. Token has expired. Please log in again.',
+        error: 'TokenExpiredError',
+        code: 'TOKEN_EXPIRED'
+      });
+    }
+    console.error('Unknown authentication error');
+    res.status(401).json({ 
+      message: 'Invalid token. Please log in again.',
+      error: error.message || 'Unknown error',
+      code: 'AUTH_ERROR'
+    });
   }
 };
 

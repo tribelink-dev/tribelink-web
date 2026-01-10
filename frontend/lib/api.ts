@@ -16,6 +16,12 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  
+  // If FormData is being sent, remove Content-Type header to let axios set it with boundary
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
+  }
+  
   return config;
 });
 
@@ -39,6 +45,34 @@ api.interceptors.response.use(
       requestHeaders: error.config?.headers,
       responseData: error.response?.data
     });
+    
+    // Handle 401 Unauthorized (Invalid token, expired token, etc.)
+    if (error.response?.status === 401) {
+      const errorMessage = error.response?.data?.message || 'Invalid token';
+      console.error('🔐 Authentication Error:', errorMessage);
+      
+      // Clear invalid token from localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('token');
+        localStorage.removeItem('host');
+        localStorage.removeItem('user');
+        
+        // Only redirect if we're not already on a login page
+        const currentPath = window.location.pathname;
+        if (!currentPath.includes('/login') && !currentPath.includes('/signup')) {
+          console.log('Redirecting to login due to invalid token...');
+          // Use setTimeout to avoid navigation during render
+          setTimeout(() => {
+            window.location.href = '/host/login';
+          }, 100);
+        }
+      }
+      
+      const authError = new Error(errorMessage);
+      (authError as any).isAuthError = true;
+      (authError as any).status = 401;
+      return Promise.reject(authError);
+    }
     
     // Network/CORS errors
     if (error.code === 'ECONNREFUSED' || error.message === 'Network Error' || error.message?.includes('Network') || !error.response) {

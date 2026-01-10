@@ -584,7 +584,8 @@ router.post('/host/signup', async (req, res) => {
       message: 'Provider account created successfully',
       token,
       host: { // Keep 'host' key for backward compatibility
-        id: provider._id,
+        _id: provider._id.toString(),
+        id: provider._id.toString(), // Also include id for compatibility
         email: provider.email,
         phoneNumber: provider.phoneNumber,
         name: provider.name,
