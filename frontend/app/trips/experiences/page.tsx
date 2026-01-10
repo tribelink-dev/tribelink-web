@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { getImageUrl } from '@/lib/imageUtils';
+import ExperienceDetailModal from '@/components/ExperienceDetailModal';
 
 interface Review {
   _id: string;
@@ -50,6 +51,7 @@ interface Experience {
     available: boolean;
     reason: string | null;
   };
+  experienceSource?: 'HOST_EXPERIENCE' | 'GUIDE_TOUR';
 }
 
 export default function ExperiencesPage() {
@@ -62,6 +64,7 @@ export default function ExperiencesPage() {
   const [error, setError] = useState('');
   const [selectedExperience, setSelectedExperience] = useState<Experience | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [hasNoTokens, setHasNoTokens] = useState(false);
   const [useAIFiltering, setUseAIFiltering] = useState(false); // Show all experiences by default, user can enable Pathfinder
   const [aiInsights, setAiInsights] = useState<string>('');
@@ -680,6 +683,14 @@ export default function ExperiencesPage() {
                         {experience.title}
                       </h3>
                       <div className="flex flex-col items-end gap-1.5">
+                        {experience.experienceSource === 'GUIDE_TOUR' && (
+                          <div className="flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200/60 text-blue-700 text-xs font-semibold rounded-lg shadow-sm">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                            </svg>
+                            Guided Tour
+                          </div>
+                        )}
                         {experience.aiFiltered && experience.matchScore && (
                           <div className="flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/60 text-emerald-700 text-xs font-semibold rounded-lg shadow-sm">
                             <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
@@ -789,6 +800,19 @@ export default function ExperiencesPage() {
                     </div>
                     <div className="space-y-2">
                       <button
+                        onClick={() => {
+                          setSelectedExperience(experience);
+                          setShowDetailModal(true);
+                        }}
+                        className="w-full btn-primary py-3 flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        View Details
+                      </button>
+                      <button
                         onClick={() => toggleBucketlist(experience._id)}
                         disabled={!isAvailable && hasDateFilter}
                         className={`w-full py-3 rounded-xl font-semibold transition-all ${
@@ -796,7 +820,7 @@ export default function ExperiencesPage() {
                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
                             : bucketlist.includes(experience._id.toString())
                             ? 'bg-red-500 text-white hover:bg-red-600 shadow-medium'
-                            : 'btn-primary'
+                            : 'btn-secondary'
                         }`}
                         title={!isAvailable && hasDateFilter ? 'Not available for selected dates' : ''}
                       >
@@ -829,6 +853,20 @@ export default function ExperiencesPage() {
           }}
         />
       )}
+
+      {/* Experience Detail Modal */}
+      <ExperienceDetailModal
+        experience={selectedExperience}
+        isOpen={showDetailModal}
+        onClose={() => {
+          setShowDetailModal(false);
+          setSelectedExperience(null);
+        }}
+        onAddToBucketlist={(experienceId) => {
+          toggleBucketlist(experienceId);
+        }}
+        isInBucketlist={selectedExperience ? bucketlist.includes(selectedExperience._id.toString()) : false}
+      />
 
       {/* Sticky Mobile Action Button */}
       {bucketlist.length > 0 && (

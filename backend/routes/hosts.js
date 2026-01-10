@@ -821,16 +821,40 @@ router.get('/guides/experiences/available', authenticate, requireHost, async (re
       return res.status(403).json({ message: 'Only guides can access this endpoint' });
     }
 
-    // Build query
-    const query = {};
+    // Build query - only show HOST_EXPERIENCE, exclude GUIDE_TOUR
+    // Handle both new experiences with experienceSource and old ones without (backward compatibility)
+    const baseQuery = {
+      $or: [
+        { experienceSource: 'HOST_EXPERIENCE' },
+        { experienceSource: { $exists: false } } // Old experiences without the field
+      ]
+    };
+    
+    const query = { ...baseQuery };
     if (state) query['location.state'] = state;
     if (district) query['location.district'] = district;
     if (category) query.category = category;
+    
     if (search) {
-      query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
+      // Combine search with experienceSource filter using $and
+      query.$and = [
+        baseQuery,
+        {
+          $or: [
+            { title: { $regex: search, $options: 'i' } },
+            { description: { $regex: search, $options: 'i' } }
+          ]
+        }
       ];
+      // Remove the top-level $or when using $and
+      delete query.$or;
+      delete query['location.state'];
+      delete query['location.district'];
+      delete query.category;
+      // Add them to $and instead
+      if (state) query.$and.push({ 'location.state': state });
+      if (district) query.$and.push({ 'location.district': district });
+      if (category) query.$and.push({ category });
     }
 
     const experiences = await Experience.find(query)
@@ -923,6 +947,57 @@ router.post('/guides/experiences/:experienceId', authenticate, requireHost, asyn
   }
 });
 
+// Get single experience details for guides
+router.get('/guides/experiences/:experienceId', authenticate, requireHost, async (req, res) => {
+  try {
+    const { experienceId } = req.params;
+    const Experience = require('../models/Experience');
+    
+    const host = await Host.findById(req.user._id);
+    if (!host || host.providerType !== 'GUIDE') {
+      return res.status(403).json({ message: 'Only guides can access this endpoint' });
+    }
+
+    // Get experience with full details
+    const experience = await Experience.findById(experienceId)
+      .populate('provider', 'name rating ratingCount email phoneNumber')
+      .lean();
+
+    if (!experience) {
+      return res.status(404).json({ message: 'Experience not found' });
+    }
+
+    // Check if guide has selected this experience
+    const isSelected = host.servicedExperiences?.some(id => id.toString() === experienceId) || false;
+
+    // Format availableDates
+    const formattedExperience = {
+      ...experience,
+      availableDates: experience.availableDates ? experience.availableDates.map((d) => {
+        if (!d) return null;
+        if (d.date) {
+          const dateValue = d.date instanceof Date 
+            ? d.date.toISOString().split('T')[0]
+            : (typeof d.date === 'string' ? d.date.split('T')[0] : d.date);
+          return {
+            date: dateValue,
+            startTime: d.startTime || null,
+            endTime: d.endTime || null,
+            available: d.available !== false
+          };
+        }
+        return null;
+      }).filter((d) => d !== null) : [],
+      isSelected
+    };
+
+    res.json({ experience: formattedExperience });
+  } catch (error) {
+    console.error('Error fetching experience details:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Remove experience from guide's serviced experiences
 router.delete('/guides/experiences/:experienceId', authenticate, requireHost, async (req, res) => {
   try {
@@ -947,6 +1022,337 @@ router.delete('/guides/experiences/:experienceId', authenticate, requireHost, as
     });
   } catch (error) {
     console.error('Error removing serviced experience:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// ==================== GUIDED TOURS ENDPOINTS ====================
+
+// Create a guided tour
+router.post('/guides/tours', authenticate, requireHost, upload.single('image'), async (req, res) => {
+  try {
+    const {
+      title,
+      description,
+      category,
+      subcategory,
+      location,
+      availableDates,
+      price,
+      contentUrl,
+      duration,
+      maxParticipants,
+      culturalMetadata,
+      tags
+    } = req.body;
+
+    const host = await Host.findById(req.user._id);
+    if (!host || host.providerType !== 'GUIDE') {
+      return res.status(403).json({ message: 'Only guides can create guided tours' });
+    }
+
+    if (!title || !description || !category || !subcategory || !location || !availableDates || price === undefined) {
+      return res.status(400).json({ message: 'Required fields missing' });
+    }
+
+    // Map category ID to category name if needed
+    const categoryMap = {
+      'living-with-the-land': 'Living with the Land',
+      'stories-of-the-past': 'Stories of the Past',
+      'the-soul': 'The Soul',
+      'the-unseen': 'The Unseen',
+      'creative-pulse': 'Creative Pulse',
+      'water-flow': 'Water & Flow',
+      'gastronomy': 'Gastronomy & Ancestral Flavors',
+      'regional-exclusives': 'Regional Exclusives'
+    };
+
+    const categoryName = categoryMap[category] || category;
+
+    // Parse location if it's a string
+    const locationData = typeof location === 'string' ? JSON.parse(location) : location;
+
+    const normalizedLocation = {
+      country: (locationData.country || '').trim(),
+      state: (locationData.state || '').trim(),
+      district: (locationData.district || '').trim(),
+      coordinates: locationData.coordinates || {}
+    };
+
+    // Parse availableDates
+    const parsedDates = typeof availableDates === 'string' 
+      ? JSON.parse(availableDates).map(d => ({
+          date: new Date(d.date || d),
+          startTime: d.startTime || null,
+          endTime: d.endTime || null,
+          available: d.available !== false
+        }))
+      : availableDates.map(d => ({
+          date: new Date(d.date || d),
+          startTime: d.startTime || null,
+          endTime: d.endTime || null,
+          available: d.available !== false
+        }));
+
+    // Parse culturalMetadata if provided
+    let parsedCulturalMetadata = null;
+    if (culturalMetadata) {
+      parsedCulturalMetadata = typeof culturalMetadata === 'string' 
+        ? JSON.parse(culturalMetadata) 
+        : culturalMetadata;
+    }
+
+    // Parse tags if provided
+    const parsedTags = tags ? (typeof tags === 'string' ? JSON.parse(tags) : tags) : [];
+
+    const tour = new Experience({
+      title: title.trim(),
+      description: description.trim(),
+      category: categoryName,
+      subcategory: subcategory.trim(),
+      provider: req.user._id,
+      location: normalizedLocation,
+      availableDates: parsedDates,
+      price: parseFloat(price),
+      contentUrl: contentUrl || null,
+      imageUrl: req.file ? (req.file.path || `/uploads/${req.file.filename}`) : null,
+      duration: duration || 2,
+      maxParticipants: maxParticipants || 10,
+      experienceSource: 'GUIDE_TOUR',
+      culturalMetadata: parsedCulturalMetadata,
+      tags: parsedTags
+    });
+
+    await tour.save();
+
+    // Normalize image URL before sending response
+    const baseUrl = getBaseUrlFromRequest(req);
+    const normalizedTour = normalizeExperience(tour.toObject ? tour.toObject() : tour, baseUrl);
+
+    res.status(201).json({
+      message: 'Guided tour created successfully',
+      tour: normalizedTour
+    });
+  } catch (error) {
+    console.error('Error creating guided tour:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get all guided tours created by the authenticated guide
+router.get('/guides/tours', authenticate, requireHost, async (req, res) => {
+  try {
+    const host = await Host.findById(req.user._id);
+    if (!host || host.providerType !== 'GUIDE') {
+      return res.status(403).json({ message: 'Only guides can access this endpoint' });
+    }
+
+    const tours = await Experience.find({
+      provider: req.user._id,
+      experienceSource: 'GUIDE_TOUR'
+    })
+      .populate('provider', 'name rating')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const baseUrl = getBaseUrlFromRequest(req);
+    const normalizedTours = normalizeExperiences(tours, baseUrl);
+
+    res.json({ tours: normalizedTours });
+  } catch (error) {
+    console.error('Error fetching guided tours:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get single guided tour by ID
+router.get('/guides/tours/:tourId', authenticate, requireHost, async (req, res) => {
+  try {
+    const { tourId } = req.params;
+    const host = await Host.findById(req.user._id);
+    
+    if (!host || host.providerType !== 'GUIDE') {
+      return res.status(403).json({ message: 'Only guides can access this endpoint' });
+    }
+
+    const tour = await Experience.findOne({
+      _id: tourId,
+      provider: req.user._id,
+      experienceSource: 'GUIDE_TOUR'
+    })
+      .populate('provider', 'name rating ratingCount email phoneNumber')
+      .lean();
+
+    if (!tour) {
+      return res.status(404).json({ message: 'Guided tour not found' });
+    }
+
+    // Format availableDates
+    const formattedTour = {
+      ...tour,
+      availableDates: tour.availableDates ? tour.availableDates.map((d) => {
+        if (!d) return null;
+        if (d.date) {
+          const dateValue = d.date instanceof Date 
+            ? d.date.toISOString().split('T')[0]
+            : (typeof d.date === 'string' ? d.date.split('T')[0] : d.date);
+          return {
+            date: dateValue,
+            startTime: d.startTime || null,
+            endTime: d.endTime || null,
+            available: d.available !== false
+          };
+        }
+        return null;
+      }).filter((d) => d !== null) : []
+    };
+
+    const baseUrl = getBaseUrlFromRequest(req);
+    const normalizedTour = normalizeExperience(formattedTour, baseUrl);
+
+    res.json({ tour: normalizedTour });
+  } catch (error) {
+    console.error('Error fetching guided tour:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Update a guided tour
+router.put('/guides/tours/:tourId', authenticate, requireHost, upload.single('image'), async (req, res) => {
+  try {
+    const { tourId } = req.params;
+    const host = await Host.findById(req.user._id);
+    
+    if (!host || host.providerType !== 'GUIDE') {
+      return res.status(403).json({ message: 'Only guides can update guided tours' });
+    }
+
+    const tour = await Experience.findOne({
+      _id: tourId,
+      provider: req.user._id,
+      experienceSource: 'GUIDE_TOUR'
+    });
+
+    if (!tour) {
+      return res.status(404).json({ message: 'Guided tour not found' });
+    }
+
+    // Update fields
+    const {
+      title,
+      description,
+      category,
+      subcategory,
+      location,
+      availableDates,
+      price,
+      contentUrl,
+      duration,
+      maxParticipants,
+      culturalMetadata,
+      tags
+    } = req.body;
+
+    if (title) tour.title = title.trim();
+    if (description) tour.description = description.trim();
+    if (category) {
+      const categoryMap = {
+        'living-with-the-land': 'Living with the Land',
+        'stories-of-the-past': 'Stories of the Past',
+        'the-soul': 'The Soul',
+        'the-unseen': 'The Unseen',
+        'creative-pulse': 'Creative Pulse',
+        'water-flow': 'Water & Flow',
+        'gastronomy': 'Gastronomy & Ancestral Flavors',
+        'regional-exclusives': 'Regional Exclusives'
+      };
+      tour.category = categoryMap[category] || category;
+    }
+    if (subcategory) tour.subcategory = subcategory.trim();
+    if (location) {
+      const locationData = typeof location === 'string' ? JSON.parse(location) : location;
+      tour.location = {
+        country: (locationData.country || tour.location.country || '').trim(),
+        state: (locationData.state || tour.location.state || '').trim(),
+        district: (locationData.district || tour.location.district || '').trim(),
+        coordinates: locationData.coordinates || tour.location.coordinates || {}
+      };
+    }
+    if (availableDates) {
+      const parsedDates = typeof availableDates === 'string' 
+        ? JSON.parse(availableDates).map(d => ({
+            date: new Date(d.date || d),
+            startTime: d.startTime || null,
+            endTime: d.endTime || null,
+            available: d.available !== false
+          }))
+        : availableDates.map(d => ({
+            date: new Date(d.date || d),
+            startTime: d.startTime || null,
+            endTime: d.endTime || null,
+            available: d.available !== false
+          }));
+      tour.availableDates = parsedDates;
+      tour.markModified('availableDates');
+    }
+    if (price !== undefined) tour.price = parseFloat(price);
+    if (contentUrl !== undefined) tour.contentUrl = contentUrl || null;
+    if (duration) tour.duration = duration;
+    if (maxParticipants) tour.maxParticipants = maxParticipants;
+    if (culturalMetadata) {
+      tour.culturalMetadata = typeof culturalMetadata === 'string' 
+        ? JSON.parse(culturalMetadata) 
+        : culturalMetadata;
+      tour.markModified('culturalMetadata');
+    }
+    if (tags) {
+      tour.tags = typeof tags === 'string' ? JSON.parse(tags) : tags;
+      tour.markModified('tags');
+    }
+    if (req.file) {
+      tour.imageUrl = req.file.path || `/uploads/${req.file.filename}`;
+    }
+
+    await tour.save();
+
+    const baseUrl = getBaseUrlFromRequest(req);
+    const normalizedTour = normalizeExperience(tour.toObject ? tour.toObject() : tour, baseUrl);
+
+    res.json({
+      message: 'Guided tour updated successfully',
+      tour: normalizedTour
+    });
+  } catch (error) {
+    console.error('Error updating guided tour:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Delete a guided tour
+router.delete('/guides/tours/:tourId', authenticate, requireHost, async (req, res) => {
+  try {
+    const { tourId } = req.params;
+    const host = await Host.findById(req.user._id);
+    
+    if (!host || host.providerType !== 'GUIDE') {
+      return res.status(403).json({ message: 'Only guides can delete guided tours' });
+    }
+
+    const tour = await Experience.findOne({
+      _id: tourId,
+      provider: req.user._id,
+      experienceSource: 'GUIDE_TOUR'
+    });
+
+    if (!tour) {
+      return res.status(404).json({ message: 'Guided tour not found' });
+    }
+
+    await Experience.findByIdAndDelete(tourId);
+
+    res.json({ message: 'Guided tour deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting guided tour:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

@@ -142,7 +142,13 @@ const experienceSchema = new mongoose.Schema({
   },
   tags: [{
     type: String // General tags for AI matching
-  }]
+  }],
+  // Distinguish between host experiences and guide tours
+  experienceSource: {
+    type: String,
+    enum: ['HOST_EXPERIENCE', 'GUIDE_TOUR'],
+    default: 'HOST_EXPERIENCE'
+  }
 }, {
   timestamps: true
 });

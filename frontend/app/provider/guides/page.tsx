@@ -1048,6 +1048,43 @@ export default function GuideDashboard() {
                     </svg>
                   </motion.div>
                 </motion.button>
+
+                <motion.button
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.15 }}
+                  whileHover={{ scale: 1.02, x: 5 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => router.push('/provider/guides/tours')}
+                  className="w-full p-4 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 hover:from-blue-500/30 hover:to-cyan-500/30 border-2 border-blue-500/30 rounded-xl text-left flex items-center gap-4 transition-all duration-200 group relative overflow-hidden"
+                >
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-cyan-600/20"
+                    initial={{ x: '-100%' }}
+                    whileHover={{ x: 0 }}
+                    transition={{ duration: 0.3 }}
+                  />
+                  <motion.div
+                    whileHover={{ rotate: [0, -10, 10, 0], scale: 1.2 }}
+                    transition={{ duration: 0.5 }}
+                    className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg relative z-10"
+                  >
+                    <span className="text-xl">🗺️</span>
+                  </motion.div>
+                  <div className="flex-1 relative z-10">
+                    <div className="font-bold text-white">My Guided Tours</div>
+                    <div className="text-sm text-slate-300">Create & manage tours</div>
+                  </div>
+                  <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    whileHover={{ opacity: 1, x: 0 }}
+                    className="relative z-10"
+                  >
+                    <svg className="w-5 h-5 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </motion.div>
+                </motion.button>
                 
                 <motion.button
                   initial={{ opacity: 0, x: -20 }}

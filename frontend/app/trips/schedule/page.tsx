@@ -503,7 +503,62 @@ export default function SchedulePage() {
 
   const createSchedule = async () => {
     // Check if user has preferences
-    if (!user?.preferences?.travelStyle) {
+    let hasPreferences = false;
+    
+    try {
+      // First check localStorage for quick access
+      if (typeof window !== 'undefined') {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            if (parsedUser.preferences?.travelStyle) {
+              hasPreferences = true;
+            }
+          } catch (parseErr) {
+            // Ignore parse errors, will check API
+          }
+        }
+      }
+      
+      // If not found in localStorage, check API (with timeout)
+      if (!hasPreferences) {
+        try {
+          const userResponse = await Promise.race([
+            api.get('/user/me'),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
+          ]) as any;
+          
+          const userPreferences = userResponse?.data?.user?.preferences;
+          if (userPreferences?.travelStyle) {
+            hasPreferences = true;
+            // Update localStorage
+            if (typeof window !== 'undefined' && userResponse.data.user) {
+              const storedUser = localStorage.getItem('user');
+              if (storedUser) {
+                try {
+                  const userData = JSON.parse(storedUser);
+                  userData.preferences = userPreferences;
+                  localStorage.setItem('user', JSON.stringify(userData));
+                } catch (err) {
+                  // Ignore
+                }
+              }
+            }
+          }
+        } catch (checkErr) {
+          // If API check fails or times out, proceed - backend will validate
+          console.warn('Preference check failed, proceeding:', checkErr);
+          hasPreferences = true; // Proceed to avoid blocking - backend will handle validation
+        }
+      }
+    } catch (err) {
+      // If localStorage check fails, proceed anyway - backend will handle it
+      console.warn('Could not verify preferences, proceeding:', err);
+      hasPreferences = true; // Assume preferences exist to avoid blocking
+    }
+    
+    if (!hasPreferences) {
       setPendingAction(() => createSchedule);
       setShowPreferenceModal(true);
       return;
@@ -511,6 +566,7 @@ export default function SchedulePage() {
 
     try {
       setCreatingSchedule(true);
+      setError(''); // Clear any previous errors
       const tripDataStr = sessionStorage.getItem('tripData');
       if (!tripDataStr) {
         router.push('/trips/select');
@@ -744,18 +800,20 @@ export default function SchedulePage() {
       setSelectedHotels(initialHotels);
       
       setError('');
+      setLoading(false); // Reset loading state after successful schedule creation
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || 'Failed to create schedule';
       // Check if error is about missing preferences
       if (errorMessage.includes('KYT questionnaire') || errorMessage.includes('preferences')) {
         setPendingAction(() => createSchedule);
         setShowPreferenceModal(true);
+        setLoading(false); // Reset loading when showing preference modal
       } else {
         setError(errorMessage);
+        setLoading(false); // Reset loading on error
       }
     } finally {
-      setLoading(false);
-      setCreatingSchedule(false);
+      setCreatingSchedule(false); // Always reset creating schedule state
     }
   };
 
@@ -970,12 +1028,15 @@ export default function SchedulePage() {
     }
   }, [tripData, fetchRecommendations]);
 
-  if (loading) {
+  if (loading || creatingSchedule) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-tourism">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-white border-t-transparent mb-6"></div>
           <div className="text-2xl font-semibold text-white">Creating your personalized schedule...</div>
+          {creatingSchedule && (
+            <p className="text-white/80 mt-4 text-sm">This may take a few moments...</p>
+          )}
         </div>
       </div>
     );
@@ -2075,10 +2136,11 @@ export default function SchedulePage() {
         onClose={() => {
           setShowPreferenceModal(false);
           setPendingAction(null);
+          setCreatingSchedule(false); // Reset loading state if modal is closed
         }}
         onSuccess={async () => {
-          // Refresh user data to get updated preferences
           try {
+            // Refresh user data to get updated preferences
             const userResponse = await api.get('/user/me');
             if (userResponse.data.user && typeof window !== 'undefined') {
               const storedUser = localStorage.getItem('user');
@@ -2086,19 +2148,52 @@ export default function SchedulePage() {
                 const userData = JSON.parse(storedUser);
                 userData.preferences = userResponse.data.user.preferences;
                 localStorage.setItem('user', JSON.stringify(userData));
+                console.log('Updated user preferences in localStorage:', userData.preferences);
+              } else {
+                // If no stored user, create one with preferences
+                const newUserData = {
+                  id: userResponse.data.user._id || userResponse.data.user.id,
+                  email: userResponse.data.user.email,
+                  phoneNumber: userResponse.data.user.phoneNumber,
+                  name: userResponse.data.user.name,
+                  tokens: userResponse.data.user.tokens,
+                  preferences: userResponse.data.user.preferences
+                };
+                localStorage.setItem('user', JSON.stringify(newUserData));
+                console.log('Created new user data with preferences:', newUserData.preferences);
               }
             }
-          } catch (err) {
-            console.error('Error refreshing user data:', err);
-          }
-          
-          // Retry the pending action
-          if (pendingAction) {
-            const action = pendingAction;
+            
+            // Wait a moment to ensure localStorage is updated
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Close modal
+            setShowPreferenceModal(false);
+            
+            // Wait a moment for modal to close
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
+            // Retry the pending action
+            if (pendingAction) {
+              const action = pendingAction;
+              setPendingAction(null);
+              // Execute the action
+              try {
+                console.log('Retrying createSchedule after preferences saved');
+                await action();
+              } catch (err: any) {
+                console.error('Error executing pending action:', err);
+                const errorMessage = err?.response?.data?.message || err?.message || 'Failed to create schedule';
+                setError(errorMessage);
+                setCreatingSchedule(false);
+              }
+            }
+          } catch (err: any) {
+            console.error('Error in onSuccess handler:', err);
+            setShowPreferenceModal(false);
             setPendingAction(null);
-            setTimeout(async () => {
-              await action();
-            }, 100);
+            setCreatingSchedule(false);
+            setError(err?.response?.data?.message || err?.message || 'Failed to refresh preferences. Please try again.');
           }
         }}
       />

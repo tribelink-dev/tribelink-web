@@ -34,11 +34,13 @@ export default function PreferenceModal({ isOpen, onClose, onSuccess }: Preferen
       await api.post('/user/kyt', {
         preferences
       });
-      onSuccess();
+      setSubmitting(false);
+      // Call onSuccess and wait for it to complete
+      await onSuccess();
+      // Close modal after onSuccess completes
       onClose();
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to save preferences');
-    } finally {
       setSubmitting(false);
     }
   };
