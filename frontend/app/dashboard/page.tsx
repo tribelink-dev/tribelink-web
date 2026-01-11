@@ -684,7 +684,7 @@ export default function TravelerDashboard() {
       {/* Delete All Trips Confirmation Modal */}
       {showDeleteAllModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all animate-slide-up">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all animate-slide-up">
               <div className="p-6">
                 {/* Icon */}
                 <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full">
@@ -753,6 +753,5 @@ export default function TravelerDashboard() {
           </div>
         )}
       </div>
-    </div>
   );
 }
