@@ -137,8 +137,9 @@ export default function TravelerDashboard() {
       'Failed': 'bg-red-50 text-red-700 border-red-200',
     };
     const config = statusConfig[status] || statusConfig['Pending'];
+    const className = 'inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ' + config;
     return (
-      <span className={'inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ' + config}>
+      <span className={className}>
         {status}
       </span>
     );
