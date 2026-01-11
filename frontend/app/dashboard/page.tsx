@@ -138,7 +138,9 @@ export default function TravelerDashboard() {
     };
     const config = statusConfig[status] || statusConfig['Pending'];
     const className = 'inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ' + config;
-    return <span className={className}>{status}</span>;
+    return (
+      <span className={className}>{status}</span>
+    );
   };
 
   if (loading) {
