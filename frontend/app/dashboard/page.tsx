@@ -130,7 +130,7 @@ export default function TravelerDashboard() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  function getStatusBadge(status: string) {
     const statusConfig: Record<string, string> = {
       'Completed': 'bg-green-50 text-green-700 border-green-200',
       'Pending': 'bg-yellow-50 text-yellow-700 border-yellow-200',
@@ -138,12 +138,8 @@ export default function TravelerDashboard() {
     };
     const config = statusConfig[status] || statusConfig['Pending'];
     const className = 'inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ' + config;
-    return (
-      <span className={className}>
-        {status}
-      </span>
-    );
-  };
+    return <span className={className}>{status}</span>;
+  }
 
   if (loading) {
     return (
