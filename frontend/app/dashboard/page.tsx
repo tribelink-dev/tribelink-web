@@ -130,19 +130,6 @@ export default function TravelerDashboard() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, string> = {
-      'Completed': 'bg-green-50 text-green-700 border-green-200',
-      'Pending': 'bg-yellow-50 text-yellow-700 border-yellow-200',
-      'Failed': 'bg-red-50 text-red-700 border-red-200',
-    };
-    const config = statusConfig[status] || statusConfig['Pending'];
-    const className = 'inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ' + config;
-    return (
-      <span className={className}>{status}</span>
-    );
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-cream-50 flex items-center justify-center">
@@ -649,7 +636,13 @@ export default function TravelerDashboard() {
                     </Link>
                     <div className="flex items-center justify-between pt-4 border-t border-charcoal-100">
                       <div className="flex items-center gap-3">
-                        {getStatusBadge(trip.paymentStatus)}
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
+                          trip.paymentStatus === 'Completed' ? 'bg-green-50 text-green-700 border-green-200' :
+                          trip.paymentStatus === 'Failed' ? 'bg-red-50 text-red-700 border-red-200' :
+                          'bg-yellow-50 text-yellow-700 border-yellow-200'
+                        }`}>
+                          {trip.paymentStatus}
+                        </span>
                       </div>
                       <div className="flex items-center gap-3">
                         <Link
