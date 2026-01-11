@@ -130,19 +130,15 @@ export default function TravelerDashboard() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-cream-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-heritage-gold border-t-transparent mb-6"></div>
-          <div className="text-xl font-semibold text-charcoal-900 mb-2">Loading your dashboard...</div>
-          <p className="text-sm text-charcoal-500">Please wait</p>
-        </div>
+  return loading ? (
+    <div className="min-h-screen bg-cream-50 flex items-center justify-center">
+      <div className="text-center">
+        <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-heritage-gold border-t-transparent mb-6"></div>
+        <div className="text-xl font-semibold text-charcoal-900 mb-2">Loading your dashboard...</div>
+        <p className="text-sm text-charcoal-500">Please wait</p>
       </div>
-    );
-  }
-
-  return (
+    </div>
+  ) : (
     <div className="min-h-screen bg-cream-50">
       {/* Premium Hero Section */}
       <div className="relative bg-gradient-to-br from-charcoal-700 via-charcoal-800 to-charcoal-900 overflow-hidden">
