@@ -23,7 +23,7 @@ interface Preferences {
   transport: string;
 }
 
-export default function TravelerDashboard(): JSX.Element {
+export default function TravelerDashboard() {
   const router = useRouter();
   const { user } = useAuth();
   const [preferences, setPreferences] = useState<Preferences>({
