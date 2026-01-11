@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
@@ -131,14 +131,14 @@ export default function TravelerDashboard() {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig = {
+    const statusConfig: Record<string, string> = {
       'Completed': 'bg-green-50 text-green-700 border-green-200',
       'Pending': 'bg-yellow-50 text-yellow-700 border-yellow-200',
       'Failed': 'bg-red-50 text-red-700 border-red-200',
     };
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig['Pending'];
+    const config = statusConfig[status] || statusConfig['Pending'];
     return (
-      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${config}`}>
+      <span className={'inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ' + config}>
         {status}
       </span>
     );
@@ -146,245 +146,227 @@ export default function TravelerDashboard() {
 
   if (loading) {
     return (
-      <div className="page-container flex items-center justify-center min-h-screen">
+      <div className="min-h-screen bg-cream-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-14 w-14 border-4 border-primary-500 border-t-transparent mb-6"></div>
-          <div className="text-xl font-medium text-gray-700">Loading your dashboard...</div>
-          <p className="text-sm text-gray-500 mt-2">Please wait</p>
+          <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-heritage-gold border-t-transparent mb-6"></div>
+          <div className="text-xl font-semibold text-charcoal-900 mb-2">Loading your dashboard...</div>
+          <p className="text-sm text-charcoal-500">Please wait</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="page-container">
-      <div className="section-container max-w-7xl">
-        {/* Header Section */}
-        <div className="mb-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6">
-            <div>
-              <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-2 tracking-tight">
-                Welcome back, <span className="text-primary-500">{user?.name?.split(' ')[0]}</span>! 👋
-              </h1>
-              <p className="text-lg text-gray-600">Here's an overview of your travel journey</p>
-            </div>
-            <div className="flex items-center w-full md:w-auto justify-end gap-3">
-              <Link
-                href="/dashboard/tickets"
-                aria-label="Open my tickets"
-                className="relative inline-flex items-center gap-1.5 rounded-2xl border border-transparent bg-gradient-to-r from-yellow-100 via-amber-200 to-yellow-300 px-3 py-1.5 text-xs font-semibold text-amber-900 shadow-medium transition-all duration-200 hover:-translate-y-0.5 hover:shadow-large"
-              >
-                <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-white/40 backdrop-blur-sm">
-                  <svg className="h-4 w-4 text-amber-500" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M5.5 7.25a1 1 0 011-1H15a1 1 0 01.7.3l1.5 1.5 1.5-1.5a1 1 0 01.7-.3h.1a1 1 0 011 1v2A1.75 1.75 0 0121 11a1.75 1.75 0 01-1.5 1.75V15a1 1 0 01-1 1H6.5a1 1 0 01-1-1v-2.25A1.75 1.75 0 014 11c0-.86.64-1.58 1.5-1.75V7.25z"
-                      fill="url(#softGoldTicketFill)"
-                      stroke="currentColor"
-                      strokeWidth="0.8"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M11.25 9.75c0-.828.657-1.5 1.468-1.5h.532a1.5 1.5 0 110 3h-.5v1.5c0 .414-.336.75-.75.75h-.75c-.414 0-.75-.336-.75-.75v-3z"
-                      fill="white"
-                      stroke="white"
-                      strokeWidth="0.15"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M14.75 12.5c0 .69.56 1.25 1.25 1.25s1.25-.56 1.25-1.25-.56-1.25-1.25-1.25-1.25.56-1.25 1.25z"
-                      fill="white"
-                      stroke="white"
-                      strokeWidth="0.25"
-                    />
-                    <defs>
-                      <linearGradient id="softGoldTicketFill" x1="5" y1="6.5" x2="20" y2="15.5" gradientUnits="userSpaceOnUse">
-                        <stop stopColor="#FFE9A3" />
-                        <stop offset="1" stopColor="#FCD34D" />
-                      </linearGradient>
-                    </defs>
+    <React.Fragment>
+      <div className="min-h-screen bg-cream-50">
+      {/* Premium Hero Section */}
+      <div className="relative bg-gradient-to-br from-charcoal-700 via-charcoal-800 to-charcoal-900 overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-0 w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIwLjUiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')]"></div>
+        </div>
+        
+        {/* Decorative Elements */}
+        <div className="absolute top-20 right-20 w-96 h-96 bg-heritage-gold/5 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-20 left-20 w-96 h-96 bg-heritage-gold/5 rounded-full blur-3xl"></div>
+        
+        <div className="section-container-luxury relative z-10 pt-24 pb-16">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+              <div className="flex-1">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full border border-white/20 mb-6">
+                  <div className="w-2 h-2 bg-heritage-gold rounded-full animate-pulse"></div>
+                  <span className="text-sm font-medium text-white/90">Your Travel Dashboard</span>
+                </div>
+                <h1 className="heading-display text-4xl md:text-5xl lg:text-6xl text-white mb-4 animate-fade-in-up">
+                  Welcome back, <span className="text-heritage-gold">{user?.name?.split(' ')[0]}</span>
+                </h1>
+                <p className="text-xl md:text-2xl text-white/80 font-light mb-8 leading-relaxed">
+                  Your journey to authentic experiences starts here
+                </p>
+              </div>
+              <div className="flex items-center gap-4 flex-shrink-0">
+                <Link
+                  href="/dashboard/tickets"
+                  aria-label="Open my tickets"
+                  className="group relative inline-flex items-center gap-2.5 px-5 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-xl border border-white/20 text-white font-medium text-sm transition-all duration-300 hover:scale-105 hover:shadow-luxury"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
                   </svg>
-                </span>
-                <span className="text-[10px] uppercase tracking-wide">My Tickets</span>
-              </Link>
-              <Link 
-                href="/trips/select" 
-                className="btn-primary flex items-center gap-2 whitespace-nowrap shadow-medium hover:shadow-large transition-all duration-300 transform hover:scale-105"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Plan New Trip
-              </Link>
+                  <span>My Tickets</span>
+                </Link>
+                <Link 
+                  href="/trips/select" 
+                  className="group px-6 py-3 bg-heritage-gold hover:bg-heritage-gold-dark text-charcoal-900 font-semibold rounded-xl transition-all duration-300 shadow-luxury hover:shadow-luxury-lg hover:scale-105 flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span>Plan New Trip</span>
+                </Link>
+              </div>
             </div>
           </div>
-
-          {/* Alerts */}
-          {error && (
-            <div className="alert-error mb-6 animate-slide-down bg-red-50 border-l-4 border-red-500 rounded-lg p-4 flex items-start gap-3">
-              <span className="text-xl">⚠️</span>
-              <div className="flex-1">
-                <p className="font-semibold text-red-800">Error</p>
-                <p className="text-red-700 text-sm mt-1">{error}</p>
-                {error.toLowerCase().includes('mongodb') || error.toLowerCase().includes('database') ? (
-                  <div className="mt-3 p-3 bg-red-100 rounded-lg">
-                    <p className="text-xs font-semibold text-red-800 mb-1">Troubleshooting:</p>
-                    <ul className="text-xs text-red-700 space-y-1 list-disc list-inside">
-                      <li>Ensure MongoDB is running: <code className="bg-red-200 px-1 rounded">sudo systemctl start mongod</code></li>
-                      <li>Or check your MongoDB Atlas connection settings</li>
-                      <li>Verify backend server is running and can connect to the database</li>
-                    </ul>
-                  </div>
-                ) : null}
-              </div>
-              <button 
-                onClick={() => setError('')} 
-                className="text-red-500 hover:text-red-700 transition-colors"
-                aria-label="Close error"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          )}
-
-          {success && (
-            <div className="alert-success mb-6 animate-slide-down bg-green-50 border-l-4 border-green-500 rounded-lg p-4 flex items-start gap-3">
-              <span className="text-xl">✅</span>
-              <div className="flex-1">
-                <p className="font-semibold text-green-800">Success</p>
-                <p className="text-green-700 text-sm mt-1">{success}</p>
-              </div>
-              <button 
-                onClick={() => setSuccess('')} 
-                className="text-green-500 hover:text-green-700 transition-colors"
-                aria-label="Close success"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          )}
         </div>
+      </div>
 
-        {/* Quick Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {/* Wallet Card */}
-          <div className="group relative overflow-hidden bg-gradient-to-br from-primary-500 to-ocean-600 rounded-2xl shadow-large p-6 text-white transform transition-all duration-300 hover:scale-105 hover:shadow-xl-soft">
-            <div className="relative z-10">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      {/* Main Content */}
+      <div className="section-container-luxury -mt-12 relative z-20">
+        <div className="max-w-7xl mx-auto">
+          {/* Alerts */}
+          <div className="mb-8">
+
+            {error && (
+              <div className="mb-6 animate-fade-in bg-red-50/80 border-2 border-red-200 rounded-xl p-5 flex items-start gap-4 shadow-sm">
+                <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-red-800 mb-1">Error</p>
+                  <p className="text-red-700 text-sm">{error}</p>
+                </div>
+                <button 
+                  onClick={() => setError('')} 
+                  className="text-red-500 hover:text-red-700 transition-colors p-1"
+                  aria-label="Close error"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
+            {success && (
+              <div className="mb-6 animate-fade-in bg-green-50/80 border-2 border-green-200 rounded-xl p-5 flex items-start gap-4 shadow-sm">
+                <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-green-800 mb-1">Success</p>
+                  <p className="text-green-700 text-sm">{success}</p>
+                </div>
+                <button 
+                  onClick={() => setSuccess('')} 
+                  className="text-green-500 hover:text-green-700 transition-colors p-1"
+                  aria-label="Close success"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Premium Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+            {/* Wallet Card */}
+            <div className="group relative overflow-hidden bg-white rounded-2xl border border-charcoal-100 shadow-luxury p-8 transform transition-all duration-300 hover:shadow-luxury-lg hover:-translate-y-1">
+              <div className="flex items-center justify-between mb-6">
+                <div className="w-16 h-16 bg-gradient-to-br from-heritage-gold/10 to-heritage-gold/5 rounded-xl flex items-center justify-center border border-heritage-gold/20">
+                  <svg className="w-8 h-8 text-heritage-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <div className="text-white/80 text-sm font-medium">Wallet</div>
+                <span className="text-xs font-semibold text-charcoal-500 uppercase tracking-wider">Wallet</span>
               </div>
               <div className="mb-6">
-                <p className="text-sm text-primary-100 mb-1 font-medium">Current Balance</p>
-                <p className="text-3xl font-bold">
+                <p className="text-sm text-charcoal-600 mb-2 font-medium">Current Balance</p>
+                <p className="text-4xl font-bold text-charcoal-900">
                   {walletCurrency} {walletBalance.toFixed(2)}
                 </p>
               </div>
               <Link 
                 href="/dashboard/wallet" 
-                className="inline-flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200"
+                className="inline-flex items-center gap-2 px-5 py-3 bg-charcoal-50 hover:bg-charcoal-100 text-charcoal-700 rounded-xl text-sm font-semibold transition-all duration-300 group-hover:bg-heritage-gold/10 group-hover:text-heritage-gold-dark"
               >
                 Top Up
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
               </Link>
             </div>
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-          </div>
 
-          {/* Trips Card */}
-          <div className="group relative overflow-hidden bg-gradient-to-br from-jade-500 to-ocean-600 rounded-2xl shadow-large p-6 text-white transform transition-all duration-300 hover:scale-105 hover:shadow-xl-soft">
-            <div className="relative z-10">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* Trips Card */}
+            <div className="group relative overflow-hidden bg-white rounded-2xl border border-charcoal-100 shadow-luxury p-8 transform transition-all duration-300 hover:shadow-luxury-lg hover:-translate-y-1">
+              <div className="flex items-center justify-between mb-6">
+                <div className="w-16 h-16 bg-gradient-to-br from-ocean-500/10 to-ocean-600/5 rounded-xl flex items-center justify-center border border-ocean-500/20">
+                  <svg className="w-8 h-8 text-ocean-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                   </svg>
                 </div>
-                <div className="text-white/80 text-sm font-medium">Trips</div>
+                <span className="text-xs font-semibold text-charcoal-500 uppercase tracking-wider">Trips</span>
               </div>
               <div className="mb-6">
-                <p className="text-sm text-jade-100 mb-1 font-medium">Active Trips</p>
-                <p className="text-3xl font-bold">{trips.length}</p>
+                <p className="text-sm text-charcoal-600 mb-2 font-medium">Active Trips</p>
+                <p className="text-4xl font-bold text-charcoal-900">{trips.length}</p>
                 {trips.length > 0 && (
-                  <p className="text-sm text-jade-100 mt-2">{trips.filter(t => t.paymentStatus === 'Completed').length} completed</p>
+                  <p className="text-sm text-charcoal-500 mt-2">
+                    {trips.filter(t => t.paymentStatus === 'Completed').length} completed
+                  </p>
                 )}
               </div>
               <Link 
                 href="#trips" 
-                className="inline-flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200"
+                className="inline-flex items-center gap-2 px-5 py-3 bg-charcoal-50 hover:bg-charcoal-100 text-charcoal-700 rounded-xl text-sm font-semibold transition-all duration-300 group-hover:bg-ocean-50 group-hover:text-ocean-700"
               >
                 View All
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
               </Link>
             </div>
-            <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full -ml-16 -mb-16"></div>
-          </div>
 
-          {/* Preferences Card - Expandable */}
-          <div className={`group relative overflow-hidden bg-gradient-to-br from-culture-500 to-indigo-600 rounded-2xl shadow-large transition-all duration-300 ${showKYTForm ? '' : 'transform hover:scale-105 hover:shadow-xl-soft'}`}>
-            <div 
+            {/* Preferences Card */}
+            <div className={`group relative overflow-hidden bg-white rounded-2xl border border-charcoal-100 shadow-luxury p-8 transition-all duration-300 ${showKYTForm ? '' : 'transform hover:shadow-luxury-lg hover:-translate-y-1 cursor-pointer'}`}
               onClick={() => !showKYTForm && setShowKYTForm(true)}
-              className={`p-6 text-white transition-all duration-300 ${showKYTForm ? 'cursor-default' : 'cursor-pointer'}`}
             >
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  </div>
-                  <div className="text-white/80 text-sm font-medium">Settings</div>
+              <div className="flex items-center justify-between mb-6">
+                <div className="w-16 h-16 bg-gradient-to-br from-indigo-500/10 to-indigo-600/5 rounded-xl flex items-center justify-center border border-indigo-500/20">
+                  <svg className="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
                 </div>
-                <div className="mb-6">
-                  <p className="text-sm text-culture-100 mb-1 font-medium">Preferences</p>
-                  {preferences.travelStyle && preferences.pace && preferences.transport ? (
-                    <div className="space-y-3">
-                      <p className="text-2xl font-bold text-white">Set ✓</p>
-                      <div className="flex flex-wrap gap-2">
-                        <div className="bg-white/30 backdrop-blur-sm px-3 py-1.5 rounded-lg flex items-center gap-1.5">
-                          <span className="text-base">{preferences.pace === 'fast' ? '⚡' : '🌿'}</span>
-                          <span className="text-sm font-semibold text-white capitalize">{preferences.pace}</span>
-                        </div>
-                        <div className="bg-white/30 backdrop-blur-sm px-3 py-1.5 rounded-lg flex items-center gap-1.5">
-                          <span className="text-base">{preferences.transport === 'native' ? '🚌' : '🚗'}</span>
-                          <span className="text-sm font-semibold text-white">{preferences.transport === 'native' ? 'Native' : 'Luxury'}</span>
-                        </div>
-                        <div className="bg-white/30 backdrop-blur-sm px-3 py-1.5 rounded-lg flex items-center gap-1.5">
-                          <span className="text-base">{preferences.travelStyle === 'flexible' ? '🔄' : '📦'}</span>
-                          <span className="text-sm font-semibold text-white capitalize">{preferences.travelStyle === 'flexible' ? 'Flexible' : 'Fixed'}</span>
-                        </div>
+                <span className="text-xs font-semibold text-charcoal-500 uppercase tracking-wider">Settings</span>
+              </div>
+              <div className="mb-6">
+                <p className="text-sm text-charcoal-600 mb-2 font-medium">Preferences</p>
+                {preferences.travelStyle && preferences.pace && preferences.transport ? (
+                  <div className="space-y-3">
+                    <p className="text-3xl font-bold text-charcoal-900">Set ✓</p>
+                    <div className="flex flex-wrap gap-2">
+                      <div className="bg-charcoal-50 px-3 py-1.5 rounded-lg border border-charcoal-100">
+                        <span className="text-sm font-semibold text-charcoal-700 capitalize">{preferences.pace}</span>
+                      </div>
+                      <div className="bg-charcoal-50 px-3 py-1.5 rounded-lg border border-charcoal-100">
+                        <span className="text-sm font-semibold text-charcoal-700">{preferences.transport === 'native' ? 'Native' : 'Luxury'}</span>
+                      </div>
+                      <div className="bg-charcoal-50 px-3 py-1.5 rounded-lg border border-charcoal-100">
+                        <span className="text-sm font-semibold text-charcoal-700 capitalize">{preferences.travelStyle === 'flexible' ? 'Flexible' : 'Fixed'}</span>
                       </div>
                     </div>
-                  ) : (
-                    <p className="text-3xl font-bold">Not Set</p>
-                  )}
-                </div>
-                {!showKYTForm && (
-                  <div className="inline-flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200">
-                    {preferences.travelStyle && preferences.pace && preferences.transport ? 'Edit Preferences' : 'Set Preferences'}
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                    </svg>
                   </div>
+                ) : (
+                  <p className="text-4xl font-bold text-charcoal-400">Not Set</p>
                 )}
               </div>
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+              {!showKYTForm && (
+                <div className="inline-flex items-center gap-2 px-5 py-3 bg-charcoal-50 hover:bg-charcoal-100 text-charcoal-700 rounded-xl text-sm font-semibold transition-all duration-300 group-hover:bg-indigo-50 group-hover:text-indigo-700">
+                  {preferences.travelStyle && preferences.pace && preferences.transport ? 'Edit Preferences' : 'Set Preferences'}
+                  <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </div>
+              )}
             </div>
           </div>
-        </div>
 
 
         {/* Preferences Form - Expands below when opened */}
@@ -583,83 +565,82 @@ export default function TravelerDashboard() {
           </div>
         )}
 
-        {/* Trips Section */}
-        <div id="trips" className="content-card">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
-                <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                </svg>
+          {/* Premium Trips Section */}
+          <div id="trips" className="bg-white rounded-2xl border border-charcoal-100 shadow-luxury p-8 md:p-10">
+            <div className="flex items-center justify-between mb-8 pb-6 border-b border-charcoal-100">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-charcoal-50 rounded-xl flex items-center justify-center">
+                  <svg className="w-6 h-6 text-charcoal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-semibold text-charcoal-900 mb-1">My Trips</h2>
+                  {trips.length > 0 && (
+                    <p className="text-sm text-charcoal-500">{trips.length} {trips.length === 1 ? 'trip' : 'trips'} total</p>
+                  )}
+                </div>
               </div>
-              <div>
-                <h2 className="heading-tertiary text-gray-900">My Trips</h2>
-                {trips.length > 0 && (
-                  <p className="text-sm text-gray-500 mt-1">{trips.length} {trips.length === 1 ? 'trip' : 'trips'} total</p>
-                )}
-              </div>
-            </div>
-            {trips.length > 0 && (
-              <button
-                onClick={() => setShowDeleteAllModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition-all duration-200 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                Delete All Trips
-              </button>
-            )}
-          </div>
-          
-          {trips.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full mb-6">
-                <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                </svg>
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">No trips yet</h3>
-              <p className="text-gray-600 mb-8 max-w-md mx-auto">Start planning your next adventure and create unforgettable memories!</p>
-              <Link href="/trips/select" className="btn-primary inline-flex items-center gap-2 shadow-medium hover:shadow-large transition-all duration-300 transform hover:scale-105">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Plan Your First Trip
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {trips.map((trip) => (
-                <div
-                  key={trip._id}
-                  className="group block bg-gradient-to-r from-white to-gray-50 rounded-xl p-6 border-2 border-gray-200 hover:border-primary-300 hover:shadow-medium transition-all duration-300"
+              {trips.length > 0 && (
+                <button
+                  onClick={() => setShowDeleteAllModal(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition-all duration-300 hover:shadow-sm"
                 >
-                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Delete All
+                </button>
+              )}
+            </div>
+            
+            {trips.length === 0 ? (
+              <div className="text-center py-20">
+                <div className="inline-flex items-center justify-center w-24 h-24 bg-charcoal-50 rounded-full mb-6 border border-charcoal-100">
+                  <svg className="w-12 h-12 text-charcoal-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                  </svg>
+                </div>
+                <h3 className="text-2xl font-semibold text-charcoal-900 mb-3">No trips yet</h3>
+                <p className="text-charcoal-600 mb-8 max-w-md mx-auto text-lg">Start planning your next adventure and create unforgettable memories!</p>
+                <Link href="/trips/select" className="inline-flex items-center gap-3 px-8 py-4 bg-charcoal-700 hover:bg-charcoal-800 text-white font-semibold rounded-xl shadow-luxury hover:shadow-luxury-lg transition-all duration-300 transform hover:scale-105">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Plan Your First Trip
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {trips.map((trip) => (
+                  <div
+                    key={trip._id}
+                    className="group relative bg-white rounded-xl border-2 border-charcoal-100 hover:border-charcoal-200 p-6 shadow-sm hover:shadow-luxury transition-all duration-300"
+                  >
                     <Link 
                       href={`/trips/schedule?tripId=${trip._id}`}
-                      className="flex-1 cursor-pointer"
+                      className="block"
                     >
-                      <div className="flex items-start gap-4 mb-3">
-                        <div className="w-12 h-12 bg-gradient-to-br from-primary-100 to-primary-200 rounded-xl flex items-center justify-center flex-shrink-0">
-                          <svg className="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="flex items-start gap-4 mb-4">
+                        <div className="w-14 h-14 bg-gradient-to-br from-heritage-gold/10 to-heritage-gold/5 rounded-xl flex items-center justify-center border border-heritage-gold/20 flex-shrink-0">
+                          <svg className="w-7 h-7 text-heritage-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                           </svg>
                         </div>
-                        <div className="flex-1">
-                          <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-primary-600 transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-xl font-semibold text-charcoal-900 mb-2 group-hover:text-heritage-gold-dark transition-colors truncate">
                             {trip.district}, {trip.state}
                           </h3>
-                          <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                          <div className="flex flex-wrap gap-4 text-sm text-charcoal-600">
                             <span className="flex items-center gap-1.5">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                               </svg>
-                              {new Date(trip.fromDate).toLocaleDateString()} - {new Date(trip.toDate).toLocaleDateString()}
+                              {new Date(trip.fromDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(trip.toDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                             </span>
                             <span className="flex items-center gap-1.5">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                               </svg>
                               {trip.totalPrice.toFixed(2)} {walletCurrency}
@@ -668,47 +649,50 @@ export default function TravelerDashboard() {
                         </div>
                       </div>
                     </Link>
-                    <div className="flex items-center gap-4">
-                      {getStatusBadge(trip.paymentStatus)}
-                      <Link
-                        href={`/trips/schedule?tripId=${trip._id}`}
-                        className="text-primary-600 font-semibold flex items-center gap-2 group-hover:gap-3 transition-all"
-                      >
-                        View Details
-                        <svg className="w-5 h-5 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                        </svg>
-                      </Link>
-                      <button
-                        onClick={(e) => handleDeleteTrip(trip._id, e)}
-                        disabled={deletingTripId === trip._id}
-                        className="bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                      >
-                        {deletingTripId === trip._id ? (
-                          <>
-                            <span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
-                            Deleting...
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="flex items-center justify-between pt-4 border-t border-charcoal-100">
+                      <div className="flex items-center gap-3">
+                        {getStatusBadge(trip.paymentStatus)}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Link
+                          href={`/trips/schedule?tripId=${trip._id}`}
+                          className="text-charcoal-700 hover:text-heritage-gold-dark font-medium text-sm flex items-center gap-2 transition-colors"
+                        >
+                          View Details
+                          <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                          </svg>
+                        </Link>
+                        <button
+                          onClick={(e) => handleDeleteTrip(trip._id, e)}
+                          disabled={deletingTripId === trip._id}
+                          className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                          aria-label="Delete trip"
+                        >
+                          {deletingTripId === trip._id ? (
+                            <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                          ) : (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
-                            Delete
-                          </>
-                        )}
-                      </button>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
+      </div>
 
-        {/* Delete All Trips Confirmation Modal */}
-        {showDeleteAllModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+      {/* Delete All Trips Confirmation Modal */}
+      {showDeleteAllModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
             <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all animate-slide-up">
               <div className="p-6">
                 {/* Icon */}
@@ -779,5 +763,6 @@ export default function TravelerDashboard() {
         )}
       </div>
     </div>
+    </React.Fragment>
   );
 }

@@ -10,7 +10,37 @@ module.exports = {
       colors: {
         background: 'var(--background)',
         foreground: 'var(--foreground)',
-        // Company website colors
+        // Luxury Heritage Brand Palette
+        charcoal: {
+          50: '#f5f5f5',
+          100: '#e5e5e5',
+          200: '#cccccc',
+          300: '#b3b3b3',
+          400: '#999999',
+          500: '#2C2C2C', // Deep Charcoal - Primary dark
+          600: '#262626',
+          700: '#1F1F1F',
+          800: '#191919',
+          900: '#0D0D0D',
+        },
+        cream: {
+          50: '#FEFDFB',
+          100: '#FDFBF7',
+          200: '#FAF7F0',
+          300: '#F7F3E9',
+          400: '#F4EFE2',
+          500: '#F2E8DC', // Soft Cream - Primary light
+          600: '#E8DCC8',
+          700: '#D4C5B0',
+          800: '#B8A68C',
+          900: '#9C8B6F',
+        },
+        heritage: {
+          gold: '#D4AF37', // Heritage Gold
+          'gold-light': '#E8D4A3',
+          'gold-dark': '#B8941F',
+        },
+        // Company website colors (keeping for compatibility)
         'deep-jungle': '#1A2F2B',
         'terracotta': '#E07A5F',
         'clay': '#D4C5B0',
@@ -211,13 +241,42 @@ module.exports = {
       },
       fontFamily: {
         sans: ['Montserrat', 'Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-        serif: ['Cormorant Garamond', 'serif'],
+        serif: ['Cormorant Garamond', 'Playfair Display', 'Georgia', 'serif'],
+        display: ['Cormorant Garamond', 'Playfair Display', 'serif'], // Editorial headings
+      },
+      fontSize: {
+        'display-2xl': ['4.5rem', { lineHeight: '1.1', letterSpacing: '-0.02em', fontWeight: '700' }],
+        'display-xl': ['3.75rem', { lineHeight: '1.1', letterSpacing: '-0.02em', fontWeight: '700' }],
+        'display-lg': ['3rem', { lineHeight: '1.2', letterSpacing: '-0.01em', fontWeight: '600' }],
+        'display-md': ['2.25rem', { lineHeight: '1.3', letterSpacing: '-0.01em', fontWeight: '600' }],
+        'display-sm': ['1.875rem', { lineHeight: '1.4', letterSpacing: '0', fontWeight: '600' }],
+      },
+      letterSpacing: {
+        'tightest': '-0.04em',
+        'tighter': '-0.02em',
+        'tight': '-0.01em',
+        'wide': '0.02em',
+        'wider': '0.04em',
       },
       boxShadow: {
         'soft': '0 2px 8px rgba(0, 0, 0, 0.08)',
         'medium': '0 4px 16px rgba(0, 0, 0, 0.1)',
         'large': '0 8px 24px rgba(0, 0, 0, 0.12)',
         'xl-soft': '0 12px 32px rgba(0, 0, 0, 0.1)',
+        'luxury': '0 4px 20px rgba(44, 44, 44, 0.08), 0 1px 3px rgba(44, 44, 44, 0.12)',
+        'luxury-lg': '0 12px 40px rgba(44, 44, 44, 0.12), 0 2px 6px rgba(44, 44, 44, 0.16)',
+        'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.15)',
+      },
+      spacing: {
+        '18': '4.5rem',
+        '22': '5.5rem',
+        '26': '6.5rem',
+        '30': '7.5rem',
+        '34': '8.5rem',
+        '38': '9.5rem',
+        '42': '10.5rem',
+        '46': '11.5rem',
+        '50': '12.5rem',
       },
       borderRadius: {
         'xl': '0.75rem',

@@ -1,5 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&family=Cormorant+Garamond:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&family=Cormorant+Garamond:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700;800;900&display=swap');
 @import 'mapbox-gl/dist/mapbox-gl.css';
 @import 'react-day-picker/dist/style.css';
 
@@ -30,15 +30,11 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: 'Inter', 'Poppins', system-ui, -apple-system, sans-serif;
-  @apply text-gray-800 leading-relaxed;
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(0, 188, 212, 0.04) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(255, 152, 0, 0.04) 0px, transparent 50%),
-    radial-gradient(at 50% 50%, rgba(156, 39, 176, 0.02) 0px, transparent 50%),
-    radial-gradient(at 25% 75%, rgba(233, 30, 99, 0.02) 0px, transparent 50%),
-    radial-gradient(at 75% 25%, rgba(63, 81, 181, 0.02) 0px, transparent 50%);
-  background-attachment: fixed;
+  font-family: 'Montserrat', 'Inter', system-ui, -apple-system, sans-serif;
+  @apply text-charcoal-700 leading-relaxed;
+  background: #FEFDFB;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 @layer utilities {
@@ -92,11 +88,33 @@ body {
   @keyframes fade-in {
     from {
       opacity: 0;
-      transform: translateY(10px);
+      transform: translateY(20px);
     }
     to {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes luxury-lift {
+    0% {
+      transform: translateY(0) scale(1);
+      box-shadow: 0 4px 20px rgba(44, 44, 44, 0.08);
+    }
+    100% {
+      transform: translateY(-8px) scale(1.02);
+      box-shadow: 0 12px 40px rgba(44, 44, 44, 0.15);
     }
   }
 
@@ -139,11 +157,28 @@ body {
   }
 
   .animate-fade-in {
-    animation: fade-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: fade-in 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .animate-slide-down {
     animation: slide-down 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .animate-luxury-lift {
+    animation: luxury-lift 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  /* Smooth hover transitions */
+  .transition-luxury {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .transition-luxury-fast {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .animate-shimmer {
@@ -243,13 +278,49 @@ body {
 }
 
 @layer components {
-  /* Modern Glassmorphism Effect */
+  /* Luxury Typography System */
+  .heading-editorial {
+    font-family: 'Cormorant Garamond', 'Playfair Display', serif;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  .heading-display {
+    font-family: 'Cormorant Garamond', 'Playfair Display', serif;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+  }
+
+  .text-body-luxury {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 400;
+    line-height: 1.7;
+    letter-spacing: 0.01em;
+  }
+
+  .text-body-luxury-sm {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 400;
+    line-height: 1.6;
+    letter-spacing: 0;
+  }
+
+  /* Modern Glassmorphism Effect - Enhanced */
   .glass {
-    background: var(--glass-bg);
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
-    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+  }
+
+  .glass-dark {
+    background: rgba(44, 44, 44, 0.85);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   .glass-strong {
@@ -549,12 +620,19 @@ body {
     z-index: 1;
   }
 
-  /* Professional content card - Enhanced */
+  /* Luxury Content Card */
   .content-card {
-    @apply bg-white rounded-2xl shadow-soft border border-gray-100 p-6 sm:p-8 lg:p-10;
+    @apply bg-white rounded-2xl shadow-luxury border border-charcoal-100/50 p-8 sm:p-10 lg:p-12;
     position: relative;
     backdrop-filter: blur(10px);
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.98);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .content-card:hover {
+    @apply shadow-luxury-lg;
+    transform: translateY(-2px);
+    border-color: rgba(212, 175, 55, 0.2);
   }
 
   .content-card::before {
@@ -563,11 +641,11 @@ body {
     top: 0;
     left: 0;
     right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #00bcd4, #009688, #00838f);
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #D4AF37, transparent);
     border-radius: 2xl 2xl 0 0;
     opacity: 0;
-    transition: opacity 0.3s;
+    transition: opacity 0.4s;
   }
 
   .content-card:hover::before {
@@ -575,8 +653,35 @@ body {
   }
   
   .content-card-elevated {
-    @apply content-card shadow-large;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    @apply content-card shadow-luxury-lg;
+    box-shadow: 0 20px 40px rgba(44, 44, 44, 0.12), 0 2px 6px rgba(44, 44, 44, 0.16);
+  }
+
+  /* Luxury Experience Card */
+  .card-experience-luxury {
+    @apply bg-white rounded-xl overflow-hidden shadow-luxury border border-charcoal-100/50;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+  }
+
+  .card-experience-luxury:hover {
+    @apply shadow-luxury-lg;
+    transform: translateY(-4px) scale(1.01);
+    border-color: rgba(212, 175, 55, 0.3);
+  }
+
+  .card-experience-luxury::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.05) 0%, transparent 50%);
+    opacity: 0;
+    transition: opacity 0.4s;
+    pointer-events: none;
+  }
+
+  .card-experience-luxury:hover::after {
+    opacity: 1;
   }
 
   /* Professional heading styles */

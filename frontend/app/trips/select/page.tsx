@@ -6,10 +6,10 @@ import api from '@/lib/api';
 import { INDIAN_STATES, DISTRICTS_BY_STATE } from '@/lib/indianStates';
 import Image from 'next/image';
 import { useAuth } from '@/lib/auth';
-import { DayPicker } from 'react-day-picker';
-import 'react-day-picker/dist/style.css';
 import { format } from 'date-fns';
 import PlanningModeSelector, { PlanningMode } from '@/components/PlanningModeSelector';
+import PremiumDatePicker from '@/components/PremiumDatePicker';
+import LocationSearch from '@/components/LocationSearch';
 
 interface Location {
   state: string;
@@ -94,8 +94,17 @@ export default function TripSelectPage() {
   }, [user]);
 
   const addLocation = () => {
-    setLocations([...locations, { state: '', district: '' }]);
+    // Only add if current locations are all filled
+    const allFilled = locations.every(loc => loc.state && loc.district);
+    if (allFilled && locations.length < 10) { // Max 10 locations
+      setLocations([...locations, { state: '', district: '' }]);
+    }
   };
+
+  // Check if all locations are filled
+  const allLocationsFilled = locations.every(loc => loc.state && loc.district);
+  const canAddLocation = allLocationsFilled && locations.length < 10;
+  const hasEmptyLocations = locations.some(loc => !loc.state || !loc.district);
 
   const removeLocation = (index: number) => {
     if (locations.length > 1) {
@@ -110,6 +119,12 @@ export default function TripSelectPage() {
       [field]: value,
       ...(field === 'state' ? { district: '' } : {}) // Reset district when state changes
     };
+    setLocations(updated);
+  };
+
+  const handleLocationChange = (index: number, location: Location) => {
+    const updated = [...locations];
+    updated[index] = location;
     setLocations(updated);
   };
 
@@ -181,382 +196,324 @@ export default function TripSelectPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-primary-50/30">
-      <div className="page-container py-8 md:py-12">
-        <div className="section-container max-w-5xl">
-          {/* Professional Header with Gradient */}
-          <div className="mb-8 md:mb-12">
-            <div className="bg-gradient-to-r from-primary-600 via-primary-500 to-accent-500 rounded-2xl md:rounded-3xl shadow-large p-8 md:p-12 text-white relative overflow-hidden">
-              {/* Decorative Background Elements */}
-              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32"></div>
-              <div className="absolute bottom-0 left-0 w-48 h-48 bg-accent-400/20 rounded-full blur-2xl -ml-24 -mb-24"></div>
-              
-              <div className="relative z-10 text-center">
-                <div className="inline-flex items-center justify-center w-24 h-24 bg-white/20 backdrop-blur-sm rounded-2xl mb-6 shadow-large border-2 border-white/30 p-3">
-                  <Image 
-                    src="/tribelink-logo.svg" 
-                    alt="Tribelink Logo" 
-                    width={80} 
-                    height={80}
-                    className="w-full h-full"
-                  />
-                </div>
-                <h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight">
-                  Plan Your Adventure
-                </h1>
-                <p className="text-lg md:text-xl text-white/90 max-w-2xl mx-auto">
-                  Create your perfect itinerary by selecting destinations and travel dates. Our AI-powered scheduler will optimize your journey.
-                </p>
-                
-                {/* Step Indicator */}
-                <div className="mt-8 flex items-center justify-center gap-2">
-                  <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full border border-white/30">
-                    <div className="w-2 h-2 bg-white rounded-full"></div>
-                    <span className="text-sm font-medium">Step 1 of 3</span>
-                  </div>
-                </div>
+    <div className="min-h-screen bg-cream-50">
+      {/* Premium Hero Section */}
+      <div className="relative bg-gradient-to-br from-charcoal-700 via-charcoal-800 to-charcoal-900 overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-0 w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIwLjUiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')]"></div>
+        </div>
+        
+        {/* Decorative Elements */}
+        <div className="absolute top-20 right-20 w-96 h-96 bg-heritage-gold/5 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-20 left-20 w-96 h-96 bg-heritage-gold/5 rounded-full blur-3xl"></div>
+        
+        <div className="section-container-luxury relative z-10 pt-32 pb-20">
+          <div className="max-w-4xl mx-auto text-center">
+            {/* Step Indicator */}
+            <div className="inline-flex items-center gap-3 mb-8 px-5 py-2.5 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-heritage-gold rounded-full"></div>
+                <span className="text-sm font-medium text-white/90 tracking-wide">Step 1 of 3</span>
               </div>
             </div>
+            
+            <h1 className="heading-display text-5xl md:text-6xl lg:text-7xl text-white mb-6 animate-fade-in-up">
+              Plan Your Adventure
+            </h1>
+            <p className="text-xl md:text-2xl text-white/80 font-light mb-12 max-w-2xl mx-auto leading-relaxed animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+              Discover authentic cultural experiences and create your perfect journey
+            </p>
           </div>
+        </div>
+      </div>
 
-          <div className="content-card shadow-large border-0">
+      {/* Main Form Section */}
+      <div className="section-container-luxury -mt-16 relative z-20">
+        <div className="max-w-5xl mx-auto">
+
+          <div className="content-card shadow-luxury-lg border-charcoal-100/50 mb-8">
             {/* Planning Mode Selector */}
-            <div className="mb-8">
+            <div className="mb-10">
               <PlanningModeSelector
                 selectedMode={planningMode}
                 onModeChange={setPlanningMode}
               />
             </div>
 
-            {/* Token Warning - Enhanced Design */}
-          {hasNoTokens || (user && (!user.tokens || user.tokens === 0)) ? (
-            <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-300 rounded-xl p-6 md:p-8 mb-8 shadow-medium">
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
-                  <span className="text-2xl">🪙</span>
+            {/* Token Warning - Premium Design */}
+            {hasNoTokens || (user && (!user.tokens || user.tokens === 0)) ? (
+              <div className="bg-gradient-to-br from-heritage-gold/10 to-heritage-gold/5 border-2 border-heritage-gold/30 rounded-2xl p-8 mb-8 shadow-luxury">
+                <div className="flex items-start gap-5">
+                  <div className="flex-shrink-0 w-14 h-14 bg-heritage-gold/20 rounded-xl flex items-center justify-center border border-heritage-gold/30">
+                    <svg className="w-7 h-7 text-heritage-gold" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-semibold text-charcoal-900 mb-2">
+                      Tokens Required
+                    </h3>
+                    <p className="text-charcoal-700 mb-6 leading-relaxed text-body-luxury-sm">
+                      You need at least <span className="font-semibold text-heritage-gold-dark">1 token</span> to plan a new trip. Complete an existing trip payment to earn <span className="font-semibold text-heritage-gold-dark">2 tokens</span> and continue planning your adventures!
+                    </p>
+                    <button
+                      onClick={() => router.push('/dashboard')}
+                      className="px-6 py-3 bg-charcoal-700 hover:bg-charcoal-800 text-white rounded-xl font-medium transition-all duration-300 shadow-md hover:shadow-lg"
+                    >
+                      Go to Dashboard
+                    </button>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-amber-900 mb-2">
-                    No Tokens Available
-                  </h3>
-                  <p className="text-amber-800 mb-4 leading-relaxed">
-                    You need at least <span className="font-semibold">1 token</span> to plan a new trip. Complete an existing trip payment to earn <span className="font-semibold">2 tokens</span> and continue planning your adventures!
-                  </p>
-                  <button
-                    onClick={() => router.push('/dashboard')}
-                    className="btn-primary bg-amber-600 hover:bg-amber-700 shadow-medium"
-                  >
-                    Go to Dashboard
-                  </button>
-                </div>
               </div>
-            </div>
-          ) : null}
+            ) : null}
 
-          {error && (
-            <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 mb-6 flex items-start gap-3 shadow-soft">
-              <div className="flex-shrink-0 w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
-                <span className="text-lg">⚠️</span>
-              </div>
-              <div className="flex-1">
-                <p className="text-red-800 font-medium">{error}</p>
-              </div>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-8">
-            {/* Travel Dates Section - Enhanced with Modern Calendar */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 md:p-8 border-2 border-blue-200 shadow-soft">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center shadow-medium">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            {error && (
+              <div className="bg-red-50/80 border-2 border-red-200 rounded-xl p-5 mb-8 flex items-start gap-4 shadow-sm">
+                <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <div>
-                  <label className="block text-lg font-bold text-gray-900">
-                    Travel Dates
-                  </label>
-                  <p className="text-sm text-gray-600">Select your journey start and end dates</p>
+                <div className="flex-1">
+                  <p className="text-red-800 font-medium">{error}</p>
                 </div>
               </div>
+            )}
 
-              {/* Modern Calendar Component */}
-              <div className="bg-white rounded-xl p-4 md:p-6 shadow-medium border border-gray-200 mb-6" style={{ position: 'relative', zIndex: 10 }}>
+            <form onSubmit={handleSubmit} className="space-y-10">
+              {/* Travel Dates Section - Premium */}
+              <div className="bg-white rounded-2xl p-8 md:p-10 border border-charcoal-100/50 shadow-luxury">
+                <div className="flex items-center gap-4 mb-8 pb-6 border-b border-charcoal-100">
+                  <div className="w-12 h-12 bg-charcoal-50 rounded-xl flex items-center justify-center">
+                    <svg className="w-6 h-6 text-charcoal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <label className="block text-xl font-semibold text-charcoal-900 mb-1">
+                      Travel Dates
+                    </label>
+                    <p className="text-sm text-charcoal-600 font-light">Select your journey start and end dates</p>
+                  </div>
+                </div>
+
                 {isClient && (
-                  <DayPicker
-                    mode="range"
-                    selected={{ from: startDate || undefined, to: endDate || undefined }}
-                    onSelect={(range) => {
-                      console.log('Calendar selection:', range);
-                      if (!range) {
-                        setStartDate(null);
-                        setEndDate(null);
-                        return;
-                      }
-                      
-                      if (range.from && !range.to) {
-                        // First date selected, waiting for second date
-                        setStartDate(range.from);
-                        setEndDate(null);
-                      } else if (range.from && range.to) {
-                        // Both dates selected
-                        setStartDate(range.from);
-                        setEndDate(range.to);
-                      } else if (!range.from && range.to) {
-                        // Edge case: only to date
-                        setStartDate(null);
-                        setEndDate(range.to);
-                      }
-                    }}
-                    disabled={{ before: new Date(new Date().setHours(0, 0, 0, 0)) }}
-                    numberOfMonths={typeof window !== 'undefined' && window.innerWidth >= 768 ? 2 : 1}
-                    className="rdp-calendar"
-                    classNames={{
-                      months: 'flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0',
-                      month: 'space-y-4',
-                      caption: 'flex justify-center pt-1 relative items-center mb-4',
-                      caption_label: 'text-lg font-bold text-gray-900',
-                      nav: 'space-x-1 flex items-center',
-                      nav_button: 'h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 hover:bg-primary-50 rounded-lg transition-all cursor-pointer',
-                      nav_button_previous: 'absolute left-1',
-                      nav_button_next: 'absolute right-1',
-                      table: 'w-full border-collapse space-y-1',
-                      head_row: 'flex mb-2',
-                      head_cell: 'text-gray-500 rounded-md w-10 font-semibold text-sm',
-                      row: 'flex w-full mt-2',
-                      cell: 'text-center text-sm p-0 relative',
-                      day: 'h-10 w-10 p-0 font-normal rounded-lg transition-all cursor-pointer',
-                      day_selected: 'bg-primary-500 text-white hover:bg-primary-600 hover:text-white focus:bg-primary-500 focus:text-white font-semibold',
-                      day_today: 'bg-blue-100 text-blue-900 font-semibold',
-                      day_outside: 'text-gray-400 opacity-50',
-                      day_disabled: 'text-gray-300 opacity-50 cursor-not-allowed',
-                      day_range_middle: 'bg-primary-100 text-primary-900',
-                      day_hidden: 'invisible',
-                    }}
-                    styles={{
-                      months: { display: 'flex', gap: '1rem' },
-                      month: { margin: 0 },
-                      caption: { position: 'relative', paddingTop: '0.5rem' },
-                      nav: { display: 'flex', gap: '0.25rem' },
-                    }}
-                    modifiersClassNames={{
-                      selected: 'bg-primary-500 text-white',
-                      range_start: 'bg-primary-500 text-white rounded-l-lg',
-                      range_end: 'bg-primary-500 text-white rounded-r-lg',
+                  <PremiumDatePicker
+                    startDate={startDate}
+                    endDate={endDate}
+                    onDatesChange={({ from, to }) => {
+                      setStartDate(from);
+                      setEndDate(to);
                     }}
                   />
                 )}
               </div>
 
-              {/* Selected Dates Display */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div className="bg-white rounded-lg p-4 border-2 border-gray-200">
-                  <label className="block text-xs font-semibold text-gray-600 mb-2">
-                    Start Date <span className="text-red-500">*</span>
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <span className="text-base font-semibold text-gray-900">
-                      {startDate ? format(startDate, 'MMMM d, yyyy') : 'Not selected'}
-                    </span>
-                  </div>
-                </div>
-                <div className="bg-white rounded-lg p-4 border-2 border-gray-200">
-                  <label className="block text-xs font-semibold text-gray-600 mb-2">
-                    End Date <span className="text-red-500">*</span>
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <span className="text-base font-semibold text-gray-900">
-                      {endDate ? format(endDate, 'MMMM d, yyyy') : 'Not selected'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {startDate && endDate && (
-                <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm px-4 py-3 rounded-lg border-2 border-blue-300 shadow-soft">
-                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p className="text-sm font-semibold text-gray-700">
-                    Trip duration: <span className="text-primary-600 font-bold text-base">{Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1}</span> days
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Country Section - Enhanced */}
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border-2 border-green-200 shadow-soft">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center shadow-medium">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div>
-                  <label className="block text-lg font-bold text-gray-900">
-                    Country
-                  </label>
-                  <p className="text-sm text-gray-600">Select your travel destination</p>
-                </div>
-              </div>
-              <input
-                type="text"
-                value="India"
-                disabled
-                className="input-field bg-white/80 border-2 border-green-200 cursor-not-allowed font-semibold"
-              />
-              <div className="mt-3 flex items-center gap-2 text-sm text-gray-600">
-                <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>Currently supporting India only. More countries coming soon!</span>
-              </div>
-            </div>
-
-            {/* Destinations Section - Enhanced */}
-            <div className="space-y-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center shadow-medium">
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              {/* Country Section - Premium */}
+              <div className="bg-white rounded-2xl p-8 border border-charcoal-100/50 shadow-luxury">
+                <div className="flex items-center gap-4 mb-6 pb-6 border-b border-charcoal-100">
+                  <div className="w-12 h-12 bg-charcoal-50 rounded-xl flex items-center justify-center">
+                    <svg className="w-6 h-6 text-charcoal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
                   <div>
-                    <label className="block text-lg font-bold text-gray-900">
-                      Destinations <span className="text-red-500">*</span>
+                    <label className="block text-xl font-semibold text-charcoal-900 mb-1">
+                      Country
                     </label>
-                    <p className="text-sm text-gray-600">Add one or more locations to visit</p>
+                    <p className="text-sm text-charcoal-600 font-light">Your travel destination</p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={addLocation}
-                  className="btn-outline text-sm py-2.5 px-5 flex items-center gap-2 hover:bg-primary-50 hover:border-primary-300 transition-all shadow-soft"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  Add Location
-                </button>
-              </div>
-
-              {locations.map((location, index) => {
-                const availableDistricts = location.state ? (DISTRICTS_BY_STATE[location.state] || []) : [];
-                
-                return (
-                  <div key={index} className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-6 border-2 border-gray-200 shadow-soft hover:border-primary-300 transition-all">
-                    <div className="flex items-center justify-between mb-5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-medium">
-                          {index + 1}
-                        </div>
-                        <span className="text-base font-bold text-gray-900">
-                          Location {index + 1}
-                        </span>
+                <div className="relative">
+                  <div className="flex items-center gap-4 bg-cream-50 border-2 border-cream-200 rounded-xl p-5">
+                    <div className="flex-shrink-0">
+                      <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-sm border border-charcoal-100">
+                        <span className="text-xl">🇮🇳</span>
                       </div>
-                      {locations.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeLocation(index)}
-                          className="text-red-500 hover:text-red-700 text-sm font-semibold flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-all"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                          Remove
-                        </button>
-                      )}
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          State/Province <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                          value={location.state}
-                          onChange={(e) => updateLocation(index, 'state', e.target.value)}
-                          required
-                          className="input-field bg-white border-2 border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-                        >
-                          <option value="">Select a state</option>
-                          {INDIAN_STATES.map((state) => (
-                            <option key={state} value={state}>
-                              {state}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          District/City <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                          value={location.district}
-                          onChange={(e) => updateLocation(index, 'district', e.target.value)}
-                          required
-                          disabled={!location.state || availableDistricts.length === 0}
-                          className="input-field bg-white border-2 border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:border-gray-200"
-                        >
-                          <option value="">
-                            {!location.state 
-                              ? 'Select a state first' 
-                              : availableDistricts.length === 0 
-                              ? 'No districts available'
-                              : 'Select a district/city'}
-                          </option>
-                          {availableDistricts.map((district) => (
-                            <option key={district} value={district}>
-                              {district}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                    <div className="flex-1">
+                      <div className="text-lg font-semibold text-charcoal-900">India</div>
+                      <div className="text-sm text-charcoal-600 mt-1">Currently available</div>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <span className="px-3 py-1.5 bg-heritage-gold/10 text-heritage-gold-dark text-xs font-semibold rounded-lg border border-heritage-gold/20">
+                        Active
+                      </span>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                  <div className="mt-4 flex items-center gap-2 text-sm text-charcoal-500">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>More countries coming soon</span>
+                  </div>
+                </div>
+              </div>
 
-            {/* CTA Button - Enhanced */}
-            <div className="pt-6 border-t-2 border-gray-200">
-              <button
-                type="submit"
-                disabled={loading || hasNoTokens || (user ? (!user.tokens || user.tokens === 0) : false)}
-                className="btn-primary w-full text-lg py-4 md:py-5 disabled:opacity-50 disabled:cursor-not-allowed shadow-large hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-center gap-3"
-              >
-                {loading ? (
-                  <>
-                    <span className="spinner w-5 h-5 border-2"></span>
-                    <span>Processing...</span>
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    <span>Browse Experiences</span>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </>
-                )}
-              </button>
-              <p className="text-center text-sm text-gray-500 mt-4">
-                You'll be able to select experiences and customize your itinerary in the next step
-              </p>
-            </div>
-          </form>
+              {/* Destinations Section - Premium */}
+              <div className="bg-white rounded-2xl p-8 md:p-10 border border-charcoal-100/50 shadow-luxury">
+                <div className="mb-8 pb-6 border-b border-charcoal-100">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-charcoal-50 rounded-xl flex items-center justify-center">
+                      <svg className="w-6 h-6 text-charcoal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <label className="block text-xl font-semibold text-charcoal-900 mb-1">
+                        Destinations <span className="text-red-500">*</span>
+                        {locations.length > 0 && (
+                          <span className="ml-2 text-sm font-normal text-charcoal-500">
+                            ({locations.length} {locations.length === 1 ? 'location' : 'locations'})
+                          </span>
+                        )}
+                      </label>
+                      <p className="text-sm text-charcoal-600 font-light">
+                        {hasEmptyLocations 
+                          ? 'Complete the current location to add more'
+                          : 'Add one or more locations to visit'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  {locations.map((location, index) => (
+                    <div 
+                      key={index} 
+                      className="bg-cream-50/50 rounded-xl p-6 md:p-8 border-2 border-charcoal-100 hover:border-charcoal-200 transition-all duration-300 shadow-sm hover:shadow-md"
+                    >
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-charcoal-700 rounded-lg flex items-center justify-center text-white font-semibold text-sm shadow-md">
+                            {index + 1}
+                          </div>
+                          <span className="text-base font-semibold text-charcoal-900">
+                            Location {index + 1}
+                          </span>
+                        </div>
+                        {locations.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeLocation(index)}
+                            className="text-red-500 hover:text-red-700 text-sm font-medium flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-50 transition-all duration-300"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Remove
+                          </button>
+                        )}
+                      </div>
+
+                      <LocationSearch
+                        value={location}
+                        onChange={(newLocation) => handleLocationChange(index, newLocation)}
+                        onRemove={locations.length > 1 ? () => removeLocation(index) : undefined}
+                        index={index}
+                        showRemove={false}
+                        autoFocus={index === locations.length - 1 && !location.state && !location.district}
+                      />
+                    </div>
+                  ))}
+
+                  {/* Add Location Button - Always visible after locations */}
+                  <div className="pt-2">
+                    {hasEmptyLocations && (
+                      <div className="mb-4 flex items-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
+                        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <span>Complete all locations above before adding more</span>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={addLocation}
+                      disabled={!canAddLocation}
+                      className={`
+                        w-full
+                        px-6 py-4 rounded-xl font-medium text-base flex items-center justify-center gap-3
+                        transition-all duration-300 shadow-sm
+                        ${
+                          canAddLocation
+                            ? 'bg-white border-2 border-charcoal-200 text-charcoal-700 hover:bg-charcoal-50 hover:border-charcoal-300 hover:shadow-md hover:scale-[1.01]'
+                            : 'bg-charcoal-50 border-2 border-charcoal-100 text-charcoal-400 cursor-not-allowed'
+                        }
+                      `}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      <span>Add Another Location</span>
+                      {locations.length >= 10 && (
+                        <span className="text-xs ml-1 opacity-75">(Max 10 reached)</span>
+                      )}
+                    </button>
+                    {canAddLocation && locations.length < 10 && (
+                      <p className="text-center text-xs text-charcoal-500 mt-3">
+                        You can add up to {10 - locations.length} more {10 - locations.length === 1 ? 'location' : 'locations'}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Premium CTA Section */}
+              <div className="pt-8 border-t border-charcoal-100">
+                <button
+                  type="submit"
+                  disabled={loading || hasNoTokens || (user ? (!user.tokens || user.tokens === 0) : false)}
+                  className="
+                    w-full
+                    bg-charcoal-700
+                    hover:bg-charcoal-800
+                    disabled:bg-charcoal-300
+                    disabled:cursor-not-allowed
+                    text-white
+                    text-lg
+                    font-semibold
+                    py-5
+                    md:py-6
+                    rounded-xl
+                    shadow-luxury-lg
+                    hover:shadow-xl
+                    transition-all duration-300
+                    transform
+                    hover:scale-[1.01]
+                    active:scale-[0.99]
+                    flex items-center justify-center gap-3
+                    group
+                  "
+                >
+                  {loading ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>Processing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                      <span>Continue to Experiences</span>
+                      <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </>
+                  )}
+                </button>
+                <p className="text-center text-sm text-charcoal-500 mt-5 font-light">
+                  You'll be able to select experiences and customize your itinerary in the next step
+                </p>
+              </div>
+            </form>
           </div>
         </div>
       </div>
