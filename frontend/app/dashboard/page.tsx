@@ -157,8 +157,7 @@ export default function TravelerDashboard() {
   }
 
   return (
-    <React.Fragment>
-      <div className="min-h-screen bg-cream-50">
+    <div className="min-h-screen bg-cream-50">
       {/* Premium Hero Section */}
       <div className="relative bg-gradient-to-br from-charcoal-700 via-charcoal-800 to-charcoal-900 overflow-hidden">
         {/* Background Pattern */}
@@ -763,6 +762,5 @@ export default function TravelerDashboard() {
         )}
       </div>
     </div>
-    </React.Fragment>
   );
 }
