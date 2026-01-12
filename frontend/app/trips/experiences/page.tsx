@@ -103,11 +103,21 @@ export default function ExperiencesPage() {
     [locations]
   );
 
+  // Clear bucketlist when user changes (fixes issue where bucketlist persists across different users)
+  useEffect(() => {
+    setBucketlist([]);
+    if (user) {
+      fetchBucketlist();
+    }
+  }, [user?.id]); // Watch for user ID changes specifically
+
   useEffect(() => {
     if (locations.length > 0) {
       fetchExperiences();
     }
-    fetchBucketlist();
+    if (user) {
+      fetchBucketlist();
+    }
     
     // Check tokens when component loads
     const checkTokens = async () => {
