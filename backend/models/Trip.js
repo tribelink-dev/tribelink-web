@@ -75,6 +75,15 @@ const tripSchema = new mongoose.Schema({
       type: Boolean,
       default: false
     },
+    chauffeurRequired: {
+      type: Boolean,
+      default: false
+    },
+    assignedDriver: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Provider',
+      default: null
+    },
     guide: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Host',

@@ -291,6 +291,23 @@ export function searchCity(query: string): Array<{ city: string; state: string; 
   const results: Array<{ city: string; state: string; district: string; displayName: string }> = [];
   const seen = new Set<string>();
   
+  // First, check if query matches a state name exactly (prioritize state-level search)
+  const matchedState = INDIAN_STATES.find(state => 
+    state.toLowerCase() === lowerQuery || 
+    state.toLowerCase().includes(lowerQuery)
+  );
+  
+  if (matchedState) {
+    // Add a special "All of [State]" option at the top
+    results.push({
+      city: `All of ${matchedState}`,
+      state: matchedState,
+      district: '', // Empty district indicates "all districts in state"
+      displayName: `All of ${matchedState} (All Districts)`
+    });
+    seen.add(`${matchedState}-`);
+  }
+  
   // Search in city mappings
   for (const [cityName, location] of Object.entries(CITY_TO_LOCATION)) {
     if (cityName.toLowerCase().includes(lowerQuery) && !seen.has(`${location.state}-${location.district}`)) {

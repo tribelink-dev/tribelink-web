@@ -295,9 +295,12 @@ router.get('/trips/:driverId', authenticate, async (req, res) => {
       return res.status(404).json({ message: 'Driver not found' });
     }
 
-    // Get trips assigned to this driver
+    // Get trips assigned to this driver (either at trip level or per-day level)
     const trips = await Trip.find({
-      assignedDriver: driverId,
+      $or: [
+        { assignedDriver: driverId }, // Trip-level assignment
+        { 'schedule.assignedDriver': driverId } // Per-day assignment
+      ],
       paymentStatus: { $in: ['Pending', 'Completed'] } // Only active trips
     })
     .populate('user', 'name email phoneNumber')
@@ -689,6 +692,80 @@ router.post('/assign/:tripId', authenticate, async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
+
+// Update driver service locations
+router.put('/profile/:providerId/locations', authenticate, async (req, res) => {
+  try {
+    const { providerId } = req.params;
+    const { serviceLocations } = req.body;
+
+    // Verify provider exists and is a driver
+    const provider = await Provider.findById(providerId);
+    if (!provider || provider.providerType !== 'DRIVER_PARTNER') {
+      return res.status(404).json({ message: 'Driver not found' });
+    }
+
+    // Verify user owns this provider account
+    if (provider._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Validate serviceLocations format
+    if (serviceLocations && !Array.isArray(serviceLocations)) {
+      return res.status(400).json({ message: 'serviceLocations must be an array' });
+    }
+
+    if (serviceLocations) {
+      for (const loc of serviceLocations) {
+        if (!loc.state || !loc.district) {
+          return res.status(400).json({ message: 'Each location must have state and district' });
+        }
+      }
+    }
+
+    // Update driver profile
+    const driverProfile = await DriverProvider.findOne({ providerId });
+    if (!driverProfile) {
+      return res.status(404).json({ message: 'Driver profile not found' });
+    }
+
+    driverProfile.serviceLocations = serviceLocations || [];
+    await driverProfile.save();
+
+    res.json({
+      message: 'Service locations updated successfully',
+      serviceLocations: driverProfile.serviceLocations
+    });
+  } catch (error) {
+    console.error('Error updating service locations:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get drivers by location
+router.get('/by-location', async (req, res) => {
+  try {
+    const { state, district, fromDate, toDate } = req.query;
+
+    if (!state || !district) {
+      return res.status(400).json({ message: 'State and district are required' });
+    }
+
+    const from = fromDate ? new Date(fromDate) : new Date();
+    const to = toDate ? new Date(toDate) : new Date();
+
+    const { findDriversByLocation } = require('../services/driverMatching');
+    const drivers = await findDriversByLocation(state, district, from, to);
+
+    res.json({ drivers });
+  } catch (error) {
+    console.error('Error fetching drivers by location:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Enhance existing /available endpoint to filter by location
+// (The existing endpoint already handles location filtering via query params)
 
 module.exports = router;
 

@@ -51,6 +51,7 @@ async function scheduleTripWithAIValidated({
   locations,
   guideId = null,
   guidePricingMode = 'daily',
+  userId = null,
   aiSchedulerFunction = null
 }) {
   // First, get base schedule from rule-based scheduler
@@ -64,7 +65,8 @@ async function scheduleTripWithAIValidated({
     district,
     locations,
     guideId,
-    guidePricingMode
+    guidePricingMode,
+    userId
   });
   
   // If AI scheduler function is provided, try to enhance

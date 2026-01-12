@@ -82,6 +82,9 @@ export default function LocationSearch({
         return `${cityEntry[0]}, ${value.state}`;
       }
       return `${value.district}, ${value.state}`;
+    } else if (value.state && !value.district) {
+      // State-only selection (all districts)
+      return `All of ${value.state}`;
     }
     return searchQuery || '';
   };
@@ -179,7 +182,9 @@ export default function LocationSearch({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-charcoal-900">{result.displayName}</div>
-                  <div className="text-xs text-charcoal-500 truncate">{result.district}</div>
+                  <div className="text-xs text-charcoal-500 truncate">
+                    {result.district || 'All districts in state'}
+                  </div>
                 </div>
                 <svg className="w-4 h-4 text-charcoal-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -282,7 +287,7 @@ export default function LocationSearch({
 
           <div>
             <label className="block text-sm font-semibold text-charcoal-700 mb-3 uppercase tracking-wide">
-              District/City <span className="text-red-500">*</span>
+              District/City {value.state && availableDistricts.length > 0 ? <span className="text-charcoal-500 text-xs font-normal normal-case">(Optional - leave empty for all districts)</span> : <span className="text-red-500">*</span>}
             </label>
             <select
               value={value.district}
@@ -290,7 +295,7 @@ export default function LocationSearch({
                 onChange({ ...value, district: e.target.value });
                 setShowPopular(false);
               }}
-              required
+              required={!value.state || availableDistricts.length === 0}
               disabled={!value.state || availableDistricts.length === 0}
               className="
                 w-full px-4 py-3.5
@@ -309,6 +314,8 @@ export default function LocationSearch({
                   ? 'Select a state first' 
                   : availableDistricts.length === 0 
                   ? 'No districts available'
+                  : value.state && availableDistricts.length > 0
+                  ? 'All districts (leave empty) or select specific district'
                   : 'Select a district/city'}
               </option>
               {availableDistricts.map((district) => (
@@ -322,7 +329,7 @@ export default function LocationSearch({
       )}
 
       {/* Selected Location Display */}
-      {value.state && value.district && !useManualSelect && (
+      {value.state && !useManualSelect && (
         <div className="flex items-center gap-3 bg-cream-50 border border-cream-200 rounded-xl px-5 py-3 animate-fade-in">
           <div className="w-10 h-10 bg-heritage-gold/10 rounded-lg flex items-center justify-center">
             <svg className="w-5 h-5 text-heritage-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -330,7 +337,9 @@ export default function LocationSearch({
             </svg>
           </div>
           <div className="flex-1">
-            <div className="font-semibold text-charcoal-900">{value.district}</div>
+            <div className="font-semibold text-charcoal-900">
+              {value.district ? value.district : `All of ${value.state} (All Districts)`}
+            </div>
             <div className="text-sm text-charcoal-600">{value.state}</div>
           </div>
           {showRemove && onRemove && (

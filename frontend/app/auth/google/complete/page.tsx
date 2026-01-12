@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { getProviderDashboard } from '@/lib/providerUtils';
 import api from '@/lib/api';
 import Image from 'next/image';
+import { LOGO_PATH, LOGO_ALT_TEXT } from '@/lib/constants';
 
 export default function GoogleAuthComplete() {
   const router = useRouter();
@@ -101,8 +102,8 @@ export default function GoogleAuthComplete() {
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl mb-6 shadow-medium p-2">
               <Image 
-                src="/tribelink-logo.svg" 
-                alt="Tribelink Logo" 
+                src={LOGO_PATH} 
+                alt={LOGO_ALT_TEXT} 
                 width={64} 
                 height={64}
                 className="w-full h-full"

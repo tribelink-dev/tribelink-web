@@ -60,6 +60,8 @@ interface ScheduleDay {
   };
   cab: boolean;
   chauffeur?: boolean;
+  chauffeurRequired?: boolean;
+  assignedDriver?: string | any;
 }
 
 interface MapData {
@@ -446,16 +448,23 @@ export default function SchedulePage() {
       });
       setSelectedHotels(hotels);
       
-      // Initialize chauffeur selections
+      // Initialize chauffeur selections from auto-assigned drivers
       const chauffeurs: { [key: number]: boolean } = {};
       const drivers: { [key: number]: string } = {};
       trip.schedule?.forEach((day: any, idx: number) => {
-        if (day.chauffeur) {
+        // Check if chauffeur is required or already assigned
+        if (day.chauffeur || day.chauffeurRequired) {
           chauffeurs[idx] = true;
         }
-        // If trip has assigned driver, set it for all chauffeur days
-        if (trip.assignedDriver && day.chauffeur) {
-          drivers[idx] = trip.assignedDriver._id || trip.assignedDriver;
+        // Use per-day assigned driver if available, otherwise use trip-level assigned driver
+        if (day.assignedDriver) {
+          drivers[idx] = typeof day.assignedDriver === 'string' 
+            ? day.assignedDriver 
+            : (day.assignedDriver._id || day.assignedDriver);
+        } else if (trip.assignedDriver && day.chauffeur) {
+          drivers[idx] = typeof trip.assignedDriver === 'string'
+            ? trip.assignedDriver
+            : (trip.assignedDriver._id || trip.assignedDriver);
         }
       });
       setChauffeurDays(chauffeurs);
@@ -1909,13 +1918,36 @@ export default function SchedulePage() {
 
                         {chauffeurDays[idx] && (
                           <div className="mt-4 pt-4 border-t border-purple-200">
+                            {/* Show auto-assigned message if driver was auto-assigned */}
+                            {day.assignedDriver && day.chauffeurRequired && !selectedDrivers[idx] && (
+                              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                <div className="flex items-start gap-2">
+                                  <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  <div className="flex-1">
+                                    <p className="text-sm font-semibold text-blue-900 mb-1">Driver Auto-Assigned</p>
+                                    <p className="text-xs text-blue-700">A driver has been automatically assigned based on your experience locations. You can change this selection below.</p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                             {!showDriverSelection[idx] ? (
                               <div>
                                 {selectedDrivers[idx] ? (
                                   <div className="mb-4">
                                     {(() => {
                                       const selectedDriver = availableDrivers.find(d => d._id === selectedDrivers[idx]);
-                                      if (!selectedDriver) return null;
+                                      if (!selectedDriver) {
+                                        // If driver not in availableDrivers list, show a placeholder
+                                        return (
+                                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                                            <p className="text-sm font-semibold text-gray-900 mb-1">Driver Assigned</p>
+                                            <p className="text-xs text-gray-600">Driver ID: {selectedDrivers[idx]}</p>
+                                            <p className="text-xs text-gray-500 mt-2">Click "Change Driver" to see details or select a different driver.</p>
+                                          </div>
+                                        );
+                                      }
                                       return (
                                         <ChauffeurSelectionCard
                                           driver={selectedDriver}
@@ -1925,6 +1957,11 @@ export default function SchedulePage() {
                                         />
                                       );
                                     })()}
+                                  </div>
+                                ) : day.assignedDriver ? (
+                                  <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                                    <p className="text-sm text-gray-700 mb-2">Driver assigned but details not loaded</p>
+                                    <p className="text-xs text-gray-500">Click "Select Driver" to view and manage your driver selection.</p>
                                   </div>
                                 ) : (
                                   <p className="text-sm text-gray-600 mb-4 text-center">No driver selected yet</p>

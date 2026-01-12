@@ -94,17 +94,17 @@ export default function TripSelectPage() {
   }, [user]);
 
   const addLocation = () => {
-    // Only add if current locations are all filled
-    const allFilled = locations.every(loc => loc.state && loc.district);
+    // Only add if current locations have at least state filled (district is optional for state-only searches)
+    const allFilled = locations.every(loc => loc.state);
     if (allFilled && locations.length < 10) { // Max 10 locations
       setLocations([...locations, { state: '', district: '' }]);
     }
   };
 
-  // Check if all locations are filled
-  const allLocationsFilled = locations.every(loc => loc.state && loc.district);
+  // Check if all locations are filled (state is required, district is optional)
+  const allLocationsFilled = locations.every(loc => loc.state);
   const canAddLocation = allLocationsFilled && locations.length < 10;
-  const hasEmptyLocations = locations.some(loc => !loc.state || !loc.district);
+  const hasEmptyLocations = locations.some(loc => !loc.state);
 
   const removeLocation = (index: number) => {
     if (locations.length > 1) {
@@ -146,9 +146,10 @@ export default function TripSelectPage() {
       return;
     }
 
-    const validLocations = locations.filter(loc => loc.state && loc.district);
+    // Allow locations with state only (district will be expanded to all districts in that state)
+    const validLocations = locations.filter(loc => loc.state);
     if (validLocations.length === 0) {
-      setError('Please add at least one location with state and district');
+      setError('Please add at least one location with state');
       setLoading(false);
       return;
     }
@@ -178,14 +179,16 @@ export default function TripSelectPage() {
       // Route based on planning mode
       if (planningMode === 'automatic') {
         // Build query params for automatic planning page
+        // Include district even if empty (for state-only selections)
         const locationParams = validLocations.map((loc, idx) => 
-          `state${idx}=${encodeURIComponent(loc.state)}&district${idx}=${encodeURIComponent(loc.district)}`
+          `state${idx}=${encodeURIComponent(loc.state)}&district${idx}=${encodeURIComponent(loc.district || '')}`
         ).join('&');
         router.push(`/trips/plan/automatic?country=India&from=${fromDate}&to=${toDate}&${locationParams}`);
       } else {
         // Build query params for experiences page (manual mode)
+        // Include district even if empty (for state-only selections)
       const locationParams = validLocations.map((loc, idx) => 
-        `state${idx}=${encodeURIComponent(loc.state)}&district${idx}=${encodeURIComponent(loc.district)}`
+        `state${idx}=${encodeURIComponent(loc.state)}&district${idx}=${encodeURIComponent(loc.district || '')}`
       ).join('&');
       router.push(`/trips/experiences?country=India&from=${fromDate}&to=${toDate}&${locationParams}`);
       }

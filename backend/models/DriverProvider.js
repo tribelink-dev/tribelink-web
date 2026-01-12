@@ -131,6 +131,34 @@ const driverProviderSchema = new mongoose.Schema({
   verifiedAt: {
     type: Date,
     default: null
+  },
+  // Location-based service areas
+  serviceLocations: [{
+    state: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    district: {
+      type: String,
+      required: true,
+      trim: true
+    }
+  }],
+  // Current GPS location for real-time tracking
+  currentLocation: {
+    latitude: {
+      type: Number,
+      default: null
+    },
+    longitude: {
+      type: Number,
+      default: null
+    },
+    lastUpdated: {
+      type: Date,
+      default: null
+    }
   }
 }, {
   timestamps: true
@@ -143,6 +171,8 @@ driverProviderSchema.index({ rating: -1 });
 driverProviderSchema.index({ isVerified: 1 });
 // Compound index for availability queries
 driverProviderSchema.index({ 'availability.date': 1 });
+// Index for location-based queries
+driverProviderSchema.index({ 'serviceLocations.state': 1, 'serviceLocations.district': 1 });
 
 module.exports = mongoose.model('DriverProvider', driverProviderSchema);
 

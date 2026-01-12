@@ -28,23 +28,29 @@ api.interceptors.request.use((config) => {
 // Handle response errors
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  (error: any) => {
     // Enhanced error logging
     const apiUrl = API_URL;
     const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'unknown';
     
-    console.error('API Error Details:', {
-      message: error.message,
-      code: error.code,
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      apiUrl: apiUrl,
-      currentOrigin: currentOrigin,
-      requestUrl: error.config?.url,
-      fullUrl: error.config ? `${apiUrl}${error.config.url}` : 'unknown',
-      requestHeaders: error.config?.headers,
-      responseData: error.response?.data
-    });
+    // Safely log error details
+    try {
+      console.error('API Error Details:', {
+        message: error?.message || 'Unknown error',
+        code: error?.code,
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        apiUrl: apiUrl,
+        currentOrigin: currentOrigin,
+        requestUrl: error?.config?.url,
+        fullUrl: error?.config ? `${apiUrl}${error.config.url}` : 'unknown',
+        requestHeaders: error?.config?.headers,
+        responseData: error?.response?.data
+      });
+    } catch (logError) {
+      // Fallback if logging itself fails
+      console.error('API Error (logging failed):', error);
+    }
     
     // Handle 401 Unauthorized (Invalid token, expired token, etc.)
     if (error.response?.status === 401) {

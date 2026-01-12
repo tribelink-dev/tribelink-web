@@ -302,6 +302,15 @@ function calculateTotalPrice(schedule, hotels, guide, preferences, guidePricingM
     totalPrice += 30 * schedule.length; // $30 per day for cabs
   }
 
+  // Add chauffeur costs (for days with assigned drivers)
+  // Note: This is a synchronous calculation. If driver pricing is needed, it should be passed in.
+  // For now, use default $50 per day for days with chauffeur
+  schedule.forEach((day) => {
+    if (day.chauffeur && day.assignedDriver) {
+      totalPrice += 50; // Default $50 per day (can be enhanced to fetch actual pricing)
+    }
+  });
+
   return Math.round(totalPrice * 100) / 100;
 }
 
@@ -318,7 +327,8 @@ async function scheduleTrip({
   district,
   locations,
   guideId = null,
-  guidePricingMode = 'daily'
+  guidePricingMode = 'daily',
+  userId = null
 }) {
   const from = new Date(fromDate);
   const to = new Date(toDate);
@@ -501,7 +511,79 @@ async function scheduleTrip({
     throw new Error('Could not create a schedule with available experiences and dates');
   }
 
-  // Calculate total price
+  // Auto-assign chauffeurs based on experience locations
+  const { 
+    findDriversByLocation, 
+    optimizeMultiDayAssignment
+  } = require('../../driverMatching');
+  
+  // Build driver map for each day
+  const driverMap = {};
+  
+  for (let i = 0; i < schedule.length; i++) {
+    const day = schedule[i];
+    const date = new Date(day.date);
+    const dateStr = date.toISOString().split('T')[0];
+    
+    if (!day.activities || day.activities.length === 0) {
+      driverMap[dateStr] = [];
+      continue;
+    }
+
+    // Extract location from first activity (activities already have location stored)
+    const firstActivity = day.activities[0];
+    let location = firstActivity.location || null;
+    
+    // Fallback: if no location in activity, use trip's primary location
+    if (!location || !location.state || !location.district) {
+      if (tripLocations && tripLocations.length > 0) {
+        location = tripLocations[0];
+      }
+    }
+    
+    if (location && location.state && location.district) {
+      try {
+        const availableDrivers = await findDriversByLocation(
+          location.state,
+          location.district,
+          date,
+          date
+        );
+        driverMap[dateStr] = availableDrivers;
+        console.log(`Found ${availableDrivers.length} drivers for ${location.district}, ${location.state} on ${dateStr}`);
+      } catch (error) {
+        console.error(`Error finding drivers for ${location.district}, ${location.state}:`, error);
+        driverMap[dateStr] = [];
+      }
+    } else {
+      driverMap[dateStr] = [];
+    }
+  }
+
+  // Optimize multi-day assignment (prefer same driver for consecutive days)
+  const driverAssignments = await optimizeMultiDayAssignment(
+    schedule,
+    driverMap,
+    userId || null
+  );
+
+  // Assign drivers to schedule days
+  for (let i = 0; i < schedule.length; i++) {
+    const assignedDriver = driverAssignments[i];
+    
+    if (assignedDriver && schedule[i].activities && schedule[i].activities.length > 0) {
+      schedule[i].chauffeur = true;
+      schedule[i].chauffeurRequired = true;
+      schedule[i].assignedDriver = assignedDriver._id;
+      console.log(`Assigned driver ${assignedDriver.name} to day ${i + 1}`);
+    } else if (schedule[i].activities && schedule[i].activities.length > 0) {
+      // Mark as requiring chauffeur but none available
+      schedule[i].chauffeurRequired = true;
+      schedule[i].chauffeur = false;
+    }
+  }
+
+  // Calculate total price (includes chauffeur costs)
   const totalPrice = calculateTotalPrice(schedule, hotels, guide, preferences, guidePricingMode);
 
   // Build map data

@@ -743,7 +743,8 @@ router.post('/schedule', authenticate, requireUser, async (req, res) => {
         district: tripLocations[0]?.district || district,
         locations: tripLocations, // Pass locations array
         guideId: finalGuideId,
-        guidePricingMode
+        guidePricingMode,
+        userId: req.user._id.toString()
       });
     } catch (scheduleError) {
       console.error('Scheduler error:', scheduleError);
