@@ -503,12 +503,13 @@ router.post('/plan/automatic', authenticate, requireUser, async (req, res) => {
     }
 
     // Handle multiple locations or single location
+    // Allow empty district for state-only selections (e.g., "All of Kerala")
     const tripLocations = locations && Array.isArray(locations) && locations.length > 0
-      ? locations
-      : [{ state: req.body.state, district: req.body.district }].filter(loc => loc.state && loc.district);
+      ? locations.filter(loc => loc.state) // Only require state, district can be empty
+      : [{ state: req.body.state, district: req.body.district || '' }].filter(loc => loc.state);
 
     if (tripLocations.length === 0) {
-      return res.status(400).json({ message: 'At least one location (state and district) is required' });
+      return res.status(400).json({ message: 'At least one location (state is required, district is optional) is required' });
     }
 
     const user = await User.findById(req.user._id);
@@ -527,11 +528,39 @@ router.post('/plan/automatic', authenticate, requireUser, async (req, res) => {
     const from = new Date(fromDate);
     const to = new Date(toDate);
     
+    console.log('[Automatic Planning] Searching experiences for:', {
+      locations: tripLocations,
+      country,
+      fromDate,
+      toDate
+    });
+    
     // Build query for all locations
-    const locationQueries = tripLocations.map(loc => ({
-      'location.country': country,
-      'location.state': { $regex: new RegExp(`^${loc.state.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
-      'location.district': { $regex: new RegExp(`^${loc.district.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+    // If district is empty, search only by state (state-only selection)
+    // Use case-insensitive partial matching for more flexibility
+    const locationQueries = tripLocations.map(loc => {
+      const query = {
+        'location.country': { 
+          $regex: new RegExp(country.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') 
+        },
+        'location.state': { 
+          $regex: new RegExp(loc.state.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') 
+        }
+      };
+      // Only add district filter if district is provided (not empty)
+      if (loc.district && loc.district.trim() !== '') {
+        query['location.district'] = { 
+          $regex: new RegExp(loc.district.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') 
+        };
+      }
+      return query;
+    });
+
+    console.log('[Automatic Planning] Location queries:', JSON.stringify(locationQueries, null, 2));
+
+    // First, try to find experiences with date filter
+    const queriesWithDates = locationQueries.map(query => ({
+      ...query,
       availableDates: {
         $elemMatch: {
           date: { $gte: from, $lte: to },
@@ -540,13 +569,105 @@ router.post('/plan/automatic', authenticate, requireUser, async (req, res) => {
       }
     }));
 
-    // Find experiences matching any location
     let allExperiences = await Experience.find({
-      $or: locationQueries
+      $or: queriesWithDates
     })
       .populate('provider', 'name rating')
       .sort({ _id: 1 })
       .lean();
+
+    console.log(`[Automatic Planning] Found ${allExperiences.length} experiences with date filter`);
+
+    // If no experiences match date filter, try without date filter (experiences might not have availableDates set)
+    if (allExperiences.length === 0) {
+      console.log('[Automatic Planning] No experiences with date filter, trying without date filter...');
+      allExperiences = await Experience.find({
+        $or: locationQueries
+      })
+        .populate('provider', 'name rating')
+        .sort({ _id: 1 })
+        .lean();
+      
+      console.log(`[Automatic Planning] Found ${allExperiences.length} experiences without date filter`);
+    }
+
+    // If still no results, try with just state (if district was provided) or just country
+    if (allExperiences.length === 0) {
+      console.log('[Automatic Planning] Still no experiences, trying broader search...');
+      const broaderQueries = tripLocations.map(loc => {
+        const query = {
+          'location.country': { $regex: new RegExp(country.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }
+        };
+        // Try with state if available (partial match)
+        if (loc.state && loc.state.trim() !== '') {
+          query['location.state'] = { $regex: new RegExp(loc.state.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') };
+        }
+        return query;
+      });
+
+      allExperiences = await Experience.find({
+        $or: broaderQueries
+      })
+        .populate('provider', 'name rating')
+        .sort({ _id: 1 })
+        .limit(100) // Limit to prevent too many results
+        .lean();
+      
+      console.log(`[Automatic Planning] Found ${allExperiences.length} experiences with broader search`);
+    }
+
+    // Final fallback: if still no results, try searching just by country (most permissive)
+    if (allExperiences.length === 0) {
+      console.log('[Automatic Planning] Final fallback: searching by country only...');
+      allExperiences = await Experience.find({
+        'location.country': { $regex: new RegExp(country.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }
+      })
+        .populate('provider', 'name rating')
+        .sort({ _id: 1 })
+        .limit(50) // Limit to prevent too many results
+        .lean();
+      
+      console.log(`[Automatic Planning] Found ${allExperiences.length} experiences with country-only search`);
+    }
+    
+    // Debug: If still no results, check what's actually in the database
+    if (allExperiences.length === 0) {
+      const totalExperiences = await Experience.countDocuments({});
+      console.log(`[Automatic Planning] Total experiences in database: ${totalExperiences}`);
+      
+      if (totalExperiences > 0) {
+        const sampleExperiences = await Experience.find({})
+          .select('title location')
+          .limit(5)
+          .lean();
+        console.log('[Automatic Planning] Sample experiences in database:', sampleExperiences.map(e => ({
+          title: e.title,
+          location: e.location
+        })));
+        
+        // Try one more time with very loose matching - just state name anywhere
+        const looseQueries = tripLocations.map(loc => {
+          if (loc.state && loc.state.trim() !== '') {
+            return {
+              'location.state': { $regex: new RegExp(loc.state.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }
+            };
+          }
+          return { 'location.country': { $regex: new RegExp(country.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') } };
+        });
+        
+        if (looseQueries.length > 0) {
+          allExperiences = await Experience.find({
+            $or: looseQueries
+          })
+            .populate('provider', 'name rating')
+            .sort({ _id: 1 })
+            .limit(50)
+            .lean();
+          
+          console.log(`[Automatic Planning] Found ${allExperiences.length} experiences with loose state matching`);
+        }
+      }
+    }
 
     // Ensure all experiences have valid provider data
     allExperiences = allExperiences.map(exp => {
@@ -556,42 +677,69 @@ router.post('/plan/automatic', authenticate, requireUser, async (req, res) => {
       return exp;
     });
 
-    // If no experiences match date filter, get all experiences from locations (backward compatibility)
+    // Final last resort: if still no experiences, return ANY experiences (limit to 20)
+    // This ensures the user sees something rather than an error
     if (allExperiences.length === 0) {
-      const fallbackQueries = tripLocations.map(loc => ({
-        'location.country': country,
-        'location.state': { $regex: new RegExp(`^${loc.state.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
-        'location.district': { $regex: new RegExp(`^${loc.district.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
-      }));
-
-      allExperiences = await Experience.find({
-        $or: fallbackQueries
-      })
+      console.log('[Automatic Planning] Last resort: returning any available experiences...');
+      allExperiences = await Experience.find({})
         .populate('provider', 'name rating')
         .sort({ _id: 1 })
+        .limit(20)
         .lean();
-
-      // Ensure all fallback experiences have valid provider data
+      
+      console.log(`[Automatic Planning] Found ${allExperiences.length} experiences (last resort - any location)`);
+      
+      // Ensure all experiences have valid provider data
       allExperiences = allExperiences.map(exp => {
         if (!exp.provider || !exp.provider.name) {
           exp.provider = { name: 'Unknown Host', rating: 0 };
         }
         return exp;
       });
+      
+      // If we still have no experiences, the database is empty
+      if (allExperiences.length === 0) {
+        const locationDescription = tripLocations.map(loc => {
+          if (loc.district && loc.district.trim() !== '') {
+            return `${loc.district}, ${loc.state}`;
+          }
+          return `All of ${loc.state}`;
+        }).join(' or ');
+        
+        // Debug: Check what locations exist in the database
+        const totalCount = await Experience.countDocuments({});
+        console.log(`[Automatic Planning] Database is empty. Total experiences: ${totalCount}`);
+        
+        return res.status(404).json({ 
+          message: `No experiences available for ${locationDescription}. The database appears to be empty. Please contact support or try again later.`,
+          experiences: [],
+          locations: tripLocations
+        });
+      }
+      
+      // Log warning that we're returning experiences from different locations
+      console.warn(`[Automatic Planning] WARNING: No experiences found for requested locations. Returning ${allExperiences.length} experiences from any location as fallback.`);
     }
 
-    if (allExperiences.length === 0) {
-      return res.status(404).json({ 
-        message: 'No experiences found for the selected locations and dates',
-        experiences: []
-      });
-    }
-
-    // Use Pathfinder (AI Agent) to filter experiences to top personalized matches
-    // Target: 2-3 experiences per location, or 5-8 total for multi-location trips
-    const targetCount = tripLocations.length === 1 ? 3 : Math.min(8, Math.max(5, tripLocations.length * 2));
+    // Calculate trip duration in days (from and to already declared above)
+    const tripDays = Math.ceil((to - from) / (1000 * 60 * 60 * 24)) + 1;
     
-    console.log(`[Automatic Planning] Filtering ${allExperiences.length} experiences to ${targetCount} using Pathfinder`);
+    // Get user preferences to determine pace (user already fetched above)
+    const pace = user?.preferences?.pace || 'normal';
+    
+    // Calculate maximum experiences that can fit in the trip
+    // Normal pace: 2-3 experiences per day, Fast pace: 3-4 experiences per day
+    const experiencesPerDay = pace === 'fast' ? 3.5 : 2.5; // Use average
+    const maxExperiences = Math.floor(tripDays * experiencesPerDay);
+    
+    // Target: Maximize experiences within available days, but ensure quality
+    // For short trips (1-2 days), aim for 2-4 experiences
+    // For medium trips (3-5 days), aim for 6-12 experiences
+    // For long trips (6+ days), aim for 12+ experiences
+    const targetCount = Math.min(maxExperiences, allExperiences.length);
+    
+    console.log(`[Automatic Planning] Trip: ${tripDays} days, Pace: ${pace}, Max experiences: ${maxExperiences}, Target: ${targetCount}`);
+    console.log(`[Automatic Planning] Filtering ${allExperiences.length} experiences to maximize ${targetCount} experiences using Pathfinder`);
     
     let filteredExperiences;
     try {
@@ -601,7 +749,10 @@ router.post('/plan/automatic', authenticate, requireUser, async (req, res) => {
         {
           locations: tripLocations,
           dateRange: { from: fromDate, to: toDate },
-          targetCount
+          tripDays: tripDays,
+          pace: pace,
+          targetCount: targetCount,
+          maxExperiences: maxExperiences
         }
       );
       console.log(`[Automatic Planning] Pathfinder returned ${filteredExperiences.length} experiences`);
@@ -671,8 +822,12 @@ router.post('/plan/automatic', authenticate, requireUser, async (req, res) => {
 
 // Create trip schedule
 router.post('/schedule', authenticate, requireUser, async (req, res) => {
+  // Declare variables in outer scope for error handling
+  let fromDate, toDate, country, state, district, locations, guideId, guidePricingMode;
+  let tripLocations, user, experienceIds, finalGuideId;
+  
   try {
-    const {
+    ({
       fromDate,
       toDate,
       country,
@@ -681,22 +836,29 @@ router.post('/schedule', authenticate, requireUser, async (req, res) => {
       locations, // Array of {state, district} for multi-city trips
       guideId,
       guidePricingMode = 'daily'
-    } = req.body;
+    } = req.body);
 
     if (!fromDate || !toDate || !country) {
       return res.status(400).json({ message: 'Travel dates and country are required' });
     }
 
     // Handle multiple locations or single location
-    const tripLocations = locations && Array.isArray(locations) && locations.length > 0
-      ? locations
-      : [{ state, district }].filter(loc => loc.state && loc.district);
+    // Allow empty district for state-only selections (e.g., "All of Kerala")
+    tripLocations = locations && Array.isArray(locations) && locations.length > 0
+      ? locations.filter(loc => loc.state).map(loc => ({
+          state: loc.state,
+          district: (loc.district || '').trim() || '' // Ensure district is always a string
+        }))
+      : [{ state, district: (district || '').trim() || '' }].filter(loc => loc.state).map(loc => ({
+          state: loc.state,
+          district: (loc.district || '').trim() || ''
+        }));
 
     if (tripLocations.length === 0) {
-      return res.status(400).json({ message: 'At least one location (state and district) is required' });
+      return res.status(400).json({ message: 'At least one location (state is required, district is optional) is required' });
     }
 
-    const user = await User.findById(req.user._id);
+    user = await User.findById(req.user._id);
     if (!user.preferences || !user.preferences.travelStyle) {
       return res.status(400).json({ message: 'Please complete KYT questionnaire first' });
     }
@@ -709,14 +871,23 @@ router.post('/schedule', authenticate, requireUser, async (req, res) => {
     }
 
     // Get experiences from user's bucketlist
-    const experienceIds = user.bucketlist.map(id => id.toString());
+    experienceIds = (user.bucketlist || []).map(id => id.toString());
 
     if (experienceIds.length === 0) {
-      return res.status(400).json({ message: 'Bucketlist is empty. Add experiences first.' });
+      console.log('[Schedule Endpoint] Bucketlist is empty for user:', req.user._id);
+      return res.status(400).json({ 
+        message: 'Bucketlist is empty. Please add experiences to your bucketlist before scheduling a trip.',
+        bucketlistCount: 0
+      });
     }
+    
+    console.log('[Schedule Endpoint] User bucketlist:', {
+      experienceIdsCount: experienceIds.length,
+      experienceIds: experienceIds.slice(0, 5) // Log first 5 for debugging
+    });
 
     // Intelligent guide matching - if no guide specified, find best match
-    let finalGuideId = guideId;
+    finalGuideId = guideId;
     if (!finalGuideId) {
       const { selectBestGuide } = require('../services/guideMatching');
       try {
@@ -733,6 +904,15 @@ router.post('/schedule', authenticate, requireUser, async (req, res) => {
     // Schedule trip using AI-powered scheduler (Gumo.ai-like)
     let scheduleResult;
     try {
+      console.log('[Schedule Endpoint] Calling scheduler with:', {
+        experienceIdsCount: experienceIds.length,
+        fromDate,
+        toDate,
+        country,
+        locations: tripLocations,
+        guideId: finalGuideId
+      });
+      
       scheduleResult = await scheduleTripWithAI({
         experienceIds,
         fromDate,
@@ -746,15 +926,74 @@ router.post('/schedule', authenticate, requireUser, async (req, res) => {
         guidePricingMode,
         userId: req.user._id.toString()
       });
+      
+      console.log('[Schedule Endpoint] Scheduler returned successfully:', {
+        scheduleDays: scheduleResult?.schedule?.length || 0,
+        totalPrice: scheduleResult?.totalPrice,
+        experiencesCount: scheduleResult?.selectedExperiencesCount
+      });
+      
+      // Validate schedule result
+      if (!scheduleResult) {
+        throw new Error('Scheduler returned no result');
+      }
+      
+      if (!scheduleResult.schedule || !Array.isArray(scheduleResult.schedule) || scheduleResult.schedule.length === 0) {
+        throw new Error('Scheduler returned an empty schedule. Please ensure you have experiences in your bucketlist that match your trip dates and location.');
+      }
+      
+      console.log('[Schedule Endpoint] Schedule validation passed');
     } catch (scheduleError) {
-      console.error('Scheduler error:', scheduleError);
+      console.error('[Schedule Endpoint] Scheduler error:', scheduleError);
+      console.error('[Schedule Endpoint] Error stack:', scheduleError.stack);
+      console.error('[Schedule Endpoint] Error details:', {
+        message: scheduleError.message,
+        name: scheduleError.name,
+        experienceIdsCount: experienceIds.length,
+        locations: tripLocations,
+        bucketlistCount: user.bucketlist?.length || 0
+      });
+      
+      // Provide user-friendly error messages
+      let errorMessage = scheduleError.message || 'Failed to create schedule';
+      
+      // Enhance error messages for common issues
+      if (errorMessage.includes('bucketlist') || errorMessage.includes('No experiences')) {
+        errorMessage = 'Your bucketlist is empty or the experiences in your bucketlist are not available for the selected location and dates. Please add experiences to your bucketlist first.';
+      } else if (errorMessage.includes('location')) {
+        errorMessage = 'No experiences found for the selected location. Please try selecting a different location or add more experiences to your bucketlist.';
+      } else if (errorMessage.includes('schedule')) {
+        errorMessage = 'Could not create a schedule with the available experiences. Please try adding more experiences to your bucketlist or adjusting your trip dates.';
+      }
+      
       return res.status(400).json({ 
-        message: scheduleError.message || 'Failed to create schedule',
-        error: scheduleError.message 
+        message: errorMessage,
+        error: scheduleError.message,
+        details: process.env.NODE_ENV === 'development' ? scheduleError.stack : undefined,
+        bucketlistCount: user.bucketlist?.length || 0
+      });
+    }
+    
+    // Validate schedule result structure
+    if (!scheduleResult || typeof scheduleResult !== 'object') {
+      console.error('[Schedule Endpoint] Invalid schedule result:', scheduleResult);
+      return res.status(500).json({ 
+        message: 'Scheduler returned an invalid result. Please try again or contact support.',
+        error: 'Invalid schedule result structure'
       });
     }
     
     const { schedule, totalPrice, selectedExperiencesCount, availableHotels, mapData } = scheduleResult;
+    
+    // Validate schedule array
+    if (!schedule || !Array.isArray(schedule) || schedule.length === 0) {
+      console.error('[Schedule Endpoint] Empty or invalid schedule:', schedule);
+      return res.status(400).json({ 
+        message: 'Could not create a schedule with the available experiences. Please ensure you have experiences in your bucketlist that match your trip dates and location.',
+        error: 'Empty schedule',
+        bucketlistCount: user.bucketlist?.length || 0
+      });
+    }
 
     // Normalize image URLs in schedule and availableHotels before saving
     const baseUrl = getBaseUrlFromRequest(req);
@@ -780,14 +1019,24 @@ router.post('/schedule', authenticate, requireUser, async (req, res) => {
     });
 
     // Create trip
+    // Ensure district is not undefined - use empty string for state-only selections
+    const tripState = tripLocations[0]?.state || state;
+    const tripDistrict = (tripLocations[0]?.district || district || '').trim() || ''; // Use empty string if district is empty/undefined
+    
+    // Ensure all locations have district as string (empty string if not provided)
+    const normalizedLocations = tripLocations.map(loc => ({
+      state: loc.state,
+      district: (loc.district || '').trim() || '' // Ensure district is always a string
+    }));
+    
     const trip = new Trip({
       user: user._id,
       fromDate,
       toDate,
       country,
-      state: tripLocations[0]?.state || state, // Keep first state for backward compatibility
-      district: tripLocations[0]?.district || district, // Keep first district for backward compatibility
-      locations: tripLocations, // Store all locations
+      state: tripState,
+      district: tripDistrict, // Can be empty string for state-only selections
+      locations: normalizedLocations, // Store all locations with normalized districts
       preferences: user.preferences,
       schedule: normalizedSchedule,
       totalPrice,
@@ -838,12 +1087,48 @@ router.post('/schedule', authenticate, requireUser, async (req, res) => {
       preferences: user.preferences
     });
   } catch (error) {
-    console.error('Schedule creation error:', error);
-    console.error('Error stack:', error.stack);
-    res.status(500).json({ 
-      message: 'Server error', 
+    console.error('[Schedule Endpoint] Schedule creation error:', error);
+    console.error('[Schedule Endpoint] Error stack:', error.stack);
+    console.error('[Schedule Endpoint] Error details:', {
+      message: error.message,
+      name: error.name,
+      fromDate,
+      toDate,
+      country,
+      locations: tripLocations,
+      experienceIdsCount: experienceIds?.length || 0,
+      bucketlistCount: user?.bucketlist?.length || 0
+    });
+    
+    // Provide more helpful error messages
+    let errorMessage = 'Failed to create schedule';
+    let statusCode = 500;
+    
+    if (error.message) {
+      // Check for specific error types
+      if (error.message.includes('bucketlist') || error.message.includes('No experiences') || error.message.includes('experience')) {
+        errorMessage = error.message.includes('bucketlist') 
+          ? 'Your bucketlist is empty. Please add experiences to your bucketlist before scheduling a trip.'
+          : error.message;
+        statusCode = 400;
+      } else if (error.message.includes('location')) {
+        errorMessage = error.message;
+        statusCode = 400;
+      } else if (error.message.includes('schedule') || error.message.includes('Could not create')) {
+        errorMessage = 'Could not create a schedule with the available experiences. Please try adding more experiences to your bucketlist or adjusting your trip dates.';
+        statusCode = 400;
+      } else {
+        errorMessage = `Failed to create schedule: ${error.message}`;
+        statusCode = 500;
+      }
+    }
+    
+    // Always return a proper error response
+    return res.status(statusCode).json({ 
+      message: errorMessage,
       error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      bucketlistCount: user?.bucketlist?.length || 0
     });
   }
 });

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
 import Link from 'next/link';
+import { getImageUrl } from '@/lib/imageUtils';
 
 interface Trip {
   _id: string;
@@ -23,6 +24,23 @@ interface Preferences {
   transport: string;
 }
 
+interface Experience {
+  _id: string;
+  title: string;
+  description: string;
+  price: number;
+  imageUrl?: string;
+  location?: {
+    state: string;
+    district: string;
+  };
+  provider?: {
+    name: string;
+    rating: number;
+  };
+  averageRating?: number;
+}
+
 export default function TravelerDashboard() {
   const router = useRouter();
   const { user } = useAuth();
@@ -32,6 +50,7 @@ export default function TravelerDashboard() {
     transport: ''
   });
   const [trips, setTrips] = useState<Trip[]>([]);
+  const [favoriteExperiences, setFavoriteExperiences] = useState<Experience[]>([]);
   const [walletBalance, setWalletBalance] = useState(0);
   const [walletCurrency, setWalletCurrency] = useState('USD');
   const [loading, setLoading] = useState(true);
@@ -42,6 +61,7 @@ export default function TravelerDashboard() {
   const [deletingTripId, setDeletingTripId] = useState<string | null>(null);
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [deletingAllTrips, setDeletingAllTrips] = useState(false);
+  const [removingFavoriteId, setRemovingFavoriteId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchUserData();
@@ -64,6 +84,9 @@ export default function TravelerDashboard() {
       setTrips(userData.bookings || []);
       setWalletBalance(userData.tripWallet?.balance || 0);
       setWalletCurrency(userData.tripWallet?.currency || 'USD');
+      
+      // Fetch favorite experiences
+      await fetchFavoriteExperiences();
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'Failed to load dashboard data';
       // Clean up error message to prevent concatenation issues
@@ -71,6 +94,31 @@ export default function TravelerDashboard() {
       console.error('Dashboard load error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchFavoriteExperiences = async () => {
+    try {
+      const response = await api.get('/user/bucketlist?populate=true');
+      setFavoriteExperiences(response.data.bucketlist || []);
+    } catch (err: any) {
+      console.error('Error fetching favorite experiences:', err);
+      // Don't show error to user, just log it
+    }
+  };
+
+  const handleRemoveFavorite = async (experienceId: string) => {
+    try {
+      setRemovingFavoriteId(experienceId);
+      await api.delete(`/user/bucketlist/${experienceId}`);
+      setFavoriteExperiences(favoriteExperiences.filter(exp => exp._id !== experienceId));
+      setSuccess('Removed from favorites');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to remove from favorites');
+      setTimeout(() => setError(''), 3000);
+    } finally {
+      setRemovingFavoriteId(null);
     }
   };
 
@@ -549,6 +597,118 @@ export default function TravelerDashboard() {
             </form>
           </div>
         )}
+
+          {/* Favorite Experiences Section */}
+          <div className="bg-white rounded-2xl border border-charcoal-100 shadow-luxury p-8 md:p-10 mb-10">
+            <div className="flex items-center justify-between mb-8 pb-6 border-b border-charcoal-100">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-heritage-gold/10 to-heritage-gold/5 rounded-xl flex items-center justify-center border border-heritage-gold/20">
+                  <svg className="w-6 h-6 text-heritage-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-semibold text-charcoal-900 mb-1">Favorite Experiences</h2>
+                  {favoriteExperiences.length > 0 && (
+                    <p className="text-sm text-charcoal-500">{favoriteExperiences.length} {favoriteExperiences.length === 1 ? 'experience' : 'experiences'} saved</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            {favoriteExperiences.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="inline-flex items-center justify-center w-20 h-20 bg-charcoal-50 rounded-full mb-6 border border-charcoal-100">
+                  <svg className="w-10 h-10 text-charcoal-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-charcoal-900 mb-3">No favorites yet</h3>
+                <p className="text-charcoal-600 mb-8 max-w-md mx-auto">Start exploring experiences and save your favorites for later!</p>
+                <Link href="/trips/select" className="inline-flex items-center gap-3 px-6 py-3 bg-charcoal-700 hover:bg-charcoal-800 text-white font-semibold rounded-xl shadow-luxury hover:shadow-luxury-lg transition-all duration-300 transform hover:scale-105">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  Explore Experiences
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {favoriteExperiences.map((experience) => (
+                  <div
+                    key={experience._id}
+                    className="group relative bg-white rounded-xl border-2 border-charcoal-100 hover:border-heritage-gold/30 overflow-hidden shadow-sm hover:shadow-luxury transition-all duration-300"
+                  >
+                    {experience.imageUrl && (
+                      <div className="relative h-48 w-full overflow-hidden bg-charcoal-100">
+                        <img
+                          src={getImageUrl(experience.imageUrl) || '/placeholder-experience.jpg'}
+                          alt={experience.title}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
+                        <button
+                          onClick={() => handleRemoveFavorite(experience._id)}
+                          disabled={removingFavoriteId === experience._id}
+                          className="absolute top-3 right-3 w-10 h-10 bg-white/90 hover:bg-white rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                          aria-label="Remove from favorites"
+                        >
+                          {removingFavoriteId === experience._id ? (
+                            <svg className="animate-spin h-5 w-5 text-heritage-gold" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                          ) : (
+                            <svg className="w-5 h-5 text-heritage-gold" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
+                    )}
+                    <div className="p-5">
+                      <h3 className="text-lg font-semibold text-charcoal-900 mb-2 line-clamp-2 group-hover:text-heritage-gold-dark transition-colors">
+                        {experience.title}
+                      </h3>
+                      <p className="text-sm text-charcoal-600 mb-4 line-clamp-2">
+                        {experience.description}
+                      </p>
+                      <div className="flex items-center justify-between pt-4 border-t border-charcoal-100">
+                        <div>
+                          <p className="text-2xl font-bold text-heritage-gold">${experience.price}</p>
+                          <p className="text-xs text-charcoal-500">per person</p>
+                        </div>
+                        {experience.provider && (
+                          <div className="text-right">
+                            <p className="text-sm font-semibold text-charcoal-700">{experience.provider.name}</p>
+                            {experience.provider.rating > 0 && (
+                              <div className="flex items-center gap-1 justify-end">
+                                <svg className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                                <span className="text-sm text-charcoal-600">{experience.provider.rating.toFixed(1)}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      {experience.location && (
+                        <div className="mt-3 pt-3 border-t border-charcoal-100">
+                          <p className="text-xs text-charcoal-500 flex items-center gap-1.5">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            {experience.location.district}, {experience.location.state}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Premium Trips Section */}
           <div id="trips" className="bg-white rounded-2xl border border-charcoal-100 shadow-luxury p-8 md:p-10">

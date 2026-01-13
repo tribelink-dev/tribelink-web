@@ -3,7 +3,20 @@
  * Now delegates to the new modular scheduler
  */
 
-const { scheduleTrip: scheduleTripModular } = require('./scheduler');
+// Lazy load to avoid potential circular dependency issues
+let scheduleTripModular = null;
+
+function getScheduleTripModular() {
+  if (!scheduleTripModular) {
+    const schedulerCore = require('./scheduler/core/scheduler');
+    scheduleTripModular = schedulerCore.scheduleTrip;
+    
+    if (typeof scheduleTripModular !== 'function') {
+      throw new Error('scheduleTrip is not exported correctly from scheduler/core/scheduler');
+    }
+  }
+  return scheduleTripModular;
+}
 
 /**
  * Intelligent Trip Scheduler
@@ -21,10 +34,13 @@ async function scheduleTrip({
   state, // Deprecated, use locations instead
   district, // Deprecated, use locations instead
   locations, // Array of {state, district} for multi-city trips
-  guideId = null
+  guideId = null,
+  guidePricingMode = 'daily', // Added: support for guide pricing mode
+  userId = null // Added: support for user ID
 }) {
   // Delegate to modular scheduler
-  return await scheduleTripModular({
+  const scheduleTripFn = getScheduleTripModular();
+  return await scheduleTripFn({
     experienceIds,
     fromDate,
     toDate,
@@ -33,7 +49,9 @@ async function scheduleTrip({
     state,
     district,
     locations,
-    guideId
+    guideId,
+    guidePricingMode,
+    userId
   });
 }
 

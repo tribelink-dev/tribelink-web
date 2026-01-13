@@ -246,9 +246,10 @@ function analyzeTravelPatterns(trips) {
  */
 async function filterExperiencesAI(userId, experiences, context = {}) {
   if (!USE_AI || experiences.length === 0) {
-    // Fallback: return top 3 by basic scoring
-    console.log('[Pathfinder] AI disabled or no experiences, using fallback');
-    return experiences.slice(0, 3);
+    // Fallback: return top experiences by basic scoring
+    const targetCount = context.targetCount || Math.min(3, experiences.length);
+    console.log(`[Pathfinder] AI disabled or no experiences, using fallback (returning ${targetCount})`);
+    return experiences.slice(0, targetCount);
   }
 
   try {
@@ -262,8 +263,17 @@ async function filterExperiencesAI(userId, experiences, context = {}) {
     
     const userProfile = await buildUserProfile(userId);
 
+    // Extract context information
+    const tripDays = context.tripDays || 1;
+    const pace = context.pace || 'normal';
+    const targetCount = context.targetCount || Math.min(3, sortedExperiences.length);
+    const maxExperiences = context.maxExperiences || targetCount;
+    
+    // Calculate experiences per day based on pace
+    const experiencesPerDay = pace === 'fast' ? 3.5 : 2.5;
+    
     // Prepare context for AI
-    const prompt = `You are Pathfinder, Tribelink's intelligent travel curator. You help travelers discover authentic cultural experiences by carefully selecting the best matches from available options. Your task is to filter ${sortedExperiences.length} experiences down to the TOP 2-3 BEST matches for this traveler.
+    const prompt = `You are Pathfinder, Tribelink's intelligent travel curator and trip planner. Your PRIMARY GOAL is to maximize the number of high-quality experiences that can fit into the traveler's ${tripDays}-day trip, while ensuring each experience is personalized and culturally authentic.
 
 TRAVELER PROFILE:
 - KYT Preferences: ${JSON.stringify(userProfile.kytPreferences)}
@@ -271,7 +281,13 @@ TRAVELER PROFILE:
 - Budget Pattern: Average $${userProfile.bookingHistory.averageSpending.experiences.toFixed(2)} per experience
 - Preferred Heritage Types: ${Object.keys(userProfile.bookingHistory.culturalInterests).join(', ')}
 - Travel Style: ${userProfile.kytPreferences.travelStyle || 'unknown'}
-- Pace: ${userProfile.kytPreferences.pace || 'unknown'}
+- Pace: ${pace} (${pace === 'fast' ? 'can handle 3-4 experiences per day' : 'prefers 2-3 experiences per day'})
+
+TRIP DETAILS:
+- Trip Duration: ${tripDays} day${tripDays > 1 ? 's' : ''}
+- Target: Select up to ${targetCount} experiences (max ${maxExperiences} can fit)
+- Experiences per day: ~${experiencesPerDay.toFixed(1)} (based on ${pace} pace)
+- Goal: Fill all ${tripDays} days with as many quality experiences as possible
 
 AVAILABLE EXPERIENCES (${sortedExperiences.length}):
 ${sortedExperiences.map((exp, idx) => `
@@ -290,14 +306,23 @@ ${idx + 1}. ${exp.title}
 CONTEXT:
 ${JSON.stringify(context)}
 
-Your task: Select the TOP 2-3 experiences that BEST match this traveler based on:
-1. Cultural interest alignment (heritage, traditions, experience type)
-2. Budget compatibility (prefer experiences within ±30% of average spending)
-3. Travel style and pace compatibility
-4. Authenticity and cultural significance
-5. Overall value and rating
+YOUR PRIMARY TASK: Select the MAXIMUM number of experiences (up to ${targetCount}) that can be scheduled across ${tripDays} days, prioritizing:
+1. **MAXIMIZING QUANTITY**: Select as many experiences as possible (up to ${targetCount}) to fill all ${tripDays} days
+2. **Cultural interest alignment**: Heritage, traditions, experience type matching traveler's interests
+3. **Budget compatibility**: Prefer experiences within ±30% of average spending, but include variety
+4. **Travel style and pace compatibility**: Ensure experiences match the ${pace} pace preference
+5. **Authenticity and cultural significance**: Prioritize authentic cultural experiences
+6. **Overall value and rating**: Balance quality with quantity
+7. **Location diversity**: If multiple locations, include experiences from different areas
+8. **Duration variety**: Mix shorter and longer experiences to optimize daily schedules
 
-IMPORTANT: Be consistent - for the same traveler profile and same experience list, always select the same top matches. Use the exact index numbers from the list above (1, 2, 3, etc.).
+IMPORTANT INSTRUCTIONS:
+- Select ${targetCount} experiences if possible (to maximize trip value)
+- If fewer high-quality matches exist, select the best available (minimum 2-3)
+- Consider that experiences can be scheduled across different days
+- Ensure variety in experience types, locations, and durations
+- Be consistent - for the same traveler profile and same experience list, always select the same matches
+- Use the exact index numbers from the list above (1, 2, 3, etc.)
 
 Return ONLY valid JSON:
 {
@@ -306,9 +331,15 @@ Return ONLY valid JSON:
       "index": 1,
       "matchScore": 0.95,
       "reasons": ["reason1", "reason2", "reason3"]
+    },
+    {
+      "index": 2,
+      "matchScore": 0.90,
+      "reasons": ["reason1", "reason2"]
     }
+    // ... continue for up to ${targetCount} experiences
   ],
-  "insights": "A brief, conversational explanation from Pathfinder about why these experiences were curated for this traveler"
+  "insights": "A brief explanation from Pathfinder about how these ${targetCount} experiences will create a rich, full itinerary across ${tripDays} days"
 }`;
 
     console.log('[Pathfinder] Calling OpenAI API...');
@@ -327,7 +358,7 @@ Return ONLY valid JSON:
           }
         ],
         temperature: 0.1,
-        max_tokens: 2000
+        max_tokens: 4000 // Increased for selecting more experiences
       },
       {
         headers: {
@@ -344,7 +375,7 @@ Return ONLY valid JSON:
     const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : content;
     const aiResult = JSON.parse(jsonStr);
 
-    // Map AI selections back to experiences using sorted array
+    // Map AI selections back to experiences using sorted array (targetCount already extracted above)
     const selectedExperiences = aiResult.selectedExperiences
       .map(selection => {
         const idx = selection.index - 1; // Convert to 0-based
@@ -360,7 +391,7 @@ Return ONLY valid JSON:
         return null;
       })
       .filter(Boolean)
-      .slice(0, 3); // Ensure max 3
+      .slice(0, targetCount); // Allow up to targetCount experiences
 
     // Sort by match score descending for consistent ordering
     selectedExperiences.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
@@ -380,13 +411,15 @@ Return ONLY valid JSON:
     // Fallback to rule-based filtering
     try {
       const userProfile = await buildUserProfile(userId);
-      const fallbackResults = await filterExperiencesRuleBased(userId, experiences, userProfile);
+      const targetCount = context.targetCount || Math.min(3, experiences.length);
+      const fallbackResults = await filterExperiencesRuleBased(userId, experiences, userProfile, targetCount);
       console.log(`[Pathfinder] Fallback returned ${fallbackResults.length} experiences`);
       return fallbackResults;
     } catch (fallbackError) {
       console.error('[Pathfinder] Fallback filtering also failed:', fallbackError);
-      // Last resort: return top 3 experiences
-      return experiences.slice(0, 3);
+      // Last resort: return top experiences up to target count
+      const targetCount = context.targetCount || Math.min(3, experiences.length);
+      return experiences.slice(0, targetCount);
     }
   }
 }
@@ -394,7 +427,7 @@ Return ONLY valid JSON:
 /**
  * Rule-based fallback for experience filtering
  */
-async function filterExperiencesRuleBased(userId, experiences, userProfile) {
+async function filterExperiencesRuleBased(userId, experiences, userProfile, targetCount = 3) {
   // Score each experience
   const scored = experiences.map(exp => {
     let score = 0;
@@ -430,9 +463,9 @@ async function filterExperiencesRuleBased(userId, experiences, userProfile) {
     return { experience: exp, score };
   });
 
-  // Sort by score and return top 3
+  // Sort by score and return top experiences up to target count
   scored.sort((a, b) => b.score - a.score);
-  return scored.slice(0, 3).map(item => item.experience);
+  return scored.slice(0, targetCount).map(item => item.experience);
 }
 
 /**

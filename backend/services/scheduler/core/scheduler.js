@@ -36,11 +36,18 @@ async function fetchExperiences(experienceIds, tripLocations, country) {
   const mongoose = require('mongoose');
   
   // Build query for experiences across all locations
-  const locationQueries = tripLocations.map(loc => ({
-    'location.country': country,
-    'location.state': loc.state,
-    'location.district': loc.district
-  }));
+  // Use case-insensitive regex matching and handle empty districts (state-only selections)
+  const locationQueries = tripLocations.map(loc => {
+    const query = {
+      'location.country': { $regex: new RegExp(country.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') },
+      'location.state': { $regex: new RegExp(loc.state.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }
+    };
+    // Only add district filter if district is provided (not empty)
+    if (loc.district && loc.district.trim() !== '') {
+      query['location.district'] = { $regex: new RegExp(loc.district.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') };
+    }
+    return query;
+  });
 
   // Validate experience IDs
   const validExperienceIds = experienceIds.filter(id => {
@@ -55,14 +62,44 @@ async function fetchExperiences(experienceIds, tripLocations, country) {
     throw new Error('No valid experience IDs found in bucketlist');
   }
 
-  // Fetch experiences with their providers from all locations
-  const experiences = await Experience.find({
-    _id: { $in: validExperienceIds },
-    $or: locationQueries
-  }).populate('provider');
+  console.log('[Scheduler] Fetching experiences:', {
+    experienceIdsCount: validExperienceIds.length,
+    locationQueries: locationQueries.length,
+    country,
+    locations: tripLocations
+  });
 
+  // Fetch experiences with their providers from all locations
+  let experiences;
+  try {
+    experiences = await Experience.find({
+      _id: { $in: validExperienceIds.map(id => new mongoose.Types.ObjectId(id)) },
+      $or: locationQueries
+    }).populate('provider');
+
+    console.log(`[Scheduler] Found ${experiences.length} experiences matching location filters`);
+  } catch (queryError) {
+    console.error('[Scheduler] Error querying experiences with location filter:', queryError);
+    experiences = [];
+  }
+
+  // If no experiences match location, try without location filter (experiences might be from different locations)
   if (experiences.length === 0) {
-    throw new Error('No experiences available for selected location');
+    console.log('[Scheduler] No experiences match location, trying without location filter...');
+    try {
+      experiences = await Experience.find({
+        _id: { $in: validExperienceIds.map(id => new mongoose.Types.ObjectId(id)) }
+      }).populate('provider');
+      
+      console.log(`[Scheduler] Found ${experiences.length} experiences in bucketlist (ignoring location filter)`);
+    } catch (fallbackError) {
+      console.error('[Scheduler] Error fetching experiences without location filter:', fallbackError);
+      throw new Error(`Failed to fetch experiences from bucketlist: ${fallbackError.message}. Please ensure you have experiences in your bucketlist.`);
+    }
+    
+    if (experiences.length === 0) {
+      throw new Error('No experiences found in your bucketlist. Please add experiences to your bucketlist first.');
+    }
   }
 
   return experiences;
@@ -335,12 +372,13 @@ async function scheduleTrip({
   const days = Math.ceil((to - from) / (1000 * 60 * 60 * 24)) + 1;
 
   // Normalize locations
+  // Allow empty district for state-only selections (e.g., "All of Kerala")
   const tripLocations = locations && Array.isArray(locations) && locations.length > 0
-    ? locations
-    : [{ state, district }].filter(loc => loc.state && loc.district);
+    ? locations.filter(loc => loc.state) // Only require state, district can be empty
+    : [{ state, district: district || '' }].filter(loc => loc.state);
 
   if (tripLocations.length === 0) {
-    throw new Error('No valid locations provided');
+    throw new Error('No valid locations provided. At least a state is required.');
   }
   
   console.log('Scheduler inputs:', {
@@ -351,24 +389,64 @@ async function scheduleTrip({
     locations: tripLocations.length
   });
 
-  // Fetch experiences
-  const experiences = await fetchExperiences(experienceIds, tripLocations, country);
+  // Fetch experiences with error handling
+  let experiences;
+  try {
+    experiences = await fetchExperiences(experienceIds, tripLocations, country);
+  } catch (fetchError) {
+    console.error('[Scheduler] Error fetching experiences:', fetchError);
+    console.error('[Scheduler] Fetch error details:', {
+      message: fetchError.message,
+      experienceIdsCount: experienceIds.length,
+      locations: tripLocations
+    });
+    
+    // Last resort: fetch experiences without location filter
+    const mongoose = require('mongoose');
+    const validExperienceIds = experienceIds.filter(id => {
+      try {
+        return mongoose.Types.ObjectId.isValid(id);
+      } catch (e) {
+        return false;
+      }
+    });
+    
+    if (validExperienceIds.length === 0) {
+      throw new Error('No valid experience IDs found in bucketlist. Please add experiences to your bucketlist first.');
+    }
+    
+    console.log('[Scheduler] Fallback: Fetching all experiences from bucketlist without location filter');
+    try {
+      experiences = await Experience.find({
+        _id: { $in: validExperienceIds.map(id => new mongoose.Types.ObjectId(id)) }
+      }).populate('provider');
+      
+      if (experiences.length === 0) {
+        throw new Error('No experiences found in bucketlist. Please add experiences to your bucketlist first.');
+      }
+      
+      console.log(`[Scheduler] Fallback found ${experiences.length} experiences`);
+    } catch (fallbackError) {
+      console.error('[Scheduler] Fallback fetch also failed:', fallbackError);
+      throw new Error(`Failed to fetch experiences: ${fallbackError.message}. Please ensure you have experiences in your bucketlist.`);
+    }
+  }
 
   // Filter experiences available in date range
   let availableExperiences = filterExperiencesByDateRange(experiences, fromDate, toDate);
 
   // If no experiences match the date filter, still include all experiences from bucketlist
   if (availableExperiences.length === 0) {
-    console.warn('No experiences match the date filter, but proceeding with all experiences from bucketlist');
+    console.warn('[Scheduler] No experiences match the date filter, but proceeding with all experiences from bucketlist');
     availableExperiences = experiences;
   }
   
-  console.log(`Found ${availableExperiences.length} available experiences out of ${experiences.length} total`);
+  console.log(`[Scheduler] Found ${availableExperiences.length} available experiences out of ${experiences.length} total`);
   
   const experiencesToSchedule = availableExperiences.length > 0 ? availableExperiences : experiences;
 
   if (experiencesToSchedule.length === 0) {
-    throw new Error('No experiences found in bucketlist. Please add experiences first.');
+    throw new Error('No experiences found in bucketlist. Please add experiences to your bucketlist first.');
   }
 
   // Group experiences by location
@@ -507,8 +585,38 @@ async function scheduleTrip({
   
   console.log(`\n=== Schedule Complete: ${schedule.length} days, ${schedule.reduce((sum, day) => sum + day.activities.length, 0)} total activities ===`);
 
+  // Ensure we have at least some schedule days, even if empty
   if (schedule.length === 0) {
-    throw new Error('Could not create a schedule with available experiences and dates');
+    console.error('[Scheduler] No schedule days created, creating empty schedule structure');
+    // Create at least one empty day to prevent complete failure
+    for (let i = 0; i < tripDates.length; i++) {
+      schedule.push({
+        date: tripDates[i],
+        dayIndex: i,
+        activities: [],
+        hotel: hotels.length > 0 ? hotels[0] : null,
+        guide: guide ? {
+          _id: guide._id,
+          name: guide.name,
+          rating: guide.rating || 0
+        } : null,
+        guideHours: {
+          calculated: 0,
+          adjusted: null,
+          final: 0
+        },
+        location: tripLocations[0] || { state, district: district || '' },
+        notes: 'No experiences could be scheduled for this day. Please add more experiences to your bucketlist.'
+      });
+    }
+    
+    // If we still have no experiences, throw a helpful error
+    if (experiencesToSchedule.length === 0) {
+      throw new Error('No experiences found in bucketlist. Please add experiences to your bucketlist first.');
+    }
+    
+    // If we have experiences but couldn't schedule them, provide a more helpful message
+    throw new Error(`Could not create a schedule with the available ${experiencesToSchedule.length} experience(s). This might be due to date availability or location mismatches. Please try adding more experiences or adjusting your trip dates.`);
   }
 
   // Auto-assign chauffeurs based on experience locations
@@ -616,11 +724,28 @@ async function scheduleTrip({
     .map((day, idx) => ({ day, dayIndex: idx }))
     .filter(({ day }) => !day.activities || day.activities.length === 0);
 
-  return {
-    schedule,
+  // Final validation - ensure we have a valid schedule
+  if (!schedule || !Array.isArray(schedule) || schedule.length === 0) {
+    console.error('[Scheduler] CRITICAL: Schedule validation failed after creation');
+    console.error('[Scheduler] Schedule value:', schedule);
+    console.error('[Scheduler] Schedule type:', typeof schedule);
+    console.error('[Scheduler] Schedule is array:', Array.isArray(schedule));
+    throw new Error('Could not create a schedule. Please ensure you have experiences in your bucketlist and valid trip dates.');
+  }
+  
+  console.log('[Scheduler] Schedule creation completed successfully:', {
+    scheduleDays: schedule.length,
+    totalActivities: schedule.reduce((sum, day) => sum + (day.activities?.length || 0), 0),
     totalPrice,
-    selectedExperiencesCount: scheduledExperienceIds.size,
-    availableHotels: hotels.map(h => ({
+    selectedExperiencesCount: scheduledExperienceIds.size
+  });
+  
+  // Ensure all required fields are present
+  const result = {
+    schedule,
+    totalPrice: totalPrice || 0,
+    selectedExperiencesCount: scheduledExperienceIds.size || 0,
+    availableHotels: (hotels || []).map(h => ({
       _id: h._id,
       name: h.name,
       pricePerNight: h.pricePerNight,
@@ -648,6 +773,14 @@ async function scheduleTrip({
       }))
     }
   };
+  
+  // Final check before returning
+  if (!result.schedule || result.schedule.length === 0) {
+    console.error('[Scheduler] CRITICAL: Result validation failed - schedule is empty');
+    throw new Error('Scheduler returned an empty schedule. Please ensure you have experiences in your bucketlist.');
+  }
+  
+  return result;
 }
 
 module.exports = {

@@ -52,16 +52,47 @@ router.post('/kyt', authenticate, requireUser, async (req, res) => {
 // Get user bucketlist
 router.get('/bucketlist', authenticate, requireUser, async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select('bucketlist');
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
+    const { populate } = req.query; // Check if client wants populated experiences
     
-    // Return bucketlist IDs as strings (without populating to avoid errors)
-    res.json({ 
-      bucketlist: (user.bucketlist || []).map(e => e.toString()),
-      count: user.bucketlist.length || 0
-    });
+    if (populate === 'true') {
+      // Return populated experiences with full details
+      const user = await User.findById(req.user._id)
+        .populate({
+          path: 'bucketlist',
+          populate: {
+            path: 'provider',
+            select: 'name rating',
+            model: 'Host'
+          }
+        });
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      const Experience = require('../models/Experience');
+      const { normalizeExperiences, getBaseUrlFromRequest } = require('../utils/imageUtils');
+      
+      // Normalize experiences for frontend
+      const baseUrl = getBaseUrlFromRequest(req);
+      const normalizedExperiences = normalizeExperiences(user.bucketlist || [], baseUrl);
+      
+      res.json({ 
+        bucketlist: normalizedExperiences,
+        count: normalizedExperiences.length
+      });
+    } else {
+      // Return just IDs (backward compatibility)
+      const user = await User.findById(req.user._id).select('bucketlist');
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      res.json({ 
+        bucketlist: (user.bucketlist || []).map(e => e.toString()),
+        count: user.bucketlist.length || 0
+      });
+    }
   } catch (error) {
     console.error('Error fetching bucketlist:', error);
     res.status(500).json({ message: 'Server error', error: error.message });

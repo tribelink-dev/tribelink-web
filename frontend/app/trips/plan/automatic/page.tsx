@@ -66,19 +66,24 @@ export default function AutomaticPlanningPage() {
     // Parse multiple locations
     const locs: Location[] = [];
     let idx = 0;
-    while (searchParams.get(`state${idx}`) && searchParams.get(`district${idx}`)) {
-      locs.push({
-        state: searchParams.get(`state${idx}`) || '',
-        district: searchParams.get(`district${idx}`) || ''
-      });
+    // Allow empty district for state-only selections (e.g., "All of Kerala")
+    while (searchParams.get(`state${idx}`)) {
+      const state = searchParams.get(`state${idx}`);
+      const district = searchParams.get(`district${idx}`) || ''; // Empty string is valid for state-only selections
+      if (state) {
+        locs.push({
+          state: state,
+          district: district
+        });
+      }
       idx++;
     }
 
-    // Fallback to single location
-    if (locs.length === 0 && searchParams.get('state') && searchParams.get('district')) {
+    // Fallback to single location (also allow empty district)
+    if (locs.length === 0 && searchParams.get('state')) {
       locs.push({
         state: searchParams.get('state') || '',
-        district: searchParams.get('district') || ''
+        district: searchParams.get('district') || '' // Empty string is valid for state-only selections
       });
     }
 
@@ -130,24 +135,56 @@ export default function AutomaticPlanningPage() {
 
       console.log('Automatic planning response:', response?.data);
 
-      if (response?.data?.experiences && response.data.experiences.length > 0) {
+      // Check response status - 404 means no experiences found, 200 means success
+      if (response?.status === 404 || (response?.data?.experiences && response.data.experiences.length === 0)) {
+        const errorMsg = response?.data?.message || 'No personalized experiences found for the selected location. Please try selecting a different location or use manual planning.';
+        const suggestions = response?.data?.suggestions;
+        
+        // Build enhanced error message with suggestions
+        let enhancedError = errorMsg;
+        if (suggestions && suggestions.availableStates && suggestions.availableStates.length > 0) {
+          enhancedError += `\n\nAvailable locations: ${suggestions.availableStates.join(', ')}`;
+        }
+        
+        setError(enhancedError);
+        setPlanning(false);
+        console.log('[Automatic Planning] No experiences returned:', response?.data);
+      } else if (response?.data?.experiences && response.data.experiences.length > 0) {
         setSelectedExperiences(response.data.experiences);
         setPlanning(false);
         // Don't auto-schedule, let user review first
         // User can click "Create Schedule" button to proceed
       } else {
-        setError(response?.data?.message || 'No personalized experiences found. Please try manual planning.');
+        // Unexpected response format
+        setError('Unexpected response from server. Please try again.');
         setPlanning(false);
+        console.error('[Automatic Planning] Unexpected response:', response?.data);
       }
     } catch (err: any) {
       console.error('Automatic planning error:', err);
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to generate automatic plan. Please try again.';
-      // Check if error is about missing preferences
-      if (errorMessage.includes('KYT questionnaire') || errorMessage.includes('preferences')) {
-        setPendingActionParams({ locs, countryParam, fromParam, toParam });
-        setShowPreferenceModal(true);
+      
+      // Handle 404 specifically (no experiences found)
+      if (err.response?.status === 404) {
+        const errorData = err.response?.data || {};
+        const errorMessage = errorData.message || 'No experiences available for the selected location.';
+        const suggestions = errorData.suggestions;
+        
+        // Build enhanced error message with suggestions
+        let enhancedError = errorMessage;
+        if (suggestions && suggestions.availableStates && suggestions.availableStates.length > 0) {
+          enhancedError += `\n\nAvailable locations: ${suggestions.availableStates.join(', ')}`;
+        }
+        
+        setError(enhancedError);
       } else {
-        setError(errorMessage);
+        const errorMessage = err.response?.data?.message || err.message || 'Failed to generate automatic plan. Please try again.';
+        // Check if error is about missing preferences
+        if (errorMessage.includes('KYT questionnaire') || errorMessage.includes('preferences')) {
+          setPendingActionParams({ locs, countryParam, fromParam, toParam });
+          setShowPreferenceModal(true);
+        } else {
+          setError(errorMessage);
+        }
       }
       setLoading(false);
       setPlanning(false);

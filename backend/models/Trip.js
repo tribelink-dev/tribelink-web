@@ -24,7 +24,8 @@ const tripSchema = new mongoose.Schema({
   },
   district: {
     type: String,
-    required: true
+    required: false, // Optional to support state-only selections (e.g., "All of Kerala")
+    default: ''
   },
   locations: [{
     state: {
@@ -33,7 +34,8 @@ const tripSchema = new mongoose.Schema({
     },
     district: {
       type: String,
-      required: true
+      required: false, // Optional to support state-only selections
+      default: ''
     }
   }], // Array of locations for multi-city trips
   preferences: {

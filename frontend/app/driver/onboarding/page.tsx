@@ -146,7 +146,7 @@ export default function DriverOnboardingPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
-                onClick={() => router.push('/provider/drivers')}
+                onClick={() => router.push('/driver/dashboard')}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

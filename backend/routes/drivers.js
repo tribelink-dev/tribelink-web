@@ -43,6 +43,11 @@ router.get('/profile/:providerId', authenticate, async (req, res) => {
   try {
     const { providerId } = req.params;
     
+    // Validate providerId
+    if (!providerId || providerId === 'undefined' || providerId === 'null') {
+      return res.status(400).json({ message: 'Invalid provider ID' });
+    }
+    
     // Verify provider exists and is a driver
     const provider = await Provider.findById(providerId);
     if (!provider || provider.providerType !== 'DRIVER_PARTNER') {
@@ -288,6 +293,11 @@ router.get('/available', async (req, res) => {
 router.get('/trips/:driverId', authenticate, async (req, res) => {
   try {
     const { driverId } = req.params;
+
+    // Validate driverId
+    if (!driverId || driverId === 'undefined' || driverId === 'null') {
+      return res.status(400).json({ message: 'Invalid driver ID' });
+    }
 
     // Verify driver exists
     const provider = await Provider.findById(driverId);

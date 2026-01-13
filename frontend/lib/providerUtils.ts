@@ -4,7 +4,7 @@ export function getProviderDashboard(providerType: string): string {
     case 'GUIDE':
       return '/provider/guides';
     case 'DRIVER_PARTNER':
-      return '/provider/drivers';
+      return '/driver/dashboard';
     case 'ACCOMMODATION_PROVIDER':
       return '/provider/hotels';
     case 'EXPERIENCE_HOST':

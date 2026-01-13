@@ -165,8 +165,31 @@ export default function DriverDashboard() {
         return;
       }
 
+      // Validate and normalize _id
+      if (!parsedHost._id) {
+        console.error('Host data missing _id:', parsedHost);
+        setError('Invalid host data. Please log in again.');
+        setLoading(false);
+        return;
+      }
+      
+      // Ensure _id is a string (handle different formats)
+      let hostId: string;
+      if (typeof parsedHost._id === 'string') {
+        hostId = parsedHost._id;
+      } else if (parsedHost._id && typeof parsedHost._id === 'object' && parsedHost._id.$oid) {
+        // Handle MongoDB extended JSON format
+        hostId = parsedHost._id.$oid;
+      } else if (parsedHost._id?.toString) {
+        hostId = parsedHost._id.toString();
+      } else {
+        hostId = String(parsedHost._id);
+      }
+      
+      // Update parsedHost with normalized _id
+      parsedHost._id = hostId;
       setHost(parsedHost);
-      fetchDashboardData(parsedHost._id);
+      fetchDashboardData(hostId);
     }
   }, [router]);
 

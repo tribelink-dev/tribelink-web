@@ -55,19 +55,34 @@ async function scheduleTripWithAIValidated({
   aiSchedulerFunction = null
 }) {
   // First, get base schedule from rule-based scheduler
-  const baseSchedule = await scheduleTrip({
-    experienceIds,
-    fromDate,
-    toDate,
-    preferences,
-    country,
-    state,
-    district,
-    locations,
-    guideId,
-    guidePricingMode,
-    userId
-  });
+  let baseSchedule;
+  try {
+    console.log('[AI Scheduler Enhanced] Calling base scheduler...');
+    baseSchedule = await scheduleTrip({
+      experienceIds,
+      fromDate,
+      toDate,
+      preferences,
+      country,
+      state,
+      district,
+      locations,
+      guideId,
+      guidePricingMode,
+      userId
+    });
+    console.log('[AI Scheduler Enhanced] Base scheduler completed:', {
+      scheduleDays: baseSchedule?.schedule?.length || 0
+    });
+  } catch (error) {
+    console.error('[AI Scheduler Enhanced] Base scheduler failed:', error);
+    console.error('[AI Scheduler Enhanced] Error details:', {
+      message: error.message,
+      experienceIdsCount: experienceIds?.length || 0
+    });
+    // Re-throw with context
+    throw new Error(`Failed to create base schedule: ${error.message}`);
+  }
   
   // If AI scheduler function is provided, try to enhance
   if (aiSchedulerFunction && baseSchedule && baseSchedule.schedule) {

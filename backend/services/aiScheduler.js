@@ -319,19 +319,41 @@ async function scheduleTripWithAI({
   }
   
   // Fallback: Use base scheduler
-  return await scheduleTrip({
-    experienceIds,
-    fromDate,
-    toDate,
-    preferences,
-    country,
-    state,
-    district,
-    locations,
-    guideId,
-    guidePricingMode,
-    userId
-  });
+  try {
+    console.log('[AI Scheduler] Falling back to base scheduler...');
+    const result = await scheduleTrip({
+      experienceIds,
+      fromDate,
+      toDate,
+      preferences,
+      country,
+      state,
+      district,
+      locations,
+      guideId,
+      guidePricingMode,
+      userId
+    });
+    
+    console.log('[AI Scheduler] Base scheduler completed successfully:', {
+      scheduleDays: result?.schedule?.length || 0,
+      experiencesCount: result?.selectedExperiencesCount || 0
+    });
+    
+    return result;
+  } catch (error) {
+    console.error('[AI Scheduler] Base scheduler failed:', error);
+    console.error('[AI Scheduler] Error stack:', error.stack);
+    console.error('[AI Scheduler] Error details:', {
+      message: error.message,
+      name: error.name,
+      experienceIdsCount: experienceIds?.length || 0,
+      locations: locations
+    });
+    
+    // Re-throw with more context
+    throw new Error(`Failed to create schedule: ${error.message}`);
+  }
 }
 
 /**
