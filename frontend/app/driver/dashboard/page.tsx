@@ -165,25 +165,40 @@ export default function DriverDashboard() {
         return;
       }
 
-      // Validate and normalize _id
-      if (!parsedHost._id) {
-        console.error('Host data missing _id:', parsedHost);
+      // Validate and normalize _id - check both _id and id for backward compatibility
+      let hostId: string | undefined;
+      
+      // Try _id first (new format)
+      if (parsedHost._id) {
+        if (typeof parsedHost._id === 'string') {
+          hostId = parsedHost._id;
+        } else if (typeof parsedHost._id === 'object' && parsedHost._id.$oid) {
+          // Handle MongoDB extended JSON format
+          hostId = parsedHost._id.$oid;
+        } else if (parsedHost._id?.toString) {
+          hostId = parsedHost._id.toString();
+        } else {
+          hostId = String(parsedHost._id);
+        }
+      }
+      // Fallback to id (old format for backward compatibility)
+      else if (parsedHost.id) {
+        if (typeof parsedHost.id === 'string') {
+          hostId = parsedHost.id;
+        } else if (parsedHost.id?.toString) {
+          hostId = parsedHost.id.toString();
+        } else {
+          hostId = String(parsedHost.id);
+        }
+        // Also set _id for consistency
+        parsedHost._id = hostId;
+      }
+      
+      if (!hostId) {
+        console.error('Host data missing both _id and id:', parsedHost);
         setError('Invalid host data. Please log in again.');
         setLoading(false);
         return;
-      }
-      
-      // Ensure _id is a string (handle different formats)
-      let hostId: string;
-      if (typeof parsedHost._id === 'string') {
-        hostId = parsedHost._id;
-      } else if (parsedHost._id && typeof parsedHost._id === 'object' && parsedHost._id.$oid) {
-        // Handle MongoDB extended JSON format
-        hostId = parsedHost._id.$oid;
-      } else if (parsedHost._id?.toString) {
-        hostId = parsedHost._id.toString();
-      } else {
-        hostId = String(parsedHost._id);
       }
       
       // Update parsedHost with normalized _id
@@ -196,6 +211,12 @@ export default function DriverDashboard() {
   const fetchDashboardData = async (providerId: string) => {
     try {
       setLoading(true);
+      setError('');
+      
+      // Validate providerId format (MongoDB ObjectId is 24 hex characters)
+      if (!providerId || !/^[0-9a-fA-F]{24}$/.test(providerId)) {
+        throw new Error('Invalid provider ID format. Please log in again.');
+      }
       
       // Fetch driver profile
       const profileResponse = await api.get(`/drivers/profile/${providerId}`);
@@ -306,6 +327,12 @@ export default function DriverDashboard() {
     } catch (err: any) {
       console.error('Error fetching dashboard data:', err);
       const errorMessage = err.response?.data?.message || err.message || 'Failed to load dashboard data';
+      console.error('Error details:', {
+        message: errorMessage,
+        status: err.response?.status,
+        data: err.response?.data,
+        providerId: providerId
+      });
       setError(errorMessage);
     } finally {
       setLoading(false);

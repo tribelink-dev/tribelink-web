@@ -903,7 +903,8 @@ router.post('/host/login', async (req, res) => {
       message: 'Login successful',
       token,
       host: {
-        id: host._id,
+        _id: host._id.toString(),
+        id: host._id.toString(), // Also include id for compatibility
         email: host.email,
         phoneNumber: host.phoneNumber,
         name: host.name,

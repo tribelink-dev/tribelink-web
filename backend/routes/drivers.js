@@ -55,14 +55,21 @@ router.get('/profile/:providerId', authenticate, async (req, res) => {
     }
 
     // Get or create driver profile
-    let driverProfile = await DriverProvider.findOne({ providerId });
+    // Ensure providerId is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(providerId)) {
+      return res.status(400).json({ message: 'Invalid provider ID format' });
+    }
+    
+    const providerObjectId = new mongoose.Types.ObjectId(providerId);
+    
+    let driverProfile = await DriverProvider.findOne({ providerId: providerObjectId });
     
     if (!driverProfile) {
-      // Create empty driver profile
+      // Create empty driver profile with required fields
       driverProfile = new DriverProvider({
-        providerId,
+        providerId: providerObjectId,
         vehicleType: 'Sedan', // Default
-        licenseNumber: '',
+        licenseNumber: 'PENDING_UPLOAD', // Required field, use placeholder
         pricing: {
           perDay: 50,
           currency: 'USD'
@@ -102,11 +109,27 @@ router.put('/profile/:providerId', authenticate, requireHost, async (req, res) =
       return res.status(403).json({ message: 'Access denied' });
     }
 
+    // Validate providerId format
+    if (!mongoose.Types.ObjectId.isValid(providerId)) {
+      return res.status(400).json({ message: 'Invalid provider ID format' });
+    }
+    
+    const providerObjectId = new mongoose.Types.ObjectId(providerId);
+    
     // Get or create driver profile
-    let driverProfile = await DriverProvider.findOne({ providerId });
+    let driverProfile = await DriverProvider.findOne({ providerId: providerObjectId });
     
     if (!driverProfile) {
-      driverProfile = new DriverProvider({ providerId });
+      // Create new profile with required fields
+      driverProfile = new DriverProvider({
+        providerId: providerObjectId,
+        vehicleType: 'Sedan',
+        licenseNumber: 'PENDING_UPLOAD',
+        pricing: {
+          perDay: 50,
+          currency: 'USD'
+        }
+      });
     }
 
     // Update fields
@@ -297,6 +320,11 @@ router.get('/trips/:driverId', authenticate, async (req, res) => {
     // Validate driverId
     if (!driverId || driverId === 'undefined' || driverId === 'null') {
       return res.status(400).json({ message: 'Invalid driver ID' });
+    }
+
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(driverId)) {
+      return res.status(400).json({ message: 'Invalid driver ID format' });
     }
 
     // Verify driver exists
