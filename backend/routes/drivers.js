@@ -137,7 +137,24 @@ router.put('/profile/:providerId', authenticate, requireHost, async (req, res) =
     if (updateData.licenseNumber) driverProfile.licenseNumber = updateData.licenseNumber;
     if (updateData.licenseDocument) driverProfile.licenseDocument = updateData.licenseDocument;
     if (updateData.documents) driverProfile.documents = updateData.documents;
-    if (updateData.availability) driverProfile.availability = updateData.availability;
+    if (updateData.availability) {
+      // Convert date strings to Date objects, ensuring consistent format
+      driverProfile.availability = updateData.availability.map(avail => {
+        let date;
+        if (typeof avail.date === 'string') {
+          // Parse date string (format: 'yyyy-MM-dd') and create date at midnight UTC
+          const [year, month, day] = avail.date.split('-').map(Number);
+          date = new Date(Date.UTC(year, month - 1, day));
+        } else {
+          date = new Date(avail.date);
+        }
+        return {
+          date: date,
+          available: avail.available !== false,
+          timeSlots: avail.timeSlots || []
+        };
+      });
+    }
     if (updateData.pricing) driverProfile.pricing = { ...driverProfile.pricing, ...updateData.pricing };
     if (updateData.yearsOfExperience !== undefined) driverProfile.yearsOfExperience = updateData.yearsOfExperience;
     if (updateData.languages) driverProfile.languages = updateData.languages;
@@ -170,9 +187,12 @@ router.get('/available/ai-filtered', authenticate, requireUser, async (req, res)
     const to = new Date(toDate);
 
     // Get all driver providers (same logic as regular endpoint)
+    // Include drivers who have completed basic setup (not just pending)
     const driverProfiles = await DriverProvider.find({
-      isVerified: true
+      licenseNumber: { $ne: 'PENDING_UPLOAD' }
     }).populate('providerId', 'name email phoneNumber rating');
+    
+    console.log(`[AI Driver Filter] Found ${driverProfiles.length} drivers with complete profiles`);
 
     // Filter drivers available for the date range
     const availableDrivers = [];
@@ -186,11 +206,28 @@ router.get('/available/ai-filtered', authenticate, requireUser, async (req, res)
       }
 
       const isAvailable = tripDates.every(date => {
+        // Normalize date to YYYY-MM-DD format for comparison (ignore time/timezone)
         const dateStr = date.toISOString().split('T')[0];
+        
         const availability = profile.availability.find(avail => {
-          const availDateStr = new Date(avail.date).toISOString().split('T')[0];
+          if (!avail || !avail.date) return false;
+          
+          // Handle both Date objects and date strings
+          let availDate;
+          if (avail.date instanceof Date) {
+            availDate = avail.date;
+          } else if (typeof avail.date === 'string') {
+            // If it's a string, parse it
+            availDate = new Date(avail.date);
+          } else {
+            return false;
+          }
+          
+          // Normalize to YYYY-MM-DD for comparison
+          const availDateStr = availDate.toISOString().split('T')[0];
           return availDateStr === dateStr;
         });
+        
         return !availability || availability.available !== false;
       });
 
@@ -255,9 +292,12 @@ router.get('/available', async (req, res) => {
     const to = new Date(toDate);
 
     // Get all driver providers
+    // Include drivers who have completed basic setup (not just pending)
     const driverProfiles = await DriverProvider.find({
-      isVerified: true // Only show verified drivers
+      licenseNumber: { $ne: 'PENDING_UPLOAD' }
     }).populate('providerId', 'name email phoneNumber rating');
+    
+    console.log(`[Driver Available] Found ${driverProfiles.length} drivers with complete profiles`);
 
     // Filter drivers available for the date range
     const availableDrivers = [];
@@ -273,11 +313,28 @@ router.get('/available', async (req, res) => {
 
       // Check availability for each date
       const isAvailable = tripDates.every(date => {
+        // Normalize date to YYYY-MM-DD format for comparison (ignore time/timezone)
         const dateStr = date.toISOString().split('T')[0];
+        
         const availability = profile.availability.find(avail => {
-          const availDateStr = new Date(avail.date).toISOString().split('T')[0];
+          if (!avail || !avail.date) return false;
+          
+          // Handle both Date objects and date strings
+          let availDate;
+          if (avail.date instanceof Date) {
+            availDate = avail.date;
+          } else if (typeof avail.date === 'string') {
+            // If it's a string, parse it
+            availDate = new Date(avail.date);
+          } else {
+            return false;
+          }
+          
+          // Normalize to YYYY-MM-DD for comparison
+          const availDateStr = availDate.toISOString().split('T')[0];
           return availDateStr === dateStr;
         });
+        
         // If no availability entry, assume available (flexible)
         // If entry exists, check if available is true
         return !availability || availability.available !== false;
@@ -697,11 +754,28 @@ router.post('/assign/:tripId', authenticate, async (req, res) => {
 
     // Verify driver is available for all trip dates
     const unavailableDates = tripDates.filter(date => {
+      // Normalize date to YYYY-MM-DD format for comparison (ignore time/timezone)
       const dateStr = date.toISOString().split('T')[0];
+      
       const availability = driverProfile.availability.find(avail => {
-        const availDateStr = new Date(avail.date).toISOString().split('T')[0];
+        if (!avail || !avail.date) return false;
+        
+        // Handle both Date objects and date strings
+        let availDate;
+        if (avail.date instanceof Date) {
+          availDate = avail.date;
+        } else if (typeof avail.date === 'string') {
+          // If it's a string, parse it
+          availDate = new Date(avail.date);
+        } else {
+          return false;
+        }
+        
+        // Normalize to YYYY-MM-DD for comparison
+        const availDateStr = availDate.toISOString().split('T')[0];
         return availDateStr === dateStr;
       });
+      
       return !availability || !availability.available;
     });
 

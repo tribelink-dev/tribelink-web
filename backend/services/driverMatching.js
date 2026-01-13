@@ -21,15 +21,25 @@ async function findDriversByLocation(state, district, fromDate, toDate) {
     const to = new Date(toDate);
 
     // Find drivers who service this location
+    // Note: For now, include both verified and unverified drivers (can be filtered later)
+    // Drivers with complete profiles (licenseNumber not 'PENDING_UPLOAD') are considered ready
     const driverProfiles = await DriverProvider.find({
-      isVerified: true,
       $or: [
         { 'serviceLocations.state': state, 'serviceLocations.district': district },
-        // If no serviceLocations set, include all verified drivers (backward compatibility)
+        // If no serviceLocations set, include all drivers (backward compatibility)
         { serviceLocations: { $exists: false } },
         { serviceLocations: { $size: 0 } }
-      ]
+      ],
+      // Include drivers who have completed basic setup (not just pending)
+      licenseNumber: { $ne: 'PENDING_UPLOAD' }
     }).populate('providerId', 'name email phoneNumber rating');
+    
+    console.log(`[Driver Matching] Found ${driverProfiles.length} drivers for ${district}, ${state}`, {
+      state,
+      district,
+      fromDate: from.toISOString().split('T')[0],
+      toDate: to.toISOString().split('T')[0]
+    });
 
     const availableDrivers = [];
 
@@ -42,18 +52,56 @@ async function findDriversByLocation(state, district, fromDate, toDate) {
         currentDate.setDate(currentDate.getDate() + 1);
       }
 
+      // Debug logging
+      const driverName = profile.providerId?.name || 'Unknown';
+      const driverId = profile.providerId?._id || 'unknown';
+      console.log(`[Driver Matching] Checking driver ${driverName} (${driverId}):`, {
+        hasAvailability: !!profile.availability,
+        availabilityCount: profile.availability?.length || 0,
+        tripDates: tripDates.map(d => d.toISOString().split('T')[0]),
+        availabilityEntries: profile.availability?.map(av => ({
+          date: av.date instanceof Date ? av.date.toISOString().split('T')[0] : av.date,
+          available: av.available
+        })) || []
+      });
+
       // Check if driver is available for all dates
       const isAvailable = tripDates.every(date => {
+        // Normalize date to YYYY-MM-DD format for comparison (ignore time/timezone)
         const dateStr = date.toISOString().split('T')[0];
+        
         const availability = profile.availability.find(avail => {
-          const availDateStr = new Date(avail.date).toISOString().split('T')[0];
+          if (!avail || !avail.date) return false;
+          
+          // Handle both Date objects and date strings
+          let availDate;
+          if (avail.date instanceof Date) {
+            availDate = avail.date;
+          } else if (typeof avail.date === 'string') {
+            // If it's a string, parse it
+            availDate = new Date(avail.date);
+          } else {
+            return false;
+          }
+          
+          // Normalize to YYYY-MM-DD for comparison
+          const availDateStr = availDate.toISOString().split('T')[0];
           return availDateStr === dateStr;
         });
+        
         // If no availability entry, assume available (flexible)
-        return !availability || availability.available !== false;
+        // If entry exists, check if available is true
+        const result = !availability || availability.available !== false;
+        
+        if (!result) {
+          console.log(`[Driver Matching] Driver ${driverName} not available on ${dateStr}`);
+        }
+        
+        return result;
       });
 
       if (isAvailable && profile.providerId) {
+        console.log(`[Driver Matching] Driver ${driverName} is available for all dates`);
         availableDrivers.push({
           _id: profile.providerId._id,
           driverProfileId: profile._id,
@@ -76,6 +124,8 @@ async function findDriversByLocation(state, district, fromDate, toDate) {
     // Sort by rating (highest first)
     availableDrivers.sort((a, b) => b.rating - a.rating);
 
+    console.log(`[Driver Matching] Returning ${availableDrivers.length} available drivers for ${district}, ${state}`);
+    
     return availableDrivers;
   } catch (error) {
     console.error('Error finding drivers by location:', error);
