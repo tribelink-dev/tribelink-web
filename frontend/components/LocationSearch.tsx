@@ -74,13 +74,8 @@ export default function LocationSearch({
 
   const getDisplayValue = () => {
     if (value.state && value.district) {
-      // Find city name if available
-      const cityEntry = Object.entries(CITY_TO_LOCATION).find(
-        ([_, loc]) => loc.state === value.state && loc.district === value.district
-      );
-      if (cityEntry) {
-        return `${cityEntry[0]}, ${value.state}`;
-      }
+      // Always show district name, not city name, to avoid confusion
+      // (e.g., Idukki district has many places, not just Munnar)
       return `${value.district}, ${value.state}`;
     } else if (value.state && !value.district) {
       // State-only selection (all districts)
@@ -262,6 +257,7 @@ export default function LocationSearch({
               value={value.state}
               onChange={(e) => {
                 onChange({ state: e.target.value, district: '' });
+                setSearchQuery(''); // Clear search query when manually selecting state
                 setShowPopular(false);
               }}
               required
@@ -293,6 +289,7 @@ export default function LocationSearch({
               value={value.district}
               onChange={(e) => {
                 onChange({ ...value, district: e.target.value });
+                setSearchQuery(''); // Clear search query when manually selecting district
                 setShowPopular(false);
               }}
               required={!value.state || availableDistricts.length === 0}
