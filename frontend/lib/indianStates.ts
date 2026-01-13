@@ -188,7 +188,7 @@ export const POPULAR_DESTINATIONS: PopularDestination[] = [
   {
     city: 'Kerala',
     state: 'Kerala',
-    district: 'Ernakulam',
+    district: '', // Empty district indicates "all districts in state"
     icon: '🌴',
     description: 'Backwaters & tropical paradise',
     category: 'beach'
