@@ -148,6 +148,13 @@ const experienceSchema = new mongoose.Schema({
     type: String,
     enum: ['HOST_EXPERIENCE', 'GUIDE_TOUR'],
     default: 'HOST_EXPERIENCE'
+  },
+  
+  // Experience provider type (for artisans, performers, etc.)
+  experienceProviderType: {
+    type: String,
+    enum: ['ARTISAN_WORKSHOP', 'PERFORMANCE', 'CULTURAL_EXPERIENCE', 'GUIDE_TOUR'],
+    default: 'CULTURAL_EXPERIENCE'
   }
 }, {
   timestamps: true
