@@ -3,8 +3,8 @@ export function getProviderDashboard(providerType: string): string {
   switch (providerType) {
     case 'GUIDE':
       return '/provider/guides';
-    case 'DRIVER_PARTNER':
-      return '/driver/dashboard';
+    case 'LOCAL_HOST':
+      return '/host/dashboard'; // Local hosts use same dashboard as experience hosts
     case 'ACCOMMODATION_PROVIDER':
       return '/provider/hotels';
     case 'EXPERIENCE_HOST':
@@ -18,12 +18,12 @@ export function getProviderWelcomeMessage(providerType: string): string {
   switch (providerType) {
     case 'EXPERIENCE_HOST':
       return 'Manage your experiences and activities';
+    case 'LOCAL_HOST':
+      return 'Manage your adobe and cultural experiences';
     case 'GUIDE':
       return 'Manage your guided tours and travel services';
     case 'ACCOMMODATION_PROVIDER':
       return 'Manage your hotel properties';
-    case 'DRIVER_PARTNER':
-      return 'Manage your driver services';
     default:
       return 'Manage your services';
   }

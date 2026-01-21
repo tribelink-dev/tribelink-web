@@ -11,7 +11,7 @@ export default function GoogleAuthComplete() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [providerType, setProviderType] = useState<'EXPERIENCE_HOST' | 'GUIDE' | 'ACCOMMODATION_PROVIDER' | 'DRIVER_PARTNER' | ''>('');
+  const [providerType, setProviderType] = useState<'EXPERIENCE_HOST' | 'GUIDE' | 'ACCOMMODATION_PROVIDER' | 'LOCAL_HOST' | ''>('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -210,26 +210,6 @@ export default function GoogleAuthComplete() {
                       <div className="font-bold text-lg mb-1.5">Hotel Owner</div>
                       <div className={`text-sm ${providerType === 'ACCOMMODATION_PROVIDER' ? 'text-white/90' : 'text-gray-600'}`}>
                         List hotels
-                      </div>
-                    </div>
-                  </label>
-                  <label className={`flex items-start p-4 rounded-xl cursor-pointer transition-all card-hover border-2 ${
-                    providerType === 'DRIVER_PARTNER' 
-                      ? 'bg-primary-500 text-white shadow-medium border-primary-600' 
-                      : 'bg-white border-gray-200 hover:border-primary-300'
-                  }`}>
-                    <input
-                      type="radio"
-                      name="providerType"
-                      value="DRIVER_PARTNER"
-                      checked={providerType === 'DRIVER_PARTNER'}
-                      onChange={(e) => setProviderType(e.target.value as 'DRIVER_PARTNER')}
-                      className="mt-1 mr-3 w-5 h-5"
-                    />
-                    <div className="flex-1">
-                      <div className="font-bold text-lg mb-1.5">Driver Partner</div>
-                      <div className={`text-sm ${providerType === 'DRIVER_PARTNER' ? 'text-white/90' : 'text-gray-600'}`}>
-                        Provide rides
                       </div>
                     </div>
                   </label>

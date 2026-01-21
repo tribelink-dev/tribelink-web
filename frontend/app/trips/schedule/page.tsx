@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
 import TripMap from '@/components/TripMap';
 import HotelBookingCard from '@/components/HotelBookingCard';
-import ChauffeurSelectionCard from '@/components/ChauffeurSelectionCard';
+// ChauffeurSelectionCard removed - drivers no longer supported
 import GuidePricingSelector, { PricingMode } from '@/components/GuidePricingSelector';
 import { useAuth } from '@/lib/auth';
 import { getImageUrl } from '@/lib/imageUtils';

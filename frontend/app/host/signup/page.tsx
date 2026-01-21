@@ -16,7 +16,7 @@ export default function HostSignupPage() {
     email: '',
     phoneNumber: '',
     password: '',
-    providerType: 'EXPERIENCE_HOST' as 'EXPERIENCE_HOST' | 'GUIDE' | 'ACCOMMODATION_PROVIDER' | 'DRIVER_PARTNER'
+    providerType: 'EXPERIENCE_HOST' as 'EXPERIENCE_HOST' | 'GUIDE' | 'ACCOMMODATION_PROVIDER' | 'LOCAL_HOST'
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -64,13 +64,9 @@ export default function HostSignupPage() {
         localStorage.setItem('userType', 'host');
       }
 
-      // Redirect based on provider type
-      if (host.providerType === 'DRIVER_PARTNER') {
-        router.push('/driver/signup');
-      } else {
-        const dashboardRoute = getProviderDashboard(host.providerType || 'EXPERIENCE_HOST');
-        router.push(dashboardRoute);
-      }
+      // Redirect to dashboard based on provider type
+      const dashboardRoute = getProviderDashboard(host.providerType || 'EXPERIENCE_HOST');
+      router.push(dashboardRoute);
     } catch (err: any) {
       console.error('Signup error:', err);
       const errorMessage = err.response?.data?.message || 
@@ -86,9 +82,9 @@ export default function HostSignupPage() {
   const getProviderTypeLabel = (type: string): string => {
     switch (type) {
       case 'EXPERIENCE_HOST': return 'Host';
+      case 'LOCAL_HOST': return 'Local Host';
       case 'GUIDE': return 'Guide';
       case 'ACCOMMODATION_PROVIDER': return 'Hotel Owner';
-      case 'DRIVER_PARTNER': return 'Driver';
       default: return 'Account';
     }
   };
@@ -309,29 +305,6 @@ export default function HostSignupPage() {
                         <div className="font-bold text-slate-900 mb-2 text-lg">Hotel Owner</div>
                         <div className="text-sm text-slate-600">
                           List and manage your hotel properties
-                        </div>
-                      </div>
-                    </div>
-                  </label>
-                  
-                  <label className={`block p-6 rounded-xl cursor-pointer transition-all border-2 ${
-                    formData.providerType === 'DRIVER_PARTNER' 
-                      ? 'bg-blue-50 border-blue-500 shadow-md' 
-                      : 'bg-white border-slate-200 hover:border-blue-300 hover:shadow-sm'
-                  }`}>
-                    <div className="flex items-start gap-4">
-                      <input
-                        type="radio"
-                        name="providerType"
-                        value="DRIVER_PARTNER"
-                        checked={formData.providerType === 'DRIVER_PARTNER'}
-                        onChange={(e) => setFormData({ ...formData, providerType: e.target.value as 'DRIVER_PARTNER' })}
-                        className="mt-1 w-5 h-5 text-blue-600 focus:ring-blue-500"
-                      />
-                      <div className="flex-1">
-                        <div className="font-bold text-slate-900 mb-2 text-lg">Driver Partner</div>
-                        <div className="text-sm text-slate-600">
-                          Provide chauffeur and transportation services
                         </div>
                       </div>
                     </div>
