@@ -541,7 +541,7 @@ router.post('/host/signup', async (req, res) => {
     }
 
     // Validate providerType
-    const validProviderTypes = ['EXPERIENCE_HOST', 'GUIDE', 'ACCOMMODATION_PROVIDER', 'DRIVER_PARTNER'];
+    const validProviderTypes = ['EXPERIENCE_HOST', 'GUIDE', 'LOCAL_HOST']; // Removed DRIVER_PARTNER, ACCOMMODATION_PROVIDER; Added LOCAL_HOST
     const finalProviderType = providerType || 'EXPERIENCE_HOST'; // Default for backward compatibility
     
     if (!validProviderTypes.includes(finalProviderType)) {
@@ -667,7 +667,7 @@ router.post('/host/signup', async (req, res) => {
     };
 
     // Add role only if defined (for EXPERIENCE_HOST and GUIDE)
-    // Don't set role for ACCOMMODATION_PROVIDER and DRIVER_PARTNER
+    // Don't set role for LOCAL_HOST
     if (finalRole) {
       providerData.role = finalRole;
     }

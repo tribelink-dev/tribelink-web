@@ -38,7 +38,7 @@ const providerSchema = new mongoose.Schema({
   // Unified provider type
   providerType: {
     type: String,
-    enum: ['EXPERIENCE_HOST', 'GUIDE', 'ACCOMMODATION_PROVIDER', 'DRIVER_PARTNER'],
+    enum: ['EXPERIENCE_HOST', 'GUIDE', 'LOCAL_HOST'], // Removed DRIVER_PARTNER, ACCOMMODATION_PROVIDER; Added LOCAL_HOST
     required: true,
     default: 'EXPERIENCE_HOST'
   },

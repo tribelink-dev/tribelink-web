@@ -3,7 +3,7 @@ const Experience = require('../models/Experience');
 const Review = require('../models/Review');
 const Trip = require('../models/Trip');
 const User = require('../models/User');
-const Hotel = require('../models/Hotel');
+// const Hotel = require('../models/Hotel'); // Deprecated - replaced by adobe stays
 const Ticket = require('../models/Ticket');
 const Provider = require('../models/Provider');
 const { scheduleTrip } = require('../services/scheduler');
@@ -1299,86 +1299,13 @@ router.put('/:tripId/guide-pricing-mode', authenticate, requireUser, async (req,
   }
 });
 
-// Update trip hotels and chauffeur options
+// Deprecated: Update trip hotels and chauffeur options - replaced by adobe stays
+// This endpoint is kept for backward compatibility but will be removed in future versions
 router.put('/:tripId/hotels', authenticate, requireUser, async (req, res) => {
-  try {
-    const { hotels, chauffeur, assignedDriverId } = req.body;
-    const trip = await Trip.findById(req.params.tripId);
-    const DriverProvider = require('../models/DriverProvider');
-    const Provider = require('../models/Provider');
-
-    if (!trip) {
-      return res.status(404).json({ message: 'Trip not found' });
-    }
-
-    // Verify trip belongs to user
-    if (trip.user.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Access denied' });
-    }
-
-    // Update hotels for each day
-    trip.schedule.forEach((day, idx) => {
-      if (hotels[idx]) {
-        day.hotel = hotels[idx];
-        day.hotelSelected = true;
-      }
-      if (chauffeur && chauffeur[idx]) {
-        day.chauffeur = true;
-      }
-    });
-
-    // Assign driver if provided and chauffeur is selected
-    if (assignedDriverId && chauffeur && Object.values(chauffeur).some(v => v === true)) {
-      const driver = await Provider.findById(assignedDriverId);
-      if (driver && driver.providerType === 'DRIVER_PARTNER') {
-        const driverProfile = await DriverProvider.findOne({ providerId: assignedDriverId });
-        if (driverProfile) {
-          trip.assignedDriver = assignedDriverId;
-          trip.assignedDriverProfile = driverProfile._id;
-        }
-      }
-    }
-
-    // Recalculate total price
-    let totalPrice = 0;
-    for (const day of trip.schedule) {
-      // Add activity prices
-      day.activities.forEach(activity => {
-        totalPrice += activity.price || 0;
-      });
-      
-      // Add hotel price
-      if (day.hotel && day.hotelSelected) {
-        const hotel = await Hotel.findById(day.hotel);
-        if (hotel) {
-          totalPrice += hotel.pricePerNight;
-        }
-      }
-      
-      // Add chauffeur cost
-      if (day.chauffeur) {
-        totalPrice += 50; // $50 per day for chauffeur
-      }
-    }
-    
-    trip.totalPrice = totalPrice;
-    await trip.save();
-
-    // Get trip without populating activities.experienceId (to preserve activity data)
-    const tripData = await Trip.findById(trip._id)
-      .populate('schedule.hotel')
-      .populate('schedule.guide');
-    
-    // Convert to JSON and ensure activities have the correct structure
-    const tripObj = tripData.toObject();
-    
-    res.json({ 
-      trip: tripObj,
-      totalPrice: trip.totalPrice
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
+  res.status(410).json({ 
+    message: 'This endpoint is deprecated. Please use adobe stays instead.',
+    deprecated: true
+  });
 });
 
 // Fund wallet (must be before /:tripId routes to avoid route conflicts)

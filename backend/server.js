@@ -11,9 +11,9 @@ const userRoutes = require('./routes/users');
 const tripRoutes = require('./routes/trips');
 const hostRoutes = require('./routes/hosts');
 const reviewRoutes = require('./routes/reviews');
-const hotelRoutes = require('./routes/hotels');
+// const hotelRoutes = require('./routes/hotels'); // Deprecated - will be replaced by adobe stays
 const safetyRoutes = require('./routes/safety');
-const driverRoutes = require('./routes/drivers');
+// const driverRoutes = require('./routes/drivers'); // Removed - no longer needed
 const ticketRoutes = require('./routes/tickets');
 
 // Connect to database
@@ -105,9 +105,9 @@ app.use('/api/user', userRoutes);
 app.use('/api/trips', tripRoutes);
 app.use('/api/hosts', hostRoutes);
 app.use('/api/experiences', reviewRoutes);
-app.use('/api/hotels', hotelRoutes);
+// app.use('/api/hotels', hotelRoutes); // Deprecated - will be replaced by adobe stays
 app.use('/api/safety', safetyRoutes);
-app.use('/api/drivers', driverRoutes);
+// app.use('/api/drivers', driverRoutes); // Removed - no longer needed
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/routes', require('./routes/routes'));
 

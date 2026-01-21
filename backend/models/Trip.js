@@ -64,60 +64,25 @@ const tripSchema = new mongoose.Schema({
         name: String
       }
     }],
-    hotel: {
+    // Adobe stay for this day (replaces hotel)
+    adobeStay: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Hotel',
+      ref: 'Provider', // LOCAL_HOST provider
       default: null
     },
-    hotelSelected: {
-      type: Boolean,
-      default: false
-    },
-    chauffeur: {
-      type: Boolean,
-      default: false
-    },
-    chauffeurRequired: {
-      type: Boolean,
-      default: false
-    },
-    assignedDriver: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Provider',
-      default: null
-    },
-    guide: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Host',
-      default: null
-    },
-    guideHours: {
-      calculated: {
-        type: Number,
-        default: 0
+    // Events booked for this day
+    events: [{
+      eventId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Event',
+        required: true
       },
-      adjusted: {
+      ticketCount: {
         type: Number,
-        default: null
-      },
-      final: {
-        type: Number,
-        default: 0
+        default: 1
       }
-    },
-    cab: {
-      type: Boolean,
-      default: false
-    },
-    foodOrders: [{
-      type: String
     }]
   }],
-  guidePricingMode: {
-    type: String,
-    enum: ['daily', 'hourly'],
-    default: 'daily'
-  },
   totalPrice: {
     type: Number,
     required: true,
@@ -127,16 +92,6 @@ const tripSchema = new mongoose.Schema({
     type: String,
     enum: ['Pending', 'Completed', 'Failed'],
     default: 'Pending'
-  },
-  assignedDriver: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Provider',
-    default: null
-  },
-  assignedDriverProfile: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'DriverProvider',
-    default: null
   }
 }, {
   timestamps: true
