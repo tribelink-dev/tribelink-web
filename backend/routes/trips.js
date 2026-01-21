@@ -13,7 +13,8 @@ const { authenticate, requireUser } = require('../middleware/auth');
 const { filterExperiencesAI } = require('../services/aiAgent');
 const { matchUserToCulturalExperiences, getSeasonalCulturalRecommendations } = require('../services/culturalMatchingEngine');
 const { canExperienceBeScheduledForTrip } = require('../services/scheduler/availability/availabilityService');
-const { normalizeExperiences, normalizeExperience, normalizeHotels, normalizeHotel, getBaseUrlFromRequest } = require('../utils/imageUtils');
+const { normalizeExperiences, normalizeExperience, getBaseUrlFromRequest } = require('../utils/imageUtils');
+// normalizeHotels, normalizeHotel removed - hotels deprecated, replaced by adobe stays
 
 const router = express.Router();
 
@@ -823,8 +824,8 @@ router.post('/plan/automatic', authenticate, requireUser, async (req, res) => {
 // Create trip schedule
 router.post('/schedule', authenticate, requireUser, async (req, res) => {
   // Declare variables in outer scope for error handling
-  let fromDate, toDate, country, state, district, locations, guideId, guidePricingMode;
-  let tripLocations, user, experienceIds, finalGuideId;
+  let fromDate, toDate, country, state, district, locations;
+  let tripLocations, user, experienceIds;
   
   try {
     ({
@@ -833,9 +834,8 @@ router.post('/schedule', authenticate, requireUser, async (req, res) => {
       country,
       state,
       district,
-      locations, // Array of {state, district} for multi-city trips
-      guideId,
-      guidePricingMode = 'daily'
+      locations // Array of {state, district} for multi-city trips
+      // guideId, guidePricingMode removed - guides simplified/merged into hosts
     } = req.body);
 
     if (!fromDate || !toDate || !country) {
@@ -886,20 +886,7 @@ router.post('/schedule', authenticate, requireUser, async (req, res) => {
       experienceIds: experienceIds.slice(0, 5) // Log first 5 for debugging
     });
 
-    // Intelligent guide matching - if no guide specified, find best match
-    finalGuideId = guideId;
-    if (!finalGuideId) {
-      const { selectBestGuide } = require('../services/guideMatching');
-      try {
-        finalGuideId = await selectBestGuide(experienceIds, tripLocations, fromDate, toDate);
-        if (finalGuideId) {
-          console.log(`🤖 Auto-selected best matching guide for trip`);
-        }
-      } catch (error) {
-        console.error('Error in intelligent guide matching:', error);
-        // Continue without guide if matching fails
-      }
-    }
+    // Guide matching removed - guides simplified/merged into hosts
 
     // Schedule trip using AI-powered scheduler (Gumo.ai-like)
     let scheduleResult;
@@ -983,7 +970,8 @@ router.post('/schedule', authenticate, requireUser, async (req, res) => {
       });
     }
     
-    const { schedule, totalPrice, selectedExperiencesCount, availableHotels, mapData } = scheduleResult;
+    const { schedule, totalPrice, selectedExperiencesCount, mapData } = scheduleResult;
+    // availableHotels removed - hotels deprecated, replaced by adobe stays
     
     // Validate schedule array
     if (!schedule || !Array.isArray(schedule) || schedule.length === 0) {
@@ -995,11 +983,8 @@ router.post('/schedule', authenticate, requireUser, async (req, res) => {
       });
     }
 
-    // Normalize image URLs in schedule and availableHotels before saving
+    // Normalize image URLs in schedule before saving
     const baseUrl = getBaseUrlFromRequest(req);
-    
-    // Normalize availableHotels images
-    const normalizedAvailableHotels = normalizeHotels(availableHotels || [], baseUrl);
     
     // Normalize experience images in schedule activities
     const normalizedSchedule = schedule.map(day => {
@@ -1011,10 +996,7 @@ router.post('/schedule', authenticate, requireUser, async (req, res) => {
           return activity;
         });
       }
-      // Normalize hotel images if hotel is populated
-      if (day.hotel && typeof day.hotel === 'object' && day.hotel.images) {
-        day.hotel = normalizeHotel(day.hotel, baseUrl);
-      }
+      // Hotel normalization removed - hotels deprecated, replaced by adobe stays
       return day;
     });
 
@@ -1040,7 +1022,7 @@ router.post('/schedule', authenticate, requireUser, async (req, res) => {
       preferences: user.preferences,
       schedule: normalizedSchedule,
       totalPrice,
-      guidePricingMode
+      // guidePricingMode removed - guides simplified/merged into hosts
     });
 
     await trip.save();
@@ -1073,7 +1055,6 @@ router.post('/schedule', authenticate, requireUser, async (req, res) => {
       schedule: normalizedSchedule,
       totalPrice,
       selectedExperiencesCount,
-      availableHotels: normalizedAvailableHotels,
       mapData: mapData || null,
       aiInsights: scheduleResult.aiInsights || [],
       optimizationScore: scheduleResult.optimizationScore || null,
@@ -1219,84 +1200,12 @@ router.put('/:tripId/schedule/:dayIndex/guide-hours', authenticate, requireUser,
   }
 });
 
-// Switch guide pricing mode (daily/hourly)
+// Deprecated: Switch guide pricing mode - guides simplified/merged into hosts
 router.put('/:tripId/guide-pricing-mode', authenticate, requireUser, async (req, res) => {
-  try {
-    const { tripId } = req.params;
-    const { guidePricingMode } = req.body;
-
-    if (!guidePricingMode || !['daily', 'hourly'].includes(guidePricingMode)) {
-      return res.status(400).json({ message: 'guidePricingMode must be "daily" or "hourly"' });
-    }
-
-    const trip = await Trip.findById(tripId);
-
-    if (!trip) {
-      return res.status(404).json({ message: 'Trip not found' });
-    }
-
-    // Verify trip belongs to user
-    if (trip.user.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Access denied' });
-    }
-
-    // Update pricing mode
-    trip.guidePricingMode = guidePricingMode;
-
-    // Recalculate all guide costs
-    const { calculateTotalPrice, calculateGuideHours, getGuideHourlyRate } = require('../services/scheduler/core/scheduler');
-    const Host = require('../models/Host');
-
-    // Recalculate guide hours for all days if switching to hourly
-    if (guidePricingMode === 'hourly') {
-      for (const day of trip.schedule) {
-        if (day.guide) {
-          // Calculate hours if not already calculated
-          if (!day.guideHours || day.guideHours.calculated === 0) {
-            const calculatedHours = calculateGuideHours(day);
-            if (!day.guideHours) {
-              day.guideHours = {
-                calculated: calculatedHours,
-                adjusted: null,
-                final: calculatedHours
-              };
-            } else {
-              day.guideHours.calculated = calculatedHours;
-              day.guideHours.final = day.guideHours.adjusted || calculatedHours;
-            }
-          }
-        }
-      }
-    }
-
-    // Get guide for price calculation
-    let guide = null;
-    const firstDayWithGuide = trip.schedule.find(day => day.guide);
-    if (firstDayWithGuide && firstDayWithGuide.guide) {
-      guide = await Host.findById(firstDayWithGuide.guide);
-    }
-
-    // Recalculate total price
-    const totalPrice = calculateTotalPrice(
-      trip.schedule,
-      [], // Hotels not needed for recalculation
-      guide,
-      trip.preferences || {},
-      guidePricingMode
-    );
-
-    trip.totalPrice = totalPrice;
-    await trip.save();
-
-    res.json({
-      message: 'Guide pricing mode updated successfully',
-      guidePricingMode: trip.guidePricingMode,
-      totalPrice: trip.totalPrice
-    });
-  } catch (error) {
-    console.error('Error updating guide pricing mode:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
+  res.status(410).json({ 
+    message: 'This endpoint is deprecated. Guides are now simplified/merged into hosts.',
+    deprecated: true
+  });
 });
 
 // Deprecated: Update trip hotels and chauffeur options - replaced by adobe stays
@@ -1655,30 +1564,22 @@ router.put('/:tripId/clear-activities', authenticate, requireUser, async (req, r
       day.activities = [];
     });
 
-    // Recalculate total price (only hotels and chauffeur costs remain)
+    // Recalculate total price (hotels and chauffeur removed - replaced by adobe stays)
     let totalPrice = 0;
     for (const day of trip.schedule) {
-      // Add hotel price
-      if (day.hotel && day.hotelSelected) {
-        const hotel = await Hotel.findById(day.hotel);
-        if (hotel) {
-          totalPrice += hotel.pricePerNight;
-        }
-      }
-      
-      // Add chauffeur cost
-      if (day.chauffeur) {
-        totalPrice += 50; // $50 per day for chauffeur
-      }
+      // Activity prices already included in trip.totalPrice
+      // Hotel and chauffeur costs removed - replaced by adobe stays
     }
+    // Use existing trip.totalPrice as it should already include all costs
+    totalPrice = trip.totalPrice;
     
     trip.totalPrice = totalPrice;
     await trip.save();
 
     // Get updated trip
-    const tripData = await Trip.findById(trip._id)
-      .populate('schedule.hotel')
-      .populate('schedule.guide');
+    const tripData = await Trip.findById(trip._id);
+      // .populate('schedule.hotel') // Removed - hotels deprecated
+      // .populate('schedule.guide') // Removed - guides simplified
     
     const tripObj = tripData.toObject();
     
@@ -1766,8 +1667,8 @@ router.delete('/:tripId', authenticate, requireUser, async (req, res) => {
 router.get('/:tripId', authenticate, requireUser, async (req, res) => {
   try {
     const trip = await Trip.findById(req.params.tripId)
-      .populate('schedule.hotel')
-      .populate('schedule.guide')
+      // .populate('schedule.hotel') // Removed - hotels deprecated
+      // .populate('schedule.guide') // Removed - guides simplified
       .populate({
         path: 'schedule.activities.experienceId',
         select: 'title description price imageUrl contentUrl duration location provider culturalMetadata tags averageRating reviewCount',
@@ -1801,18 +1702,12 @@ router.get('/:tripId', authenticate, requireUser, async (req, res) => {
             return activity;
           });
         }
-        // Normalize hotel images
-        if (day.hotel && day.hotel.images) {
-          day.hotel = normalizeHotel(day.hotel, baseUrl);
-        }
+        // Hotel normalization removed - hotels deprecated
         return day;
       });
     }
     
-    // Normalize availableHotels if present
-    if (tripObj.availableHotels && Array.isArray(tripObj.availableHotels)) {
-      tripObj.availableHotels = normalizeHotels(tripObj.availableHotels, baseUrl);
-    }
+    // availableHotels normalization removed - hotels deprecated
 
     res.json({ trip: tripObj });
   } catch (error) {
