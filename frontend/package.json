@@ -11,7 +11,7 @@
   "dependencies": {
     "@types/leaflet": "^1.9.8",
     "@types/mapbox-gl": "^3.4.1",
-    "@types/react-datepicker": "^6.2.0",
+    // "@types/react-datepicker": "^6.2.0", // Removed - using react-day-picker instead
     "axios": "^1.7.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -22,7 +22,7 @@
     "mapbox-gl": "^3.17.0",
     "next": "^16.1.1",
     "react": "^19.2.3",
-    "react-datepicker": "^8.8.0",
+    // "react-datepicker": "^8.8.0", // Removed - using react-day-picker instead
     "react-day-picker": "^9.11.1",
     "react-dom": "^19.2.3",
     "react-leaflet": "^4.2.1",
