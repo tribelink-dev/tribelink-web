@@ -1,0 +1,358 @@
+/**
+ * Unified Booking Routes
+ * Handles bookings for adobe stays, experiences, and events
+ */
+
+const express = require('express');
+const Booking = require('../models/Booking');
+const LocalHost = require('../models/LocalHost');
+const Experience = require('../models/Experience');
+const Event = require('../models/Event');
+const Trip = require('../models/Trip');
+const { authenticate, requireUser } = require('../middleware/auth');
+
+const router = express.Router();
+
+// Get user's bookings
+router.get('/', authenticate, requireUser, async (req, res) => {
+  try {
+    const { bookingType, status, page = 1, limit = 20 } = req.query;
+    
+    const query = { user: req.user._id };
+    if (bookingType) query.bookingType = bookingType;
+    if (status) query.status = status;
+
+    const skip = (Number(page) - 1) * Number(limit);
+    const bookings = await Booking.find(query)
+      .populate('adobeStay.localHost')
+      .populate('experience.experienceId')
+      .populate('event.eventId')
+      .populate('trip')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit));
+
+    const total = await Booking.countDocuments(query);
+
+    res.json({
+      success: true,
+      bookings,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / Number(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching bookings:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get booking details
+router.get('/:id', authenticate, requireUser, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id)
+      .populate('adobeStay.localHost')
+      .populate('experience.experienceId')
+      .populate('event.eventId')
+      .populate('trip')
+      .populate('user', 'name email phoneNumber');
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    // Verify ownership
+    if (booking.user._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    res.json({
+      success: true,
+      booking
+    });
+  } catch (error) {
+    console.error('Error fetching booking:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Book adobe stay
+router.post('/adobe-stay', authenticate, requireUser, async (req, res) => {
+  try {
+    const {
+      localHostId,
+      checkIn,
+      checkOut,
+      numberOfGuests,
+      specialRequests,
+      tripId
+    } = req.body;
+
+    // Validate input
+    if (!localHostId || !checkIn || !checkOut) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const localHost = await LocalHost.findById(localHostId);
+    if (!localHost) {
+      return res.status(404).json({ message: 'Local host not found' });
+    }
+
+    // Check availability
+    const checkInDate = new Date(checkIn);
+    const checkOutDate = new Date(checkOut);
+    const nights = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+
+    if (nights <= 0) {
+      return res.status(400).json({ message: 'Invalid date range' });
+    }
+
+    // Check availability for each night
+    let currentDate = new Date(checkInDate);
+    while (currentDate < checkOutDate) {
+      if (!localHost.isAvailableOnDate(currentDate)) {
+        return res.status(400).json({ 
+          message: `Not available on ${currentDate.toISOString().split('T')[0]}` 
+        });
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Calculate price
+    let totalPrice = localHost.pricing.pricePerNight * nights;
+    
+    // Apply discounts
+    if (nights >= 30 && localHost.pricing.monthlyDiscount > 0) {
+      totalPrice *= (1 - localHost.pricing.monthlyDiscount / 100);
+    } else if (nights >= 7 && localHost.pricing.weeklyDiscount > 0) {
+      totalPrice *= (1 - localHost.pricing.weeklyDiscount / 100);
+    }
+
+    // Create booking
+    const booking = new Booking({
+      user: req.user._id,
+      bookingType: 'ADOBE_STAY',
+      adobeStay: {
+        localHost: localHostId,
+        checkIn: checkInDate,
+        checkOut: checkOutDate,
+        numberOfGuests: numberOfGuests || 1,
+        specialRequests
+      },
+      totalPrice: Math.round(totalPrice * 100) / 100,
+      currency: localHost.pricing.currency,
+      trip: tripId || null,
+      status: 'Pending',
+      paymentStatus: 'Pending'
+    });
+
+    await booking.save();
+
+    // Update availability
+    currentDate = new Date(checkInDate);
+    while (currentDate < checkOutDate) {
+      const dateStr = currentDate.toISOString().split('T')[0];
+      let availability = localHost.availability.find(avail => {
+        const availDateStr = new Date(avail.date).toISOString().split('T')[0];
+        return availDateStr === dateStr;
+      });
+
+      if (!availability) {
+        availability = {
+          date: new Date(currentDate),
+          available: true,
+          bookedSlots: 0
+        };
+        localHost.availability.push(availability);
+      }
+
+      availability.bookedSlots += (numberOfGuests || 1);
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    await localHost.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Adobe stay booked successfully',
+      booking
+    });
+  } catch (error) {
+    console.error('Error booking adobe stay:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Book experience
+router.post('/experience', authenticate, requireUser, async (req, res) => {
+  try {
+    const {
+      experienceId,
+      date,
+      startTime,
+      numberOfParticipants,
+      specialRequests,
+      tripId
+    } = req.body;
+
+    if (!experienceId || !date || !startTime) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const experience = await Experience.findById(experienceId)
+      .populate('provider');
+
+    if (!experience) {
+      return res.status(404).json({ message: 'Experience not found' });
+    }
+
+    // Check availability (simplified - can be enhanced)
+    const experienceDate = new Date(date);
+    const isAvailable = experience.availableDates.some(avail => {
+      const availDate = new Date(avail.date);
+      return availDate.toISOString().split('T')[0] === experienceDate.toISOString().split('T')[0] 
+        && avail.available === true;
+    });
+
+    if (!isAvailable) {
+      return res.status(400).json({ message: 'Experience not available on selected date' });
+    }
+
+    // Calculate price
+    const totalPrice = experience.price * (numberOfParticipants || 1);
+
+    // Create booking
+    const booking = new Booking({
+      user: req.user._id,
+      bookingType: 'EXPERIENCE',
+      experience: {
+        experienceId,
+        date: experienceDate,
+        startTime,
+        numberOfParticipants: numberOfParticipants || 1,
+        specialRequests
+      },
+      totalPrice,
+      currency: 'USD', // Default, can be enhanced
+      trip: tripId || null,
+      status: 'Pending',
+      paymentStatus: 'Pending'
+    });
+
+    await booking.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Experience booked successfully',
+      booking
+    });
+  } catch (error) {
+    console.error('Error booking experience:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Book event tickets
+router.post('/event', authenticate, requireUser, async (req, res) => {
+  try {
+    const {
+      eventId,
+      ticketCount,
+      ticketTier,
+      seatNumbers,
+      tripId
+    } = req.body;
+
+    if (!eventId || !ticketCount) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const event = await Event.findById(eventId);
+
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+
+    // Check ticket availability
+    if (!event.hasAvailableTickets(ticketCount, ticketTier)) {
+      return res.status(400).json({ message: 'Not enough tickets available' });
+    }
+
+    // Calculate price
+    let ticketPrice = event.ticketPrice;
+    if (ticketTier) {
+      const tier = event.ticketTiers.find(t => t.name === ticketTier);
+      if (tier) {
+        ticketPrice = tier.price;
+      }
+    }
+
+    const totalPrice = ticketPrice * ticketCount;
+
+    // Create booking
+    const booking = new Booking({
+      user: req.user._id,
+      bookingType: 'EVENT',
+      event: {
+        eventId,
+        ticketCount,
+        ticketTier: ticketTier || null,
+        seatNumbers: seatNumbers || []
+      },
+      totalPrice,
+      currency: event.currency,
+      trip: tripId || null,
+      status: 'Pending',
+      paymentStatus: 'Pending'
+    });
+
+    await booking.save();
+
+    // Update event ticket availability
+    await event.bookTickets(ticketCount, ticketTier);
+
+    res.status(201).json({
+      success: true,
+      message: 'Event tickets booked successfully',
+      booking
+    });
+  } catch (error) {
+    console.error('Error booking event:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Cancel booking
+router.put('/:id/cancel', authenticate, requireUser, async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const booking = await Booking.findById(req.params.id);
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    // Verify ownership
+    if (booking.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Cancel booking
+    await booking.cancel(reason);
+
+    res.json({
+      success: true,
+      message: 'Booking cancelled successfully',
+      booking
+    });
+  } catch (error) {
+    console.error('Error cancelling booking:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+module.exports = router;
+

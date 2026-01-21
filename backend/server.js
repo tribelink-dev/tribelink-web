@@ -106,6 +106,9 @@ app.use('/api/trips', tripRoutes);
 app.use('/api/hosts', hostRoutes);
 app.use('/api/experiences', reviewRoutes);
 // app.use('/api/hotels', hotelRoutes); // Deprecated - will be replaced by adobe stays
+app.use('/api/adobes', require('./routes/adobes')); // Local hosts (adobe stays)
+app.use('/api/events', require('./routes/events')); // Events/concerts
+app.use('/api/bookings', require('./routes/bookings')); // Unified bookings
 app.use('/api/safety', safetyRoutes);
 // app.use('/api/drivers', driverRoutes); // Removed - no longer needed
 app.use('/api/tickets', ticketRoutes);
