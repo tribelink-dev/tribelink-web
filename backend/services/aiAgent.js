@@ -1,7 +1,7 @@
 const axios = require('axios');
 const Experience = require('../models/Experience');
 const Hotel = require('../models/Hotel');
-const DriverProvider = require('../models/DriverProvider');
+// const DriverProvider = require('../models/DriverProvider'); // Removed - drivers no longer supported
 const Trip = require('../models/Trip');
 const User = require('../models/User');
 const mongoose = require('mongoose');
@@ -32,7 +32,7 @@ async function buildUserProfile(userId) {
   const pastTrips = await Trip.find({ user: userId, paymentStatus: 'Completed' })
     .populate('schedule.activities.experienceId')
     .populate('schedule.hotel')
-    .populate('assignedDriverProfile')
+    // .populate('assignedDriverProfile') // Removed - drivers no longer supported
     .sort({ createdAt: -1 })
     .limit(10);
 
@@ -48,7 +48,7 @@ async function buildUserProfile(userId) {
       totalTrips: pastTrips.length,
       experiencesBooked: bookingAnalysis.experiences,
       hotelsBooked: bookingAnalysis.hotels,
-      driversBooked: bookingAnalysis.drivers,
+      // driversBooked: bookingAnalysis.drivers, // Removed - drivers no longer supported
       averageSpending: bookingAnalysis.averageSpending,
       preferredRegions: bookingAnalysis.preferredRegions,
       culturalInterests: bookingAnalysis.culturalInterests,
@@ -70,8 +70,8 @@ function analyzeBookingHistory(trips) {
   const analysis = {
     experiences: [],
     hotels: [],
-    drivers: [],
-    averageSpending: { experiences: 0, hotels: 0, drivers: 0 },
+    // drivers: [], // Removed - drivers no longer supported
+    averageSpending: { experiences: 0, hotels: 0 }, // drivers removed
     preferredRegions: {},
     culturalInterests: {},
     budgetPattern: { min: Infinity, max: 0, average: 0 },
@@ -79,8 +79,8 @@ function analyzeBookingHistory(trips) {
     transportationPattern: {}
   };
 
-  let totalExpSpend = 0, totalHotelSpend = 0, totalDriverSpend = 0;
-  let expCount = 0, hotelCount = 0, driverCount = 0;
+  let totalExpSpend = 0, totalHotelSpend = 0; // totalDriverSpend removed
+  let expCount = 0, hotelCount = 0; // driverCount removed
 
   trips.forEach(trip => {
     // Analyze experiences
@@ -132,19 +132,7 @@ function analyzeBookingHistory(trips) {
       }
     });
 
-    // Analyze drivers
-    if (trip.assignedDriverProfile && trip.assignedDriverProfile._id) {
-      const driver = trip.assignedDriverProfile;
-      analysis.drivers.push({
-        id: driver._id.toString(),
-        vehicleType: driver.vehicleType,
-        pricing: driver.pricing,
-        rating: driver.rating || 0
-      });
-      
-      totalDriverSpend += driver.pricing.perDay || 0;
-      driverCount++;
-    }
+    // Driver analysis removed - drivers no longer supported
 
     // Track preferred regions
     const regionKey = `${trip.state}-${trip.district}`;
@@ -154,12 +142,12 @@ function analyzeBookingHistory(trips) {
   // Calculate averages
   analysis.averageSpending.experiences = expCount > 0 ? totalExpSpend / expCount : 0;
   analysis.averageSpending.hotels = hotelCount > 0 ? totalHotelSpend / hotelCount : 0;
-  analysis.averageSpending.drivers = driverCount > 0 ? totalDriverSpend / driverCount : 0;
+  // analysis.averageSpending.drivers removed
 
   // Calculate budget pattern
   const allPrices = analysis.experiences.map(e => e.price)
-    .concat(analysis.hotels.map(h => h.pricePerNight))
-    .concat(analysis.drivers.map(d => d.pricing.perDay || 0));
+    .concat(analysis.hotels.map(h => h.pricePerNight));
+    // .concat(analysis.drivers.map(d => d.pricing.perDay || 0)); // Removed
   
   if (allPrices.length > 0) {
     analysis.budgetPattern.min = Math.min(...allPrices);
@@ -601,127 +589,20 @@ async function filterHotelsRuleBased(userId, hotels, userProfile) {
 
 /**
  * Pathfinder - Chauffeur/Driver Filtering
- * Filters drivers to top 2-3 matches based on user profile
+ * DEPRECATED: Drivers no longer supported - function kept for backward compatibility
  */
 async function filterDriversAI(userId, drivers, context = {}) {
-  if (!USE_AI || drivers.length === 0) {
-    return drivers.slice(0, 3);
-  }
-
-  try {
-    const userProfile = await buildUserProfile(userId);
-
-    const prompt = `You are Pathfinder, Tribelink's intelligent travel curator. Filter ${drivers.length} drivers/chauffeurs to TOP 2-3 BEST matches for this traveler.
-
-TRAVELER PROFILE:
-- Average Driver Spending: $${userProfile.bookingHistory.averageSpending.drivers.toFixed(2)}/day
-- Preferred Vehicle Types: ${userProfile.bookingHistory.transportationPattern.preferredVehicleTypes?.join(', ') || 'Any'}
-- Transport Preference: ${userProfile.kytPreferences.transport || 'unknown'}
-- Comfort Level: ${userProfile.personalizationProfile?.transportationPreferences?.comfortLevel || 5}/10
-
-AVAILABLE DRIVERS (${drivers.length}):
-${drivers.map((driver, idx) => `
-${idx + 1}. Vehicle: ${driver.vehicleType}
-   - Price/Day: $${driver.pricing.perDay}
-   - Rating: ${driver.rating || 0}/5
-   - Experience: ${driver.yearsOfExperience || 0} years
-   - Languages: ${(driver.languages || []).join(', ') || 'Not specified'}
-   - Verified: ${driver.isVerified ? 'Yes' : 'No'}
-`).join('')}
-
-Select TOP 2-3 based on:
-1. Budget compatibility
-2. Vehicle type preference
-3. Rating and experience
-4. Verification status
-
-Return JSON:
-{
-  "selectedDrivers": [
-    {
-      "index": 1,
-      "matchScore": 0.95,
-      "reasons": ["reason1", "reason2"]
-    }
-  ]
-}`;
-
-    const response = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
-      {
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: 'You are Pathfinder, Tribelink\'s intelligent travel curator specializing in driver recommendations. Return valid JSON only.' },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.3,
-        max_tokens: 1500
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${OPENAI_API_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    const content = response.data.choices[0].message.content.trim();
-    const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/) || content.match(/\{[\s\S]*\}/);
-    const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : content;
-    const aiResult = JSON.parse(jsonStr);
-
-    return aiResult.selectedDrivers
-      .map(selection => {
-        const idx = selection.index - 1;
-        if (idx >= 0 && idx < drivers.length) {
-          return {
-            ...drivers[idx],
-            matchScore: selection.matchScore,
-            aiReasons: selection.reasons
-          };
-        }
-        return null;
-      })
-      .filter(Boolean)
-      .slice(0, 3);
-  } catch (error) {
-    console.error('AI driver filtering error:', error.message);
-    return filterDriversRuleBased(userId, drivers, await buildUserProfile(userId));
-  }
+  // Drivers no longer supported - return empty array
+  return [];
 }
 
 /**
  * Rule-based driver filtering fallback
+ * DEPRECATED: Drivers no longer supported
  */
 async function filterDriversRuleBased(userId, drivers, userProfile) {
-  const avgSpend = userProfile.bookingHistory.averageSpending.drivers || 50;
-  const transportPref = userProfile.kytPreferences.transport || 'native';
-
-  const scored = drivers.map(driver => {
-    let score = 0;
-
-    // Budget match (40 points)
-    const priceDiff = Math.abs(driver.pricing.perDay - avgSpend) / avgSpend;
-    if (priceDiff <= 0.3) score += 40;
-    else if (priceDiff <= 0.5) score += 30;
-    else score += 20;
-
-    // Vehicle type match (30 points)
-    if (transportPref === 'luxury' && driver.vehicleType === 'Luxury') score += 30;
-    else if (transportPref === 'native' && ['Sedan', 'SUV'].includes(driver.vehicleType)) score += 30;
-    else score += 15;
-
-    // Rating (20 points)
-    score += (driver.rating || 0) * 4;
-
-    // Verification (10 points)
-    if (driver.isVerified) score += 10;
-
-    return { driver, score };
-  });
-
-  scored.sort((a, b) => b.score - a.score);
-  return scored.slice(0, 3).map(item => item.driver);
+  // Drivers no longer supported - return empty array
+  return [];
 }
 
 /**

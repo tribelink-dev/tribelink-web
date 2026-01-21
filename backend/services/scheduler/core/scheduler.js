@@ -339,14 +339,7 @@ function calculateTotalPrice(schedule, hotels, guide, preferences, guidePricingM
     totalPrice += 30 * schedule.length; // $30 per day for cabs
   }
 
-  // Add chauffeur costs (for days with assigned drivers)
-  // Note: This is a synchronous calculation. If driver pricing is needed, it should be passed in.
-  // For now, use default $50 per day for days with chauffeur
-  schedule.forEach((day) => {
-    if (day.chauffeur && day.assignedDriver) {
-      totalPrice += 50; // Default $50 per day (can be enhanced to fetch actual pricing)
-    }
-  });
+  // Chauffeur costs removed - drivers no longer supported
 
   return Math.round(totalPrice * 100) / 100;
 }
