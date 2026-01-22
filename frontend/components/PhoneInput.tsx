@@ -106,13 +106,26 @@ export default function PhoneInput({
     }
   }, [value, isInitialized]);
 
+  // Use ref to store the latest onChange callback to avoid dependency issues
+  const onChangeRef = useRef(onChange);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  // Track previous value to prevent unnecessary updates
+  const prevFullNumberRef = useRef<string>('');
+
   // Update parent when phone number or country changes (but not on initial mount)
   useEffect(() => {
     if (isInitialized) {
       const fullNumber = selectedCountry.dialCode + phoneNumber;
-      onChange(fullNumber);
+      // Only call onChange if the value actually changed from the previous value
+      if (fullNumber !== prevFullNumberRef.current) {
+        prevFullNumberRef.current = fullNumber;
+        onChangeRef.current(fullNumber);
+      }
     }
-  }, [selectedCountry, phoneNumber, isInitialized, onChange]);
+  }, [selectedCountry, phoneNumber, isInitialized]);
 
   // Close dropdown when clicking outside
   useEffect(() => {

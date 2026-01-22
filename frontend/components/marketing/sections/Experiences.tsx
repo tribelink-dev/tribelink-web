@@ -33,7 +33,7 @@ const ExperienceCard = ({
     const opacity = useTransform(scrollYProgress, [0, 0.3, 0.7, 1], [0, 1, 1, 0]);
 
     return (
-        <Link href="/login">
+        <Link href="/explore">
             <motion.div
                 ref={cardRef}
                 style={{ y, opacity }}

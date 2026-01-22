@@ -83,7 +83,7 @@ export default function GoogleAuthComplete() {
 
       // Redirect based on provider type
       if (type === 'user') {
-        router.push('/dashboard');
+        router.push('/explore');
       } else {
         const dashboardRoute = getProviderDashboard(host?.providerType || 'EXPERIENCE_HOST');
         router.push(dashboardRoute);

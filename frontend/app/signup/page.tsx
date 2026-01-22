@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/lib/auth';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import api from '@/lib/api';
@@ -28,6 +28,7 @@ export default function SignupPage(): JSX.Element {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { signup } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -189,7 +190,10 @@ export default function SignupPage(): JSX.Element {
     try {
       // PhoneInput component already formats with country code
       await signup(email.trim(), phoneNumber, password, name);
-      router.push('/');
+      
+      // Check for redirect parameter, default to /explore
+      const redirect = searchParams.get('redirect') || '/explore';
+      router.push(redirect);
     } catch (err: any) {
       setError(err.message || 'Signup failed');
     } finally {

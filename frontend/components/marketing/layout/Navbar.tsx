@@ -107,7 +107,7 @@ const Navbar = () => {
                                 </motion.div>
                             </Link>
                         ) : (
-                            <Link href="/login">
+                            <Link href="/explore">
                                 <motion.div
                                     className="bg-terracotta text-white px-6 py-2 rounded-full font-medium hover:bg-terracotta/90 transition-all relative overflow-hidden group shadow-lg"
                                     whileHover={{ scale: 1.05 }}
@@ -202,7 +202,7 @@ const Navbar = () => {
                                             </motion.div>
                                         </Link>
                                     ) : (
-                                        <Link href="/login">
+                                        <Link href="/explore">
                                             <motion.div
                                                 className="bg-terracotta text-white text-center py-3 rounded-lg font-medium mt-4 shadow-lg"
                                                 onClick={() => setIsMobileMenuOpen(false)}

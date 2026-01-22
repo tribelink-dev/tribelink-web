@@ -342,3 +342,4 @@ router.get('/:id/bookings', authenticate, requireHost, async (req, res) => {
 
 module.exports = router;
 
+

@@ -276,3 +276,4 @@ localHostSchema.virtual('mainImage').get(function() {
 
 module.exports = mongoose.model('LocalHost', localHostSchema);
 
+

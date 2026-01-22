@@ -29,19 +29,37 @@ const allowedOrigins = [
   'http://172.16.68.100:3000',
   process.env.FRONTEND_URL,
   'https://tribelink-app.vercel.app', // Explicitly allow Vercel frontend
-  'https://*.vercel.app', // Allow all Vercel preview deployments
   // Allow Render frontend deployments
   process.env.FRONTEND_RENDER_URL,
-  'https://*.onrender.com' // Allow all Render deployments
 ].filter(Boolean);
+
+// Determine if we're in development mode
+const isDevelopment = process.env.NODE_ENV !== 'production';
 
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    // In production, check allowed origins
-    if (process.env.NODE_ENV === 'production') {
+    // In development, always allow localhost and common development origins
+    if (isDevelopment) {
+      // Allow localhost, 127.0.0.1, and common development IPs
+      if (
+        origin.startsWith('http://localhost:') ||
+        origin.startsWith('http://127.0.0.1:') ||
+        origin.startsWith('http://172.16.') ||
+        origin.startsWith('http://192.168.') ||
+        origin.startsWith('http://10.') ||
+        allowedOrigins.indexOf(origin) !== -1
+      ) {
+        return callback(null, true);
+      }
+      // In development, allow all origins for easier debugging
+      console.log('[CORS] Allowing origin in development:', origin);
+      return callback(null, true);
+    }
+    
+    // Production: check allowed origins
       // Check exact match first
       if (allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
@@ -61,19 +79,16 @@ app.use(cors({
       }
       
       // Log blocked origin for debugging
-      console.log('CORS blocked origin:', origin);
-      console.log('Allowed origins:', allowedOrigins);
-      console.log('FRONTEND_URL env:', process.env.FRONTEND_URL);
-      console.log('FRONTEND_RENDER_URL env:', process.env.FRONTEND_RENDER_URL);
+    console.log('[CORS] Blocked origin:', origin);
+    console.log('[CORS] Allowed origins:', allowedOrigins);
+    console.log('[CORS] NODE_ENV:', process.env.NODE_ENV);
+    console.log('[CORS] FRONTEND_URL env:', process.env.FRONTEND_URL);
       callback(new Error('Not allowed by CORS'));
-    } else {
-      // Development: allow all origins
-      callback(null, true);
-    }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range']
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

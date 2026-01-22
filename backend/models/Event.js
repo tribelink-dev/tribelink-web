@@ -299,3 +299,4 @@ eventSchema.virtual('mainImage').get(function() {
 
 module.exports = mongoose.model('Event', eventSchema);
 
+

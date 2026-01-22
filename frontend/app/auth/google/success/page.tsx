@@ -29,14 +29,14 @@ export default function GoogleAuthSuccess() {
             localStorage.setItem('user', JSON.stringify(response.data.user));
             setLoading(false);
             setTimeout(() => {
-              router.push('/dashboard');
+              router.push('/explore');
             }, 1500);
           }).catch(err => {
             // Store basic info if API call fails
             localStorage.setItem('user', JSON.stringify({ email, name }));
             setLoading(false);
             setTimeout(() => {
-              router.push('/dashboard');
+              router.push('/explore');
             }, 1500);
           });
         } else if (type === 'host') {

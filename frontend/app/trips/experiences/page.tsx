@@ -279,6 +279,12 @@ export default function ExperiencesPage() {
   };
 
   const toggleBucketlist = async (experienceId: string) => {
+    if (!user) {
+      const currentPath = window.location.pathname + window.location.search;
+      router.push(`/login?redirect=${encodeURIComponent(currentPath)}`);
+      return;
+    }
+
     try {
       setError('');
       const experienceIdStr = experienceId.toString();
@@ -300,6 +306,12 @@ export default function ExperiencesPage() {
       }
     } catch (err: any) {
       console.error('Bucketlist error:', err);
+      // If error is due to authentication, redirect to login
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        const currentPath = window.location.pathname + window.location.search;
+        router.push(`/login?redirect=${encodeURIComponent(currentPath)}`);
+        return;
+      }
       const errorMessage = err.response?.data?.message || 'Failed to update bucketlist';
       setError(errorMessage);
       fetchBucketlist();

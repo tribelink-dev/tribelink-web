@@ -183,7 +183,7 @@ const Hero = () => {
                     className="flex flex-col md:flex-row gap-4 justify-center items-center"
                 >
                     <Button 
-                        href="/login" 
+                        href="/explore" 
                         variant="primary" 
                         size="lg"
                     >

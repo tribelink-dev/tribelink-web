@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/lib/auth';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import PhoneInput from '@/components/PhoneInput';
@@ -18,6 +18,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,7 +49,10 @@ export default function LoginPage() {
       const loginValue = loginMethod === 'email' ? email : phoneNumber;
       
       await login(loginValue, password, loginMethod === 'email');
-      router.push('/');
+      
+      // Check for redirect parameter, default to /explore
+      const redirect = searchParams.get('redirect') || '/explore';
+      router.push(redirect);
     } catch (err: any) {
       console.error('Login error:', err);
       const errorMessage = err.message || 'Login failed. Please check your credentials.';

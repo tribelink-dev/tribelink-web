@@ -149,7 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // The useEffect will fetch fresh data with tokens in the background
       await new Promise(resolve => setTimeout(resolve, 50));
       
-      router.push('/');
+      // Redirect is handled by the calling page (login/signup) to support redirect parameters
     } catch (error: any) {
       console.error('Login error details:', {
         message: error.message,
@@ -194,7 +194,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // The useEffect will fetch fresh data with tokens in the background
       await new Promise(resolve => setTimeout(resolve, 50));
       
-      router.push('/');
+      // Redirect is handled by the calling page (login/signup) to support redirect parameters
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Signup failed');
     }

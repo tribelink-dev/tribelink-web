@@ -42,3 +42,4 @@ async function migrateArchiveHotels() {
 // Run migration
 migrateArchiveHotels();
 
+

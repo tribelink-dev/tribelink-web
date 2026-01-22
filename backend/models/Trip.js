@@ -73,7 +73,7 @@ const tripSchema = new mongoose.Schema({
     // Events booked for this day
     events: [{
       eventId: {
-        type: mongoose.Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
         ref: 'Event',
         required: true
       },

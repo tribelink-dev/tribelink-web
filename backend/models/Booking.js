@@ -230,3 +230,4 @@ bookingSchema.methods.cancel = async function(reason) {
 
 module.exports = mongoose.model('Booking', bookingSchema);
 
+

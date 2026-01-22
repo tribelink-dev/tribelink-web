@@ -33,23 +33,39 @@ api.interceptors.response.use(
     const apiUrl = API_URL;
     const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'unknown';
     
-    // Safely log error details
-    try {
-      console.error('API Error Details:', {
-        message: error?.message || 'Unknown error',
-        code: error?.code,
-        status: error?.response?.status,
-        statusText: error?.response?.statusText,
-        apiUrl: apiUrl,
-        currentOrigin: currentOrigin,
-        requestUrl: error?.config?.url,
-        fullUrl: error?.config ? `${apiUrl}${error.config.url}` : 'unknown',
-        requestHeaders: error?.config?.headers,
-        responseData: error?.response?.data
-      });
-    } catch (logError) {
-      // Fallback if logging itself fails
-      console.error('API Error (logging failed):', error);
+    // Safely log error details (only for non-public pages or non-401 errors)
+    const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+    const publicPages = ['/', '/explore', '/adobes', '/trips/experiences', '/events'];
+    const isPublicPage = publicPages.some(page => currentPath === page || currentPath.startsWith(page + '/'));
+    
+    // Only log detailed errors if:
+    // 1. Not a 401 error (handled separately)
+    // 2. Not a 404 on public pages (expected for missing endpoints)
+    // 3. Not a network error (handled separately)
+    const shouldLogDetails = 
+      error.response?.status !== 401 && 
+      !(error.response?.status === 404 && isPublicPage) &&
+      error.code !== 'ECONNREFUSED' &&
+      error.message !== 'Network Error';
+    
+    if (shouldLogDetails) {
+      try {
+        console.error('API Error Details:', {
+          message: error?.message || 'Unknown error',
+          code: error?.code,
+          status: error?.response?.status,
+          statusText: error?.response?.statusText,
+          apiUrl: apiUrl,
+          currentOrigin: currentOrigin,
+          requestUrl: error?.config?.url,
+          fullUrl: error?.config ? `${apiUrl}${error.config.url}` : 'unknown',
+          requestHeaders: error?.config?.headers,
+          responseData: error?.response?.data
+        });
+      } catch (logError) {
+        // Fallback if logging itself fails
+        console.error('API Error (logging failed):', error);
+      }
     }
     
     // Handle 401 Unauthorized (Invalid token, expired token, etc.)
@@ -63,9 +79,12 @@ api.interceptors.response.use(
         localStorage.removeItem('host');
         localStorage.removeItem('user');
         
-        // Only redirect if we're not already on a login page
+        // Only redirect if we're not on a public page and not already on a login page
         const currentPath = window.location.pathname;
-        if (!currentPath.includes('/login') && !currentPath.includes('/signup')) {
+        const publicPages = ['/', '/explore', '/adobes', '/trips/experiences', '/events'];
+        const isPublicPage = publicPages.some(page => currentPath === page || currentPath.startsWith(page + '/'));
+        
+        if (!isPublicPage && !currentPath.includes('/login') && !currentPath.includes('/signup')) {
           console.log('Redirecting to login due to invalid token...');
           // Use setTimeout to avoid navigation during render
           setTimeout(() => {
