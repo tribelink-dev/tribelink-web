@@ -1934,48 +1934,10 @@ export default function SchedulePage() {
                             )}
                             {!showDriverSelection[idx] ? (
                               <div>
-                                {selectedDrivers[idx] ? (
-                                  <div className="mb-4">
-                                    {(() => {
-                                      const selectedDriver = availableDrivers.find(d => d._id === selectedDrivers[idx]);
-                                      if (!selectedDriver) {
-                                        // If driver not in availableDrivers list, show a placeholder
-                                        return (
-                                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                                            <p className="text-sm font-semibold text-gray-900 mb-1">Driver Assigned</p>
-                                            <p className="text-xs text-gray-600">Driver ID: {selectedDrivers[idx]}</p>
-                                            <p className="text-xs text-gray-500 mt-2">Click "Change Driver" to see details or select a different driver.</p>
-                                          </div>
-                                        );
-                                      }
-                                      return (
-                                        <ChauffeurSelectionCard
-                                          driver={selectedDriver}
-                                          isSelected={true}
-                                          onSelect={() => {}}
-                                          date={day.date}
-                                        />
-                                      );
-                                    })()}
-                                  </div>
-                                ) : day.assignedDriver ? (
-                                  <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                                    <p className="text-sm text-gray-700 mb-2">Driver assigned but details not loaded</p>
-                                    <p className="text-xs text-gray-500">Click "Select Driver" to view and manage your driver selection.</p>
-                                  </div>
-                                ) : (
-                                  <p className="text-sm text-gray-600 mb-4 text-center">No driver selected yet</p>
-                                )}
-                                <button
-                                  onClick={() => {
-                                    setShowDriverSelection({ ...showDriverSelection, [idx]: true });
-                                    fetchAvailableDrivers(idx);
-                                  }}
-                                  className="w-full btn-primary py-3"
-                                  disabled={loadingDrivers}
-                                >
-                                  {loadingDrivers ? 'Loading Drivers...' : selectedDrivers[idx] ? 'Change Driver' : 'Select Driver'}
-                                </button>
+                                {/* Driver/chauffeur selection removed - no longer supported */}
+                                <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                                  <p className="text-sm text-gray-700">Driver/chauffeur services are no longer available. Please use local transportation options.</p>
+                                </div>
                               </div>
                             ) : (
                               <div className="space-y-4">
@@ -1985,25 +1947,15 @@ export default function SchedulePage() {
                                     <p className="text-sm text-gray-600">Loading available drivers...</p>
                                   </div>
                                 ) : availableDrivers.length > 0 ? (
-                                  <>
-                                    <div className="grid grid-cols-1 gap-4 max-h-96 overflow-y-auto p-2">
-                                      {availableDrivers.map(driver => (
-                                        <ChauffeurSelectionCard
-                                          key={driver._id}
-                                          driver={driver}
-                                          isSelected={selectedDrivers[idx] === driver._id}
-                                          onSelect={() => handleDriverSelect(idx, driver._id)}
-                                          date={day.date}
-                                        />
-                                      ))}
-                                    </div>
+                                  <div className="p-4 text-center">
+                                    <p className="text-sm text-gray-700">Driver/chauffeur services are no longer available.</p>
                                     <button
                                       onClick={() => setShowDriverSelection({ ...showDriverSelection, [idx]: false })}
-                                      className="w-full btn-secondary py-2"
+                                      className="mt-4 w-full btn-secondary py-2"
                                     >
-                                      Cancel
+                                      Close
                                     </button>
-                                  </>
+                                  </div>
                                 ) : (
                                   <div className="text-center py-8">
                                     <p className="text-sm text-gray-600 mb-4">No drivers available for this date</p>
