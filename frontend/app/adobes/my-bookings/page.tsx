@@ -349,9 +349,14 @@ export default function MyBookingsPage() {
                         Mark as Completed
                       </button>
                     )}
-                    {booking.trip && (
+                    {booking.trip?._id && (
                       <button
-                        onClick={() => router.push(`/trips/${booking.trip._id}`)}
+                        onClick={() => {
+                          const tripId = booking.trip?._id;
+                          if (tripId) {
+                            router.push(`/trips/${tripId}`);
+                          }
+                        }}
                         className="px-4 py-2 border border-charcoal-200 text-charcoal-700 rounded-lg hover:bg-charcoal-50 transition-all"
                       >
                         View Trip
