@@ -108,7 +108,11 @@ export default function ExplorePage() {
         });
       } else {
         await api.post('/users/bucketlist', { experienceId });
-        setBucketlistIds(prev => new Set([...prev, experienceId]));
+        setBucketlistIds(prev => {
+          const newSet = new Set(prev);
+          newSet.add(experienceId);
+          return newSet;
+        });
       }
 
       // Update the selected experience in modal

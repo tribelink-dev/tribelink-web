@@ -202,7 +202,7 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
     return `${currencyData.symbol}${parts.join('.')}`;
   }, [currency, convertPrice, ratesVersion]); // Include ratesVersion to force update
 
-  const currencyData = getCurrencyByCode(currency);
+  const currencyData = getCurrencyByCode(currency) || null;
 
   return (
     <CurrencyContext.Provider

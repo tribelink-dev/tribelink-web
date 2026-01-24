@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
 import Link from 'next/link';
 import CurrencySelector from '@/components/CurrencySelector';
-import { getCurrencyByCode, formatCurrency } from '@/lib/currency';
+import { getCurrencyByCode, formatCurrency, CURRENCIES } from '@/lib/currency';
 
 const QUICK_AMOUNTS = [50, 100, 250, 500, 1000];
 
@@ -73,7 +73,7 @@ export default function WalletPage() {
     }
   };
 
-  const selectedCurrencyInfo = getCurrencyByCode(walletCurrency) || getCurrencyByCode('USD');
+  const selectedCurrencyInfo = getCurrencyByCode(walletCurrency) || getCurrencyByCode('USD') || CURRENCIES[0];
 
   if (loading) {
     return (
