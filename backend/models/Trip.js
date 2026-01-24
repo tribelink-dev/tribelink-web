@@ -64,8 +64,8 @@ const tripSchema = new mongoose.Schema({
         name: String
       }
     }],
-    // Adobe stay for this day (replaces hotel)
-    adobeStay: {
+    // Abode stay for this day (replaces hotel)
+    abodeStay: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Provider', // LOCAL_HOST provider
       default: null

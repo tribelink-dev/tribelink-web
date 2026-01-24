@@ -1,8 +1,8 @@
 /**
  * LocalHost Model
- * Extends Provider model for local hosts offering adobe stays
+ * Extends Provider model for local hosts offering abode stays
  * 
- * Adobe stays are cultural immersion experiences where travelers
+ * Abode stays are cultural immersion experiences where travelers
  * stay with local families to understand traditional practices
  */
 
@@ -19,8 +19,8 @@ const localHostSchema = new mongoose.Schema({
     unique: true
   },
   
-  // Adobe (home) details
-  adobeDetails: {
+  // Abode (home) details
+  abodeDetails: {
     description: {
       type: String,
       required: true,
@@ -136,7 +136,7 @@ const localHostSchema = new mongoose.Schema({
     }
   },
   
-  // Images of the adobe
+  // Images of the abode
   images: [{
     url: {
       type: String,
@@ -254,7 +254,7 @@ localHostSchema.index({ rating: -1 });
 localHostSchema.index({ isVerified: 1 });
 localHostSchema.index({ 'pricing.pricePerNight': 1 });
 
-// Virtual for checking if adobe is available on a specific date
+// Virtual for checking if abode is available on a specific date
 localHostSchema.methods.isAvailableOnDate = function(date) {
   const dateStr = date.toISOString().split('T')[0];
   const availability = this.availability.find(avail => {
@@ -265,7 +265,7 @@ localHostSchema.methods.isAvailableOnDate = function(date) {
   if (!availability) return false;
   
   // Check if capacity is available
-  return availability.bookedSlots < this.adobeDetails.capacity;
+    return availability.bookedSlots < this.abodeDetails.capacity;
 };
 
 // Virtual for getting main image

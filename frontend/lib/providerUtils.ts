@@ -19,7 +19,7 @@ export function getProviderWelcomeMessage(providerType: string): string {
     case 'EXPERIENCE_HOST':
       return 'Manage your experiences and activities';
     case 'LOCAL_HOST':
-      return 'Manage your adobe and cultural experiences';
+      return 'Manage your abode and cultural experiences';
     case 'GUIDE':
       return 'Manage your guided tours and travel services';
     case 'ACCOMMODATION_PROVIDER':

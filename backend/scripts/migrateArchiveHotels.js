@@ -24,7 +24,7 @@ async function migrateArchiveHotels() {
         $set: {
           deprecated: true,
           deprecatedAt: new Date(),
-          deprecatedReason: 'Replaced by adobe stays'
+          deprecatedReason: 'Replaced by abode stays'
         }
       }
     );

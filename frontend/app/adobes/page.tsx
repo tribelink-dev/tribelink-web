@@ -11,7 +11,7 @@ import AirbnbListingCard from '@/components/AirbnbListingCard';
 
 interface LocalHost {
   _id: string;
-  adobeDetails: {
+  abodeDetails: {
     description: string;
     capacity: number;
     bedrooms: number;
@@ -61,11 +61,11 @@ interface LocalHost {
   };
 }
 
-export default function AdobesPage() {
+export default function AbodesPage() {
   const router = useRouter();
   const { user } = useAuth();
   const searchParams = useSearchParams();
-  const [adobes, setAdobes] = useState<LocalHost[]>([]);
+  const [abodes, setAbodes] = useState<LocalHost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filters, setFilters] = useState({
@@ -88,10 +88,10 @@ export default function AdobesPage() {
   });
 
   useEffect(() => {
-    fetchAdobes();
+    fetchAbodes();
   }, [filters, pagination.page]);
 
-  const fetchAdobes = async () => {
+  const fetchAbodes = async () => {
     try {
       setLoading(true);
       setError('');
@@ -111,16 +111,16 @@ export default function AdobesPage() {
       if (filters.availableFrom) params.availableFrom = filters.availableFrom;
       if (filters.availableTo) params.availableTo = filters.availableTo;
 
-      const response = await api.get('/adobes', { params });
-      setAdobes(response.data.localHosts || []);
+      const response = await api.get('/abodes', { params });
+      setAbodes(response.data.localHosts || []);
       setPagination(prev => ({
         ...prev,
         total: response.data.pagination?.total || 0,
         pages: response.data.pagination?.pages || 0,
       }));
     } catch (err: any) {
-      console.error('Error fetching adobes:', err);
-      setError(err.response?.data?.message || 'Failed to load adobes');
+      console.error('Error fetching abodes:', err);
+      setError(err.response?.data?.message || 'Failed to load abodes');
     } finally {
       setLoading(false);
     }
@@ -161,7 +161,7 @@ export default function AdobesPage() {
           className="mb-12"
         >
           <h1 className="text-display-lg font-serif text-charcoal-700 mb-4">
-            Experience Adobes
+            Experience Abodes
           </h1>
           <p className="text-lg text-charcoal-600 max-w-3xl">
             Stay with local families and immerse yourself in authentic cultural experiences. 
@@ -304,11 +304,11 @@ export default function AdobesPage() {
               </div>
             ))}
           </div>
-        ) : adobes.length === 0 ? (
+        ) : abodes.length === 0 ? (
           <div className="text-center py-16">
             <div className="text-6xl mb-4">🏠</div>
             <h3 className="text-2xl font-semibold text-charcoal-700 mb-2">
-              No adobes found
+              No abodes found
             </h3>
             <p className="text-charcoal-600 mb-6">
               Try adjusting your filters to see more results.
@@ -323,26 +323,26 @@ export default function AdobesPage() {
         ) : (
           <>
             <div className="mb-6 text-charcoal-600">
-              Found <span className="font-semibold text-charcoal-700">{pagination.total}</span> adobes
+              Found <span className="font-semibold text-charcoal-700">{pagination.total}</span> abodes
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {adobes.map((adobe, index) => {
-                const mainImage = adobe.images.find(img => img.isMain) || adobe.images[0];
+              {abodes.map((abode, index) => {
+                const mainImage = abode.images.find(img => img.isMain) || abode.images[0];
                 const imageUrl = mainImage ? getImageUrl(mainImage.url) : null;
 
                 return (
                   <AirbnbListingCard
-                    key={adobe._id}
-                    id={adobe._id}
+                    key={abode._id}
+                    id={abode._id}
                     imageUrl={imageUrl}
-                    location={`${adobe.location.district}, ${adobe.location.state}`}
-                    title={`${adobe.providerId.name}'s Adobe`}
-                    subtitle={adobe.adobeDetails.propertyType}
-                    rating={adobe.rating}
-                    ratingCount={adobe.ratingCount}
-                    price={adobe.pricing.pricePerNight}
+                    location={`${abode.location.district}, ${abode.location.state}`}
+                    title={`${abode.providerId.name}'s Abode`}
+                    subtitle={abode.abodeDetails.propertyType}
+                    rating={abode.rating}
+                    ratingCount={abode.ratingCount}
+                    price={abode.pricing.pricePerNight}
                     priceLabel="night"
-                    onClick={() => router.push(`/adobes/${adobe._id}`)}
+                    onClick={() => router.push(`/abodes/${abode._id}`)}
                     index={index}
                   />
                 );

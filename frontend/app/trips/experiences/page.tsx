@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { useCurrency } from '@/lib/CurrencyContext';
 import { getImageUrl } from '@/lib/imageUtils';
 import ExperienceDetailModal from '@/components/ExperienceDetailModal';
 import ReviewModal from '@/components/ReviewModal';
@@ -59,6 +60,7 @@ interface Experience {
 export default function ExperiencesPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const { formatPrice } = useCurrency();
   const searchParams = useSearchParams();
   const [experiences, setExperiences] = useState<Experience[]>([]);
   const [bucketlist, setBucketlist] = useState<string[]>([]);
@@ -681,7 +683,7 @@ export default function ExperiencesPage() {
                       </div>
                       <div className="text-right">
                         <div className="text-2xl font-bold text-blue-600">
-                          ${experience.price}
+                          {formatPrice(experience.price, 'USD')}
                         </div>
                         <div className="text-xs text-slate-500">per person</div>
                       </div>

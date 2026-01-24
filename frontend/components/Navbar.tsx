@@ -7,6 +7,7 @@ import { getProviderDashboard } from '@/lib/providerUtils';
 import { useEffect, useState } from 'react';
 import { LOGO_PATH, LOGO_ALT_TEXT } from '@/lib/constants';
 import AirbnbSearchBar from './AirbnbSearchBar';
+import CurrencySelectorButton from './CurrencySelectorButton';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -93,19 +94,22 @@ export default function Navbar() {
               />
             </div>
             <span className="text-lg font-semibold text-gray-900">
-              TRIBELINK
-            </span>
+                TRIBELINK
+              </span>
           </a>
 
           {/* Search Bar (only on non-homepage and non-explore page) */}
           {!isHomepage && !isExplorePage && (
             <div className="flex-1 max-w-xl mx-8 hidden lg:block">
               <AirbnbSearchBar variant="navbar" />
-            </div>
-          )}
+                </div>
+              )}
 
           {/* Right Side */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {/* Currency Selector */}
+            <CurrencySelectorButton />
+            
             {!user && !isHost && (
               <>
                 {!isExplorePage && (
@@ -166,8 +170,8 @@ export default function Navbar() {
                     <div className="w-8 h-8 rounded-full bg-gray-500 flex items-center justify-center">
                       <span className="text-white text-sm font-medium">
                         {(user?.name || hostName || 'U').charAt(0).toUpperCase()}
-                      </span>
-                    </div>
+                </span>
+              </div>
                   </button>
 
                   {showUserMenu && (
@@ -185,12 +189,12 @@ export default function Navbar() {
                           </button>
                           <button
                             onClick={() => {
-                              router.push('/adobes');
+                              router.push('/abodes');
                               setShowUserMenu(false);
                             }}
                             className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                           >
-                            Experience Adobes
+                            Experience Abodes
                           </button>
                           <button
                             onClick={() => {
@@ -215,14 +219,14 @@ export default function Navbar() {
                           Host Dashboard
                         </button>
                       )}
-                      <button
+              <button
                         onClick={handleLogout}
                         className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                      >
+              >
                         Sign out
-                      </button>
-                    </div>
-                  )}
+              </button>
+            </div>
+          )}
                 </div>
               </>
             )}

@@ -1,6 +1,6 @@
 /**
  * Unified Booking Routes
- * Handles bookings for adobe stays, experiences, and events
+ * Handles bookings for abode stays, experiences, and events
  */
 
 const express = require('express');
@@ -24,7 +24,7 @@ router.get('/', authenticate, requireUser, async (req, res) => {
 
     const skip = (Number(page) - 1) * Number(limit);
     const bookings = await Booking.find(query)
-      .populate('adobeStay.localHost')
+      .populate('abodeStay.localHost')
       .populate('experience.experienceId')
       .populate('event.eventId')
       .populate('trip')
@@ -54,7 +54,7 @@ router.get('/', authenticate, requireUser, async (req, res) => {
 router.get('/:id', authenticate, requireUser, async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id)
-      .populate('adobeStay.localHost')
+      .populate('abodeStay.localHost')
       .populate('experience.experienceId')
       .populate('event.eventId')
       .populate('trip')
@@ -79,8 +79,8 @@ router.get('/:id', authenticate, requireUser, async (req, res) => {
   }
 });
 
-// Book adobe stay
-router.post('/adobe-stay', authenticate, requireUser, async (req, res) => {
+// Book abode stay
+router.post('/abode-stay', authenticate, requireUser, async (req, res) => {
   try {
     const {
       localHostId,
@@ -134,8 +134,8 @@ router.post('/adobe-stay', authenticate, requireUser, async (req, res) => {
     // Create booking
     const booking = new Booking({
       user: req.user._id,
-      bookingType: 'ADOBE_STAY',
-      adobeStay: {
+      bookingType: 'ABODE_STAY',
+      abodeStay: {
         localHost: localHostId,
         checkIn: checkInDate,
         checkOut: checkOutDate,
@@ -177,11 +177,11 @@ router.post('/adobe-stay', authenticate, requireUser, async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Adobe stay booked successfully',
+      message: 'Abode stay booked successfully',
       booking
     });
   } catch (error) {
-    console.error('Error booking adobe stay:', error);
+    console.error('Error booking abode stay:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

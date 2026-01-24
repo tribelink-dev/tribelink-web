@@ -60,7 +60,7 @@ export default function ReviewModal({
   const checkCanReview = async () => {
     try {
       setCheckingCanReview(true);
-      const response = await api.get(`/experiences/${experience._id}/can-review`);
+      const response = await api.get(`/reviews/${experience._id}/can-review`);
       setCanReview(response.data.canReview);
       setHasExistingReview(response.data.hasExistingReview || false);
     } catch (err: any) {

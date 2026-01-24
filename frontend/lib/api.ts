@@ -35,7 +35,7 @@ api.interceptors.response.use(
     
     // Safely log error details (only for non-public pages or non-401 errors)
     const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
-    const publicPages = ['/', '/explore', '/adobes', '/trips/experiences', '/events'];
+    const publicPages = ['/', '/explore', '/abodes', '/trips/experiences', '/events'];
     const isPublicPage = publicPages.some(page => currentPath === page || currentPath.startsWith(page + '/'));
     
     // Only log detailed errors if:
@@ -49,22 +49,22 @@ api.interceptors.response.use(
       error.message !== 'Network Error';
     
     if (shouldLogDetails) {
-      try {
-        console.error('API Error Details:', {
-          message: error?.message || 'Unknown error',
-          code: error?.code,
-          status: error?.response?.status,
-          statusText: error?.response?.statusText,
-          apiUrl: apiUrl,
-          currentOrigin: currentOrigin,
-          requestUrl: error?.config?.url,
-          fullUrl: error?.config ? `${apiUrl}${error.config.url}` : 'unknown',
-          requestHeaders: error?.config?.headers,
-          responseData: error?.response?.data
-        });
-      } catch (logError) {
-        // Fallback if logging itself fails
-        console.error('API Error (logging failed):', error);
+    try {
+      console.error('API Error Details:', {
+        message: error?.message || 'Unknown error',
+        code: error?.code,
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        apiUrl: apiUrl,
+        currentOrigin: currentOrigin,
+        requestUrl: error?.config?.url,
+        fullUrl: error?.config ? `${apiUrl}${error.config.url}` : 'unknown',
+        requestHeaders: error?.config?.headers,
+        responseData: error?.response?.data
+      });
+    } catch (logError) {
+      // Fallback if logging itself fails
+      console.error('API Error (logging failed):', error);
       }
     }
     
@@ -81,7 +81,7 @@ api.interceptors.response.use(
         
         // Only redirect if we're not on a public page and not already on a login page
         const currentPath = window.location.pathname;
-        const publicPages = ['/', '/explore', '/adobes', '/trips/experiences', '/events'];
+        const publicPages = ['/', '/explore', '/abodes', '/trips/experiences', '/events'];
         const isPublicPage = publicPages.some(page => currentPath === page || currentPath.startsWith(page + '/'));
         
         if (!isPublicPage && !currentPath.includes('/login') && !currentPath.includes('/signup')) {

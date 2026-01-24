@@ -3,7 +3,7 @@ const Experience = require('../models/Experience');
 const Review = require('../models/Review');
 const Trip = require('../models/Trip');
 const User = require('../models/User');
-// const Hotel = require('../models/Hotel'); // Deprecated - replaced by adobe stays
+// const Hotel = require('../models/Hotel'); // Deprecated - replaced by abode stays
 const Ticket = require('../models/Ticket');
 const Provider = require('../models/Provider');
 const { scheduleTrip } = require('../services/scheduler');
@@ -1299,11 +1299,11 @@ router.put('/:tripId/guide-pricing-mode', authenticate, requireUser, async (req,
   }
 });
 
-// Deprecated: Update trip hotels and chauffeur options - replaced by adobe stays
+// Deprecated: Update trip hotels and chauffeur options - replaced by abode stays
 // This endpoint is kept for backward compatibility but will be removed in future versions
 router.put('/:tripId/hotels', authenticate, requireUser, async (req, res) => {
   res.status(410).json({ 
-    message: 'This endpoint is deprecated. Please use adobe stays instead.',
+    message: 'This endpoint is deprecated. Please use abode stays instead.',
     deprecated: true
   });
 });

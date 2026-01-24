@@ -5,14 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
 import Link from 'next/link';
-
-const CURRENCIES = [
-  { code: 'USD', symbol: '$', name: 'US Dollar' },
-  { code: 'EUR', symbol: '€', name: 'Euro' },
-  { code: 'GBP', symbol: '£', name: 'British Pound' },
-  { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
-  { code: 'JPY', symbol: '¥', name: 'Japanese Yen' },
-];
+import CurrencySelector from '@/components/CurrencySelector';
+import { getCurrencyByCode, formatCurrency } from '@/lib/currency';
 
 const QUICK_AMOUNTS = [50, 100, 250, 500, 1000];
 
@@ -79,7 +73,7 @@ export default function WalletPage() {
     }
   };
 
-  const selectedCurrencyInfo = CURRENCIES.find(c => c.code === walletCurrency) || CURRENCIES[0];
+  const selectedCurrencyInfo = getCurrencyByCode(walletCurrency) || getCurrencyByCode('USD');
 
   if (loading) {
     return (
@@ -164,7 +158,7 @@ export default function WalletPage() {
             <p className="text-sm text-gray-500 uppercase tracking-wide mb-2">Current Balance</p>
             <div className="flex items-center justify-center gap-2 mb-2">
               <span className="text-5xl font-bold text-gray-900">
-                {selectedCurrencyInfo.symbol} {walletBalance.toFixed(2)}
+                {formatCurrency(walletBalance, selectedCurrencyInfo)}
               </span>
               <span className="text-xl text-gray-500 font-medium">{walletCurrency}</span>
             </div>
@@ -183,7 +177,7 @@ export default function WalletPage() {
                 disabled={funding}
                 className="px-6 py-4 bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 border-2 border-blue-200 hover:border-blue-300 rounded-xl font-semibold text-blue-900 transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {selectedCurrencyInfo.symbol} {quickAmount}
+                {formatCurrency(quickAmount, selectedCurrencyInfo)}
               </button>
             ))}
           </div>
@@ -219,9 +213,11 @@ export default function WalletPage() {
                     Amount
                   </label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
-                      {selectedCurrencyInfo.symbol}
-                    </span>
+                    {selectedCurrencyInfo && (
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl">
+                        {selectedCurrencyInfo.flag}
+                      </span>
+                    )}
                     <input
                       type="number"
                       step="0.01"
@@ -229,7 +225,7 @@ export default function WalletPage() {
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
                       placeholder="0.00"
-                      className="input-field pl-10 pr-4"
+                      className="input-field pl-12 pr-4"
                       required
                     />
                   </div>
@@ -240,17 +236,12 @@ export default function WalletPage() {
                   <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Currency
                   </label>
-                  <select
+                  <CurrencySelector
                     value={selectedCurrency}
-                    onChange={(e) => setSelectedCurrency(e.target.value)}
-                    className="input-field"
-                  >
-                    {CURRENCIES.map((currency) => (
-                      <option key={currency.code} value={currency.code}>
-                        {currency.code} - {currency.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setSelectedCurrency}
+                    disabled={funding}
+                    showPopular={true}
+                  />
                 </div>
               </div>
 

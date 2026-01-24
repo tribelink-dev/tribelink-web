@@ -1935,9 +1935,9 @@ export default function SchedulePage() {
                             {!showDriverSelection[idx] ? (
                               <div>
                                 {/* Driver/chauffeur selection removed - no longer supported */}
-                                <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                                  <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
                                   <p className="text-sm text-gray-700">Driver/chauffeur services are no longer available. Please use local transportation options.</p>
-                                </div>
+                                  </div>
                               </div>
                             ) : (
                               <div className="space-y-4">

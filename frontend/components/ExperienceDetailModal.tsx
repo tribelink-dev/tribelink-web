@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { getImageUrl } from '@/lib/imageUtils';
+import { useCurrency } from '@/lib/CurrencyContext';
 
 interface Review {
   _id: string;
@@ -71,6 +72,7 @@ export default function ExperienceDetailModal({
   const [activeTab, setActiveTab] = useState<'overview' | 'reviews' | 'location'>('overview');
   const [imageIndex, setImageIndex] = useState(0);
   const [isImageZoomed, setIsImageZoomed] = useState(false);
+  const { formatPrice } = useCurrency();
 
   // Hooks must be called unconditionally - always call them
   const x = useMotionValue(0);
@@ -314,7 +316,7 @@ export default function ExperienceDetailModal({
                         </div>
                         <div className="text-right">
                           <p className="text-3xl font-bold text-primary-600">
-                            ${experience.price}
+                            {formatPrice(experience.price, 'USD')}
                           </p>
                           <p className="text-sm text-gray-500">per person</p>
                         </div>

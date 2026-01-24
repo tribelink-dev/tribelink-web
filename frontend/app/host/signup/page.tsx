@@ -16,7 +16,7 @@ export default function HostSignupPage() {
     email: '',
     phoneNumber: '',
     password: '',
-    providerType: 'EXPERIENCE_HOST' as 'EXPERIENCE_HOST' | 'GUIDE' | 'ACCOMMODATION_PROVIDER' | 'LOCAL_HOST'
+    providerType: 'EXPERIENCE_HOST' as 'EXPERIENCE_HOST' | 'LOCAL_HOST'
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -65,8 +65,8 @@ export default function HostSignupPage() {
       }
 
       // Redirect to dashboard based on provider type
-      const dashboardRoute = getProviderDashboard(host.providerType || 'EXPERIENCE_HOST');
-      router.push(dashboardRoute);
+        const dashboardRoute = getProviderDashboard(host.providerType || 'EXPERIENCE_HOST');
+        router.push(dashboardRoute);
     } catch (err: any) {
       console.error('Signup error:', err);
       const errorMessage = err.response?.data?.message || 
@@ -81,10 +81,8 @@ export default function HostSignupPage() {
 
   const getProviderTypeLabel = (type: string): string => {
     switch (type) {
-      case 'EXPERIENCE_HOST': return 'Host';
+      case 'EXPERIENCE_HOST': return 'Experience Provider';
       case 'LOCAL_HOST': return 'Local Host';
-      case 'GUIDE': return 'Guide';
-      case 'ACCOMMODATION_PROVIDER': return 'Hotel Owner';
       default: return 'Account';
     }
   };
@@ -113,10 +111,10 @@ export default function HostSignupPage() {
               />
             </div>
             <h1 className="text-3xl font-bold text-white mb-2">
-              Become a Service Provider
+              Become a Host
             </h1>
             <p className="text-blue-100 text-base">
-              Join our platform and start offering your services
+              Join our platform as a Local Host or Experience Provider
             </p>
           </div>
 
@@ -238,9 +236,32 @@ export default function HostSignupPage() {
               {/* Provider Type Selection */}
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-4">
-                  What type of service provider are you? <span className="text-red-500">*</span>
+                  What type of host are you? <span className="text-red-500">*</span>
                 </label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <label className={`block p-6 rounded-xl cursor-pointer transition-all border-2 ${
+                    formData.providerType === 'LOCAL_HOST' 
+                      ? 'bg-blue-50 border-blue-500 shadow-md' 
+                      : 'bg-white border-slate-200 hover:border-blue-300 hover:shadow-sm'
+                  }`}>
+                    <div className="flex items-start gap-4">
+                      <input
+                        type="radio"
+                        name="providerType"
+                        value="LOCAL_HOST"
+                        checked={formData.providerType === 'LOCAL_HOST'}
+                        onChange={(e) => setFormData({ ...formData, providerType: e.target.value as 'LOCAL_HOST' })}
+                        className="mt-1 w-5 h-5 text-blue-600 focus:ring-blue-500"
+                      />
+                      <div className="flex-1">
+                        <div className="font-bold text-slate-900 mb-2 text-lg">Local Host</div>
+                        <div className="text-sm text-slate-600 leading-relaxed">
+                          Provide travelers the chance to live with a local, understanding their traditions, regular routines, and how they live. You can take them to different historical or cultural places nearby.
+                        </div>
+                      </div>
+                    </div>
+                  </label>
+                  
                   <label className={`block p-6 rounded-xl cursor-pointer transition-all border-2 ${
                     formData.providerType === 'EXPERIENCE_HOST' 
                       ? 'bg-blue-50 border-blue-500 shadow-md' 
@@ -256,55 +277,9 @@ export default function HostSignupPage() {
                         className="mt-1 w-5 h-5 text-blue-600 focus:ring-blue-500"
                       />
                       <div className="flex-1">
-                        <div className="font-bold text-slate-900 mb-2 text-lg">Experience Host</div>
-                        <div className="text-sm text-slate-600">
-                          Offer unique experiences and activities to travelers
-                        </div>
-                      </div>
-                    </div>
-                  </label>
-                  
-                  <label className={`block p-6 rounded-xl cursor-pointer transition-all border-2 ${
-                    formData.providerType === 'GUIDE' 
-                      ? 'bg-blue-50 border-blue-500 shadow-md' 
-                      : 'bg-white border-slate-200 hover:border-blue-300 hover:shadow-sm'
-                  }`}>
-                    <div className="flex items-start gap-4">
-                      <input
-                        type="radio"
-                        name="providerType"
-                        value="GUIDE"
-                        checked={formData.providerType === 'GUIDE'}
-                        onChange={(e) => setFormData({ ...formData, providerType: e.target.value as 'GUIDE' })}
-                        className="mt-1 w-5 h-5 text-blue-600 focus:ring-blue-500"
-                      />
-                      <div className="flex-1">
-                        <div className="font-bold text-slate-900 mb-2 text-lg">Tour Guide</div>
-                        <div className="text-sm text-slate-600">
-                          Provide guided tours and travel companionship
-                        </div>
-                      </div>
-                    </div>
-                  </label>
-                  
-                  <label className={`block p-6 rounded-xl cursor-pointer transition-all border-2 ${
-                    formData.providerType === 'ACCOMMODATION_PROVIDER' 
-                      ? 'bg-blue-50 border-blue-500 shadow-md' 
-                      : 'bg-white border-slate-200 hover:border-blue-300 hover:shadow-sm'
-                  }`}>
-                    <div className="flex items-start gap-4">
-                      <input
-                        type="radio"
-                        name="providerType"
-                        value="ACCOMMODATION_PROVIDER"
-                        checked={formData.providerType === 'ACCOMMODATION_PROVIDER'}
-                        onChange={(e) => setFormData({ ...formData, providerType: e.target.value as 'ACCOMMODATION_PROVIDER' })}
-                        className="mt-1 w-5 h-5 text-blue-600 focus:ring-blue-500"
-                      />
-                      <div className="flex-1">
-                        <div className="font-bold text-slate-900 mb-2 text-lg">Hotel Owner</div>
-                        <div className="text-sm text-slate-600">
-                          List and manage your hotel properties
+                        <div className="font-bold text-slate-900 mb-2 text-lg">Experience Provider</div>
+                        <div className="text-sm text-slate-600 leading-relaxed">
+                          Perform, host, or organize short experiences, live events, or live performances for travelers.
                         </div>
                       </div>
                     </div>

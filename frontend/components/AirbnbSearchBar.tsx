@@ -24,14 +24,14 @@ export default function AirbnbSearchBar({ className = '', variant = 'homepage' }
   const [activeField, setActiveField] = useState<string | null>(null);
 
   const handleSearch = () => {
-    // Navigate to adobes page with search params
+    // Navigate to abodes page with search params
     const params = new URLSearchParams();
     if (location) params.set('location', location);
     if (checkIn) params.set('checkIn', checkIn.toISOString());
     if (checkOut) params.set('checkOut', checkOut.toISOString());
     if (guests > 1) params.set('guests', guests.toString());
     
-    router.push(`/adobes?${params.toString()}`);
+    router.push(`/abodes?${params.toString()}`);
   };
 
   const isHomepage = variant === 'homepage';

@@ -11,7 +11,7 @@ const userRoutes = require('./routes/users');
 const tripRoutes = require('./routes/trips');
 const hostRoutes = require('./routes/hosts');
 const reviewRoutes = require('./routes/reviews');
-// const hotelRoutes = require('./routes/hotels'); // Deprecated - will be replaced by adobe stays
+// const hotelRoutes = require('./routes/hotels'); // Deprecated - will be replaced by abode stays
 const safetyRoutes = require('./routes/safety');
 // const driverRoutes = require('./routes/drivers'); // Removed - no longer needed
 const ticketRoutes = require('./routes/tickets');
@@ -119,15 +119,17 @@ app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/trips', tripRoutes);
 app.use('/api/hosts', hostRoutes);
-app.use('/api/experiences', reviewRoutes);
-// app.use('/api/hotels', hotelRoutes); // Deprecated - will be replaced by adobe stays
-app.use('/api/adobes', require('./routes/adobes')); // Local hosts (adobe stays)
+app.use('/api/reviews', reviewRoutes); // Moved from /api/experiences
+app.use('/api/experiences', require('./routes/experiences')); // New experiences endpoint
+// app.use('/api/hotels', hotelRoutes); // Deprecated - will be replaced by abode stays
+app.use('/api/abodes', require('./routes/adobes')); // Local hosts (abode stays)
 app.use('/api/events', require('./routes/events')); // Events/concerts
 app.use('/api/bookings', require('./routes/bookings')); // Unified bookings
 app.use('/api/safety', safetyRoutes);
 // app.use('/api/drivers', driverRoutes); // Removed - no longer needed
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/routes', require('./routes/routes'));
+app.use('/api/currency', require('./routes/currency')); // Currency conversion
 
 // Test routes (development only)
 if (process.env.NODE_ENV === 'development') {

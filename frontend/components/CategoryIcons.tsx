@@ -12,14 +12,21 @@ interface Category {
   route: string;
 }
 
-const categories: Category[] = [
+interface CategoryIconsProps {
+  section: 'localHosts' | 'experiences';
+}
+
+const localHostCategories: Category[] = [
   {
-    id: 'adobes',
-    label: 'Adobes',
+    id: 'abodes',
+    label: 'Abodes',
     icon: '🏠',
     description: 'Stay with locals',
-    route: '/adobes'
+    route: '/abodes'
   },
+];
+
+const experienceCategories: Category[] = [
   {
     id: 'artisan',
     label: 'Artisan Workshops',
@@ -57,10 +64,12 @@ const categories: Category[] = [
   },
 ];
 
-export default function CategoryIcons() {
+export default function CategoryIcons({ section }: CategoryIconsProps) {
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [scrollPosition, setScrollPosition] = useState(0);
+
+  const categories = section === 'localHosts' ? localHostCategories : experienceCategories;
 
   const handleScroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -77,34 +86,40 @@ export default function CategoryIcons() {
     }
   };
 
+  if (categories.length === 0) return null;
+
   return (
     <div className="relative">
-      {/* Scroll Buttons */}
-      <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-white to-transparent z-10 flex items-center">
-        <button
-          onClick={() => handleScroll('left')}
-          className="w-8 h-8 rounded-full bg-white shadow-lg border border-gray-200 flex items-center justify-center hover:shadow-xl transition-all"
-        >
-          <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-      </div>
-      <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white to-transparent z-10 flex items-center justify-end">
-        <button
-          onClick={() => handleScroll('right')}
-          className="w-8 h-8 rounded-full bg-white shadow-lg border border-gray-200 flex items-center justify-center hover:shadow-xl transition-all"
-        >
-          <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-      </div>
+      {/* Scroll Buttons - only show if there are multiple categories */}
+      {categories.length > 3 && (
+        <>
+          <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-white to-transparent z-10 flex items-center">
+            <button
+              onClick={() => handleScroll('left')}
+              className="w-8 h-8 rounded-full bg-white shadow-lg border border-gray-200 flex items-center justify-center hover:shadow-xl transition-all"
+            >
+              <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+          </div>
+          <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white to-transparent z-10 flex items-center justify-end">
+            <button
+              onClick={() => handleScroll('right')}
+              className="w-8 h-8 rounded-full bg-white shadow-lg border border-gray-200 flex items-center justify-center hover:shadow-xl transition-all"
+            >
+              <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+        </>
+      )}
 
       {/* Categories */}
       <div
         ref={scrollRef}
-        className="flex gap-8 overflow-x-auto scrollbar-hide pb-4 px-12"
+        className={`flex gap-8 overflow-x-auto scrollbar-hide pb-4 ${categories.length > 3 ? 'px-12' : 'px-0'}`}
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {categories.map((category, index) => (
@@ -131,4 +146,3 @@ export default function CategoryIcons() {
     </div>
   );
 }
-

@@ -1,6 +1,6 @@
 /**
  * Unified Booking Model
- * Supports bookings for adobe stays, experiences, and events
+ * Supports bookings for abode stays, experiences, and events
  */
 
 const mongoose = require('mongoose');
@@ -14,24 +14,24 @@ const bookingSchema = new mongoose.Schema({
   
   bookingType: {
     type: String,
-    enum: ['ADOBE_STAY', 'EXPERIENCE', 'EVENT'],
+    enum: ['ABODE_STAY', 'EXPERIENCE', 'EVENT'],
     required: true
   },
   
-  // Adobe stay booking
-  adobeStay: {
+  // Abode stay booking
+  abodeStay: {
     localHost: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'LocalHost',
-      required: function() { return this.bookingType === 'ADOBE_STAY'; }
+      required: function() { return this.bookingType === 'ABODE_STAY'; }
     },
     checkIn: {
       type: Date,
-      required: function() { return this.bookingType === 'ADOBE_STAY'; }
+      required: function() { return this.bookingType === 'ABODE_STAY'; }
     },
     checkOut: {
       type: Date,
-      required: function() { return this.bookingType === 'ADOBE_STAY'; }
+      required: function() { return this.bookingType === 'ABODE_STAY'; }
     },
     numberOfGuests: {
       type: Number,
@@ -159,7 +159,7 @@ const bookingSchema = new mongoose.Schema({
 // Indexes
 bookingSchema.index({ user: 1, status: 1 });
 bookingSchema.index({ bookingType: 1, status: 1 });
-bookingSchema.index({ 'adobeStay.localHost': 1 });
+bookingSchema.index({ 'abodeStay.localHost': 1 });
 bookingSchema.index({ 'experience.experienceId': 1 });
 bookingSchema.index({ 'event.eventId': 1 });
 bookingSchema.index({ trip: 1 });
@@ -169,8 +169,8 @@ bookingSchema.index({ createdAt: -1 });
 // Virtual for booking title
 bookingSchema.virtual('title').get(function() {
   switch (this.bookingType) {
-    case 'ADOBE_STAY':
-      return `Adobe Stay Booking`;
+    case 'ABODE_STAY':
+      return `Abode Stay Booking`;
     case 'EXPERIENCE':
       return `Experience Booking`;
     case 'EVENT':
@@ -192,13 +192,13 @@ bookingSchema.methods.cancel = async function(reason) {
   this.paymentStatus = 'Refunded';
   
   // Update availability
-  if (this.bookingType === 'ADOBE_STAY' && this.adobeStay.localHost) {
+  if (this.bookingType === 'ABODE_STAY' && this.abodeStay.localHost) {
     const LocalHost = require('./LocalHost');
-    const localHost = await LocalHost.findById(this.adobeStay.localHost);
+    const localHost = await LocalHost.findById(this.abodeStay.localHost);
     if (localHost) {
       // Release the dates
-      const checkIn = new Date(this.adobeStay.checkIn);
-      const checkOut = new Date(this.adobeStay.checkOut);
+      const checkIn = new Date(this.abodeStay.checkIn);
+      const checkOut = new Date(this.abodeStay.checkOut);
       let currentDate = new Date(checkIn);
       
       while (currentDate < checkOut) {
@@ -209,7 +209,7 @@ bookingSchema.methods.cancel = async function(reason) {
         });
         
         if (availability) {
-          availability.bookedSlots = Math.max(0, availability.bookedSlots - this.adobeStay.numberOfGuests);
+          availability.bookedSlots = Math.max(0, availability.bookedSlots - this.abodeStay.numberOfGuests);
         }
         
         currentDate.setDate(currentDate.getDate() + 1);

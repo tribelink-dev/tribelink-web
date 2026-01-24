@@ -11,7 +11,7 @@ export default function GoogleAuthComplete() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [providerType, setProviderType] = useState<'EXPERIENCE_HOST' | 'GUIDE' | 'ACCOMMODATION_PROVIDER' | 'LOCAL_HOST' | ''>('');
+  const [providerType, setProviderType] = useState<'EXPERIENCE_HOST' | 'LOCAL_HOST' | ''>('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -65,7 +65,7 @@ export default function GoogleAuthComplete() {
         phoneNumber: formattedPhone,
         type,
         providerType: type === 'host' ? providerType : undefined,
-        role: type === 'host' && providerType === 'EXPERIENCE_HOST' ? 'Host' : type === 'host' && providerType === 'GUIDE' ? 'Guide' : undefined
+        role: type === 'host' && providerType === 'EXPERIENCE_HOST' ? 'Host' : undefined
       });
 
       const { token, user, host } = response.data;
@@ -150,9 +150,29 @@ export default function GoogleAuthComplete() {
             {type === 'host' && (
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  What type of service provider are you? <span className="text-red-500">*</span>
+                  What type of host are you? <span className="text-red-500">*</span>
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <label className={`flex items-start p-4 rounded-xl cursor-pointer transition-all card-hover border-2 ${
+                    providerType === 'LOCAL_HOST' 
+                      ? 'bg-primary-500 text-white shadow-medium border-primary-600' 
+                      : 'bg-white border-gray-200 hover:border-primary-300'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="providerType"
+                      value="LOCAL_HOST"
+                      checked={providerType === 'LOCAL_HOST'}
+                      onChange={(e) => setProviderType(e.target.value as 'LOCAL_HOST')}
+                      className="mt-1 mr-3 w-5 h-5"
+                    />
+                    <div className="flex-1">
+                      <div className="font-bold text-lg mb-1.5">Local Host</div>
+                      <div className={`text-sm leading-relaxed ${providerType === 'LOCAL_HOST' ? 'text-white/90' : 'text-gray-600'}`}>
+                        Provide travelers the chance to live with a local, understanding their traditions, regular routines, and how they live. You can take them to different historical or cultural places nearby.
+                      </div>
+                    </div>
+                  </label>
                   <label className={`flex items-start p-4 rounded-xl cursor-pointer transition-all card-hover border-2 ${
                     providerType === 'EXPERIENCE_HOST' 
                       ? 'bg-primary-500 text-white shadow-medium border-primary-600' 
@@ -167,49 +187,9 @@ export default function GoogleAuthComplete() {
                       className="mt-1 mr-3 w-5 h-5"
                     />
                     <div className="flex-1">
-                      <div className="font-bold text-lg mb-1.5">Experience Host</div>
-                      <div className={`text-sm ${providerType === 'EXPERIENCE_HOST' ? 'text-white/90' : 'text-gray-600'}`}>
-                        Offer experiences
-                      </div>
-                    </div>
-                  </label>
-                  <label className={`flex items-start p-4 rounded-xl cursor-pointer transition-all card-hover border-2 ${
-                    providerType === 'GUIDE' 
-                      ? 'bg-primary-500 text-white shadow-medium border-primary-600' 
-                      : 'bg-white border-gray-200 hover:border-primary-300'
-                  }`}>
-                    <input
-                      type="radio"
-                      name="providerType"
-                      value="GUIDE"
-                      checked={providerType === 'GUIDE'}
-                      onChange={(e) => setProviderType(e.target.value as 'GUIDE')}
-                      className="mt-1 mr-3 w-5 h-5"
-                    />
-                    <div className="flex-1">
-                      <div className="font-bold text-lg mb-1.5">Tour Guide</div>
-                      <div className={`text-sm ${providerType === 'GUIDE' ? 'text-white/90' : 'text-gray-600'}`}>
-                        Provide tours
-                      </div>
-                    </div>
-                  </label>
-                  <label className={`flex items-start p-4 rounded-xl cursor-pointer transition-all card-hover border-2 ${
-                    providerType === 'ACCOMMODATION_PROVIDER' 
-                      ? 'bg-primary-500 text-white shadow-medium border-primary-600' 
-                      : 'bg-white border-gray-200 hover:border-primary-300'
-                  }`}>
-                    <input
-                      type="radio"
-                      name="providerType"
-                      value="ACCOMMODATION_PROVIDER"
-                      checked={providerType === 'ACCOMMODATION_PROVIDER'}
-                      onChange={(e) => setProviderType(e.target.value as 'ACCOMMODATION_PROVIDER')}
-                      className="mt-1 mr-3 w-5 h-5"
-                    />
-                    <div className="flex-1">
-                      <div className="font-bold text-lg mb-1.5">Hotel Owner</div>
-                      <div className={`text-sm ${providerType === 'ACCOMMODATION_PROVIDER' ? 'text-white/90' : 'text-gray-600'}`}>
-                        List hotels
+                      <div className="font-bold text-lg mb-1.5">Experience Provider</div>
+                      <div className={`text-sm leading-relaxed ${providerType === 'EXPERIENCE_HOST' ? 'text-white/90' : 'text-gray-600'}`}>
+                        Perform, host, or organize short experiences, live events, or live performances for travelers.
                       </div>
                     </div>
                   </label>

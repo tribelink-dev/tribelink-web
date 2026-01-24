@@ -11,7 +11,7 @@ import 'react-day-picker/dist/style.css';
 
 interface LocalHost {
   _id: string;
-  adobeDetails: {
+  abodeDetails: {
     description: string;
     capacity: number;
     bedrooms: number;
@@ -79,11 +79,11 @@ interface LocalHost {
   }>;
 }
 
-export default function AdobeDetailPage() {
+export default function AbodeDetailPage() {
   const router = useRouter();
   const params = useParams();
   const { user } = useAuth();
-  const [adobe, setAdobe] = useState<LocalHost | null>(null);
+  const [abode, setAbode] = useState<LocalHost | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -95,18 +95,18 @@ export default function AdobeDetailPage() {
 
   useEffect(() => {
     if (params.id) {
-      fetchAdobe();
+      fetchAbode();
     }
   }, [params.id]);
 
-  const fetchAdobe = async () => {
+  const fetchAbode = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/adobes/${params.id}`);
-      setAdobe(response.data.localHost);
+      const response = await api.get(`/abodes/${params.id}`);
+      setAbode(response.data.localHost);
     } catch (err: any) {
-      console.error('Error fetching adobe:', err);
-      setError(err.response?.data?.message || 'Failed to load adobe details');
+      console.error('Error fetching abode:', err);
+      setError(err.response?.data?.message || 'Failed to load abode details');
     } finally {
       setLoading(false);
     }
@@ -114,7 +114,7 @@ export default function AdobeDetailPage() {
 
   const handleBooking = async () => {
     if (!user) {
-      const currentPath = `/adobes/${params.id}`;
+      const currentPath = `/abodes/${params.id}`;
       router.push(`/login?redirect=${encodeURIComponent(currentPath)}`);
       return;
     }
@@ -129,29 +129,29 @@ export default function AdobeDetailPage() {
       return;
     }
 
-    if (guests > (adobe?.adobeDetails.capacity || 1)) {
-      alert(`Maximum capacity is ${adobe?.adobeDetails.capacity} guests`);
+    if (guests > (abode?.abodeDetails.capacity || 1)) {
+      alert(`Maximum capacity is ${abode?.abodeDetails.capacity} guests`);
       return;
     }
 
     try {
       setBooking(true);
       const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
-      const basePrice = (adobe?.pricing.pricePerNight || 0) * nights;
+      const basePrice = (abode?.pricing.pricePerNight || 0) * nights;
       let discount = 0;
       
-      if (nights >= 30 && adobe?.pricing.monthlyDiscount) {
-        discount = basePrice * (adobe.pricing.monthlyDiscount / 100);
-      } else if (nights >= 7 && adobe?.pricing.weeklyDiscount) {
-        discount = basePrice * (adobe.pricing.weeklyDiscount / 100);
+      if (nights >= 30 && abode?.pricing.monthlyDiscount) {
+        discount = basePrice * (abode.pricing.monthlyDiscount / 100);
+      } else if (nights >= 7 && abode?.pricing.weeklyDiscount) {
+        discount = basePrice * (abode.pricing.weeklyDiscount / 100);
       }
       
       const totalPrice = basePrice - discount;
 
       const bookingData = {
-        bookingType: 'ADOBE_STAY',
-        adobeStay: {
-          localHost: adobe?._id,
+        bookingType: 'ABODE_STAY',
+        abodeStay: {
+          localHost: abode?._id,
           checkIn: checkIn.toISOString(),
           checkOut: checkOut.toISOString(),
           guests,
@@ -186,20 +186,20 @@ export default function AdobeDetailPage() {
     );
   }
 
-  if (error || !adobe) {
+  if (error || !abode) {
     return (
       <div className="min-h-screen bg-off-white pt-24 pb-16">
         <div className="section-container-luxury">
           <div className="text-center py-16">
             <div className="text-6xl mb-4">😔</div>
             <h3 className="text-2xl font-semibold text-charcoal-700 mb-2">
-              {error || 'Adobe not found'}
+              {error || 'Abode not found'}
             </h3>
             <button
-              onClick={() => router.push('/adobes')}
+              onClick={() => router.push('/abodes')}
               className="mt-6 px-6 py-3 bg-heritage-gold text-white font-medium rounded-lg hover:bg-heritage-gold-dark transition-all"
             >
-              Browse Adobes
+              Browse Abodes
             </button>
           </div>
         </div>
@@ -207,17 +207,17 @@ export default function AdobeDetailPage() {
     );
   }
 
-  const mainImage = adobe.images[selectedImageIndex] || adobe.images[0];
+  const mainImage = abode.images[selectedImageIndex] || abode.images[0];
   const imageUrl = mainImage ? getImageUrl(mainImage.url) : null;
   const nights = checkIn && checkOut 
     ? Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24))
     : 0;
-  const basePrice = adobe.pricing.pricePerNight * nights;
+  const basePrice = abode.pricing.pricePerNight * nights;
   let discount = 0;
-  if (nights >= 30 && adobe.pricing.monthlyDiscount) {
-    discount = basePrice * (adobe.pricing.monthlyDiscount / 100);
-  } else if (nights >= 7 && adobe.pricing.weeklyDiscount) {
-    discount = basePrice * (adobe.pricing.weeklyDiscount / 100);
+  if (nights >= 30 && abode.pricing.monthlyDiscount) {
+    discount = basePrice * (abode.pricing.monthlyDiscount / 100);
+  } else if (nights >= 7 && abode.pricing.weeklyDiscount) {
+    discount = basePrice * (abode.pricing.weeklyDiscount / 100);
   }
   const totalPrice = basePrice - discount;
 
@@ -248,7 +248,7 @@ export default function AdobeDetailPage() {
                 {imageUrl ? (
                   <img
                     src={imageUrl}
-                    alt={adobe.adobeDetails.description}
+                    alt={abode.abodeDetails.description}
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -258,9 +258,9 @@ export default function AdobeDetailPage() {
                 )}
               </div>
               
-              {adobe.images.length > 1 && (
+              {abode.images.length > 1 && (
                 <div className="p-4 grid grid-cols-5 gap-2">
-                  {adobe.images.slice(0, 5).map((img, index) => (
+                  {abode.images.slice(0, 5).map((img, index) => (
                     <button
                       key={index}
                       onClick={() => setSelectedImageIndex(index)}
@@ -291,15 +291,15 @@ export default function AdobeDetailPage() {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h1 className="text-display-md font-serif text-charcoal-700 mb-2">
-                    {adobe.providerId.name}'s Adobe
+                    {abode.providerId.name}'s Abode
                   </h1>
                   <div className="flex items-center gap-2 text-charcoal-600 mb-4">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                    <span>{adobe.location.district}, {adobe.location.state}, {adobe.location.country}</span>
-                    {adobe.isVerified && (
+                    <span>{abode.location.district}, {abode.location.state}, {abode.location.country}</span>
+                    {abode.isVerified && (
                       <span className="px-2 py-1 bg-heritage-gold text-white text-xs font-semibold rounded">
                         ✓ Verified
                       </span>
@@ -311,10 +311,10 @@ export default function AdobeDetailPage() {
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                   </svg>
                   <span className="text-xl font-semibold text-charcoal-700">
-                    {adobe.rating.toFixed(1)}
+                    {abode.rating.toFixed(1)}
                   </span>
                   <span className="text-charcoal-500">
-                    ({adobe.ratingCount})
+                    ({abode.ratingCount})
                   </span>
                 </div>
               </div>
@@ -325,23 +325,23 @@ export default function AdobeDetailPage() {
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
-                  {adobe.adobeDetails.capacity} guests
+                  {abode.abodeDetails.capacity} guests
                 </div>
                 <div className="flex items-center gap-2">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                   </svg>
-                  {adobe.adobeDetails.bedrooms} bedroom{adobe.adobeDetails.bedrooms !== 1 ? 's' : ''}
+                  {abode.abodeDetails.bedrooms} bedroom{abode.abodeDetails.bedrooms !== 1 ? 's' : ''}
                 </div>
                 <div className="flex items-center gap-2">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  {adobe.adobeDetails.bathrooms} bathroom{adobe.adobeDetails.bathrooms !== 1 ? 's' : ''}
+                  {abode.abodeDetails.bathrooms} bathroom{abode.abodeDetails.bathrooms !== 1 ? 's' : ''}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="px-3 py-1 bg-cream-500 text-charcoal-700 text-xs font-semibold rounded-full">
-                    {adobe.adobeDetails.propertyType}
+                    {abode.abodeDetails.propertyType}
                   </span>
                 </div>
               </div>
@@ -354,14 +354,14 @@ export default function AdobeDetailPage() {
               transition={{ delay: 0.2 }}
               className="bg-white rounded-2xl shadow-luxury p-6"
             >
-              <h2 className="text-2xl font-semibold text-charcoal-700 mb-4">About this adobe</h2>
+              <h2 className="text-2xl font-semibold text-charcoal-700 mb-4">About this abode</h2>
               <p className="text-charcoal-600 leading-relaxed whitespace-pre-line">
-                {adobe.adobeDetails.description}
+                {abode.abodeDetails.description}
               </p>
             </motion.div>
 
             {/* Cultural Practices */}
-            {adobe.culturalPractices.length > 0 && (
+            {abode.culturalPractices.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -372,7 +372,7 @@ export default function AdobeDetailPage() {
                   Cultural Practices
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {adobe.culturalPractices.map((practice, index) => (
+                  {abode.culturalPractices.map((practice, index) => (
                     <div key={index} className="p-4 bg-cream-50 rounded-lg border border-cream-300">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="px-2 py-1 bg-heritage-gold text-white text-xs font-semibold rounded">
@@ -390,7 +390,7 @@ export default function AdobeDetailPage() {
             )}
 
             {/* Nearby Places */}
-            {adobe.nearbyPlaces.length > 0 && (
+            {abode.nearbyPlaces.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -401,7 +401,7 @@ export default function AdobeDetailPage() {
                   Nearby Cultural & Historical Places
                 </h2>
                 <div className="space-y-4">
-                  {adobe.nearbyPlaces.map((place, index) => (
+                  {abode.nearbyPlaces.map((place, index) => (
                     <div key={index} className="p-4 bg-cream-50 rounded-lg border border-cream-300">
                       <div className="flex items-start justify-between mb-2">
                         <h3 className="font-semibold text-charcoal-700">{place.name}</h3>
@@ -424,7 +424,7 @@ export default function AdobeDetailPage() {
             )}
 
             {/* Amenities */}
-            {adobe.adobeDetails.amenities.length > 0 && (
+            {abode.abodeDetails.amenities.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -433,7 +433,7 @@ export default function AdobeDetailPage() {
               >
                 <h2 className="text-2xl font-semibold text-charcoal-700 mb-4">Amenities</h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {adobe.adobeDetails.amenities.map((amenity, index) => (
+                  {abode.abodeDetails.amenities.map((amenity, index) => (
                     <div key={index} className="flex items-center gap-2 text-charcoal-600">
                       <svg className="w-5 h-5 text-heritage-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -446,7 +446,7 @@ export default function AdobeDetailPage() {
             )}
 
             {/* House Rules */}
-            {adobe.adobeDetails.houseRules.length > 0 && (
+            {abode.abodeDetails.houseRules.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -455,7 +455,7 @@ export default function AdobeDetailPage() {
               >
                 <h2 className="text-2xl font-semibold text-charcoal-700 mb-4">House Rules</h2>
                 <ul className="space-y-2">
-                  {adobe.adobeDetails.houseRules.map((rule, index) => (
+                  {abode.abodeDetails.houseRules.map((rule, index) => (
                     <li key={index} className="flex items-start gap-2 text-charcoal-600">
                       <svg className="w-5 h-5 text-heritage-gold mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -468,7 +468,7 @@ export default function AdobeDetailPage() {
             )}
 
             {/* Family Info */}
-            {adobe.familyInfo?.background && (
+            {abode.familyInfo?.background && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -477,11 +477,11 @@ export default function AdobeDetailPage() {
               >
                 <h2 className="text-2xl font-semibold text-charcoal-700 mb-4">About the Family</h2>
                 <p className="text-charcoal-600 leading-relaxed whitespace-pre-line">
-                  {adobe.familyInfo.background}
+                  {abode.familyInfo.background}
                 </p>
-                {adobe.familyInfo.generations && (
+                {abode.familyInfo.generations && (
                   <p className="mt-4 text-sm text-charcoal-500">
-                    {adobe.familyInfo.generations} generation{adobe.familyInfo.generations !== 1 ? 's' : ''} of tradition
+                    {abode.familyInfo.generations} generation{abode.familyInfo.generations !== 1 ? 's' : ''} of tradition
                   </p>
                 )}
               </motion.div>
@@ -498,12 +498,12 @@ export default function AdobeDetailPage() {
             >
               <div className="mb-6">
                 <div className="text-3xl font-bold text-charcoal-700 mb-1">
-                  ₹{adobe.pricing.pricePerNight}
+                  ₹{abode.pricing.pricePerNight}
                   <span className="text-lg font-normal text-charcoal-500">/night</span>
                 </div>
-                {adobe.pricing.weeklyDiscount && (
+                {abode.pricing.weeklyDiscount && (
                   <p className="text-sm text-charcoal-500">
-                    {adobe.pricing.weeklyDiscount}% off for 7+ nights
+                    {abode.pricing.weeklyDiscount}% off for 7+ nights
                   </p>
                 )}
               </div>
@@ -543,7 +543,7 @@ export default function AdobeDetailPage() {
                     onChange={(e) => setGuests(Number(e.target.value))}
                     className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
                   >
-                    {[...Array(adobe.adobeDetails.capacity)].map((_, i) => (
+                    {[...Array(abode.abodeDetails.capacity)].map((_, i) => (
                       <option key={i + 1} value={i + 1}>
                         {i + 1} guest{i !== 0 ? 's' : ''}
                       </option>
@@ -556,7 +556,7 @@ export default function AdobeDetailPage() {
               {nights > 0 && (
                 <div className="mb-6 p-4 bg-cream-50 rounded-lg space-y-2">
                   <div className="flex justify-between text-sm text-charcoal-600">
-                    <span>₹{adobe.pricing.pricePerNight} × {nights} nights</span>
+                    <span>₹{abode.pricing.pricePerNight} × {nights} nights</span>
                     <span>₹{basePrice}</span>
                   </div>
                   {discount > 0 && (
@@ -584,7 +584,7 @@ export default function AdobeDetailPage() {
               {!user && (
                 <p className="mt-4 text-sm text-center text-charcoal-500">
                   <button
-                    onClick={() => router.push('/login?redirect=/adobes/' + params.id)}
+                    onClick={() => router.push('/login?redirect=/abodes/' + params.id)}
                     className="text-heritage-gold hover:underline"
                   >
                     Sign in

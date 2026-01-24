@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { getImageUrl } from '@/lib/imageUtils';
+import { useCurrency } from '@/lib/CurrencyContext';
 
 interface AirbnbListingCardProps {
   id: string;
@@ -34,6 +35,7 @@ export default function AirbnbListingCard({
 }: AirbnbListingCardProps) {
   const router = useRouter();
   const [isFavorite, setIsFavorite] = useState(false);
+  const { formatPrice } = useCurrency();
 
   const handleClick = () => {
     if (onClick) {
@@ -115,7 +117,7 @@ export default function AirbnbListingCard({
 
         {/* Price */}
         <div className="text-sm">
-          <span className="font-semibold text-gray-900">₹{price}</span>
+          <span className="font-semibold text-gray-900">{formatPrice(price, 'USD')}</span>
           <span className="text-gray-600"> {priceLabel}</span>
         </div>
       </div>

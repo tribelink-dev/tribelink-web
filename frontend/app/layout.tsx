@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
+import { CurrencyProvider } from "@/lib/CurrencyContext";
 import ConditionalLayout from "@/components/ConditionalLayout";
 import EmergencySOS from "@/components/EmergencySOS";
 
@@ -18,10 +19,12 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <AuthProvider>
-          <ConditionalLayout>
-            {children}
-          </ConditionalLayout>
-          <EmergencySOS />
+          <CurrencyProvider>
+            <ConditionalLayout>
+              {children}
+            </ConditionalLayout>
+            <EmergencySOS />
+          </CurrencyProvider>
         </AuthProvider>
       </body>
     </html>

@@ -1,6 +1,6 @@
 /**
- * Adobe (Local Host) Routes
- * API endpoints for local hosts offering adobe stays
+ * Abode (Local Host) Routes
+ * API endpoints for local hosts offering abode stays
  */
 
 const express = require('express');
@@ -13,7 +13,7 @@ const { getBaseUrlFromRequest } = require('../utils/imageUtils');
 
 const router = express.Router();
 
-// List all local hosts (adobes) with filters
+// List all local hosts (abodes) with filters
 router.get('/', async (req, res) => {
   try {
     const {
@@ -44,7 +44,7 @@ router.get('/', async (req, res) => {
       if (maxPrice) query['pricing.pricePerNight'].$lte = Number(maxPrice);
     }
     if (minRating) query.rating = { $gte: Number(minRating) };
-    if (capacity) query['adobeDetails.capacity'] = { $gte: Number(capacity) };
+    if (capacity) query['abodeDetails.capacity'] = { $gte: Number(capacity) };
     if (languages) {
       query.languages = { $in: Array.isArray(languages) ? languages : [languages] };
     }
@@ -115,7 +115,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get adobe details by ID
+// Get abode details by ID
 router.get('/:id', async (req, res) => {
   try {
     const localHost = await LocalHost.findById(req.params.id)
@@ -164,7 +164,7 @@ router.post('/register', authenticate, requireHost, upload.array('images', 10), 
     }
 
     const {
-      adobeDetails,
+      abodeDetails,
       culturalPractices,
       nearbyPlaces,
       availability,
@@ -188,14 +188,14 @@ router.post('/register', authenticate, requireHost, upload.array('images', 10), 
 
     const localHost = new LocalHost({
       providerId,
-      adobeDetails: {
-        description: adobeDetails?.description || '',
-        capacity: adobeDetails?.capacity || 2,
-        bedrooms: adobeDetails?.bedrooms || 1,
-        bathrooms: adobeDetails?.bathrooms || 1,
-        amenities: adobeDetails?.amenities || [],
-        houseRules: adobeDetails?.houseRules || [],
-        propertyType: adobeDetails?.propertyType || 'Traditional Home'
+      abodeDetails: {
+        description: abodeDetails?.description || '',
+        capacity: abodeDetails?.capacity || 2,
+        bedrooms: abodeDetails?.bedrooms || 1,
+        bathrooms: abodeDetails?.bathrooms || 1,
+        amenities: abodeDetails?.amenities || [],
+        houseRules: abodeDetails?.houseRules || [],
+        propertyType: abodeDetails?.propertyType || 'Traditional Home'
       },
       culturalPractices: culturalPractices || [],
       nearbyPlaces: nearbyPlaces || [],
@@ -250,7 +250,7 @@ router.put('/:id', authenticate, requireHost, upload.array('images', 10), async 
     }
 
     const {
-      adobeDetails,
+      abodeDetails,
       culturalPractices,
       nearbyPlaces,
       availability,
@@ -261,7 +261,7 @@ router.put('/:id', authenticate, requireHost, upload.array('images', 10), async 
     } = req.body;
 
     // Update fields
-    if (adobeDetails) localHost.adobeDetails = { ...localHost.adobeDetails, ...adobeDetails };
+    if (abodeDetails) localHost.abodeDetails = { ...localHost.abodeDetails, ...abodeDetails };
     if (culturalPractices) localHost.culturalPractices = culturalPractices;
     if (nearbyPlaces) localHost.nearbyPlaces = nearbyPlaces;
     if (availability) localHost.availability = availability;
@@ -309,8 +309,8 @@ router.get('/:id/bookings', authenticate, requireHost, async (req, res) => {
 
     const { status, page = 1, limit = 20 } = req.query;
     const query = {
-      'adobeStay.localHost': req.params.id,
-      bookingType: 'ADOBE_STAY'
+      'abodeStay.localHost': req.params.id,
+      bookingType: 'ABODE_STAY'
     };
     if (status) query.status = status;
 

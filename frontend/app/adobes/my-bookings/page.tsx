@@ -8,11 +8,11 @@ import { format } from 'date-fns';
 
 interface Booking {
   _id: string;
-  bookingType: 'ADOBE_STAY' | 'EXPERIENCE' | 'EVENT';
+  bookingType: 'ABODE_STAY' | 'EXPERIENCE' | 'EVENT';
   status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
   totalPrice: number;
   createdAt: string;
-  adobeStay?: {
+  abodeStay?: {
     localHost: string;
     checkIn: string;
     checkOut: string;
@@ -36,17 +36,17 @@ export default function MyBookingsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [adobeId, setAdobeId] = useState<string | null>(null);
+  const [abodeId, setAbodeId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Get adobe ID from localStorage or query params
+    // Get abode ID from localStorage or query params
     if (typeof window !== 'undefined') {
       const host = localStorage.getItem('host');
       if (host) {
         try {
           const hostData = JSON.parse(host);
           // We'll need to fetch the LocalHost profile to get the ID
-          fetchAdobeId();
+          fetchAbodeId();
         } catch (e) {
           router.push('/host/login');
         }
@@ -56,23 +56,23 @@ export default function MyBookingsPage() {
     }
   }, [router]);
 
-  const fetchAdobeId = async () => {
+  const fetchAbodeId = async () => {
     try {
-      // Fetch the host's adobe profile
-      const response = await api.get('/adobes', {
+      // Fetch the host's abode profile
+      const response = await api.get('/abodes', {
         params: { limit: 1 },
       });
       
       if (response.data.localHosts && response.data.localHosts.length > 0) {
-        setAdobeId(response.data.localHosts[0]._id);
+        setAbodeId(response.data.localHosts[0]._id);
         fetchBookings(response.data.localHosts[0]._id);
       } else {
-        setError('No adobe profile found. Please register your adobe first.');
+        setError('No abode profile found. Please register your abode first.');
         setLoading(false);
       }
     } catch (err: any) {
-      console.error('Error fetching adobe ID:', err);
-      setError('Failed to load adobe profile');
+      console.error('Error fetching abode ID:', err);
+      setError('Failed to load abode profile');
       setLoading(false);
     }
   };
@@ -85,7 +85,7 @@ export default function MyBookingsPage() {
         params.status = statusFilter;
       }
 
-      const response = await api.get(`/adobes/${id}/bookings`, { params });
+      const response = await api.get(`/abodes/${id}/bookings`, { params });
       setBookings(response.data.bookings || []);
     } catch (err: any) {
       console.error('Error fetching bookings:', err);
@@ -96,16 +96,16 @@ export default function MyBookingsPage() {
   };
 
   useEffect(() => {
-    if (adobeId) {
-      fetchBookings(adobeId);
+    if (abodeId) {
+      fetchBookings(abodeId);
     }
-  }, [statusFilter, adobeId]);
+  }, [statusFilter, abodeId]);
 
   const handleStatusChange = async (bookingId: string, newStatus: string) => {
     try {
       await api.put(`/bookings/${bookingId}`, { status: newStatus });
-      if (adobeId) {
-        fetchBookings(adobeId);
+      if (abodeId) {
+        fetchBookings(abodeId);
       }
     } catch (err: any) {
       console.error('Error updating booking status:', err);
@@ -128,7 +128,7 @@ export default function MyBookingsPage() {
     }
   };
 
-  if (loading && !adobeId) {
+  if (loading && !abodeId) {
     return (
       <div className="min-h-screen bg-off-white pt-24 pb-16">
         <div className="section-container-luxury">
@@ -153,7 +153,7 @@ export default function MyBookingsPage() {
             My Bookings
           </h1>
           <p className="text-lg text-charcoal-600">
-            Manage bookings for your adobe
+            Manage bookings for your abode
           </p>
         </motion.div>
 
@@ -248,10 +248,10 @@ export default function MyBookingsPage() {
                 : `No ${statusFilter.toLowerCase()} bookings.`}
             </p>
             <button
-              onClick={() => router.push('/adobes/register')}
+              onClick={() => router.push('/abodes/register')}
               className="px-6 py-3 bg-heritage-gold text-white font-medium rounded-lg hover:bg-heritage-gold-dark transition-all"
             >
-              Register Your Adobe
+              Register Your Abode
             </button>
           </motion.div>
         ) : (
@@ -276,13 +276,13 @@ export default function MyBookingsPage() {
                           <span>
                             {format(new Date(booking.createdAt), 'MMM dd, yyyy')}
                           </span>
-                          {booking.adobeStay && (
+                          {booking.abodeStay && (
                             <>
                               <span>
-                                {format(new Date(booking.adobeStay.checkIn), 'MMM dd')} -{' '}
-                                {format(new Date(booking.adobeStay.checkOut), 'MMM dd, yyyy')}
+                                {format(new Date(booking.abodeStay.checkIn), 'MMM dd')} -{' '}
+                                {format(new Date(booking.abodeStay.checkOut), 'MMM dd, yyyy')}
                               </span>
-                              <span>{booking.adobeStay.guests} guest{booking.adobeStay.guests !== 1 ? 's' : ''}</span>
+                              <span>{booking.abodeStay.guests} guest{booking.abodeStay.guests !== 1 ? 's' : ''}</span>
                             </>
                           )}
                         </div>

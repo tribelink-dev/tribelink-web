@@ -540,21 +540,27 @@ router.post('/host/signup', async (req, res) => {
       return res.status(400).json({ message: 'All fields are required' });
     }
 
-    // Validate providerType
-    const validProviderTypes = ['EXPERIENCE_HOST', 'GUIDE', 'LOCAL_HOST']; // Removed DRIVER_PARTNER, ACCOMMODATION_PROVIDER; Added LOCAL_HOST
-    const finalProviderType = providerType || 'EXPERIENCE_HOST'; // Default for backward compatibility
+    // Validate providerType - only allow LOCAL_HOST and EXPERIENCE_HOST
+    const validProviderTypes = ['EXPERIENCE_HOST', 'LOCAL_HOST'];
     
-    if (!validProviderTypes.includes(finalProviderType)) {
-      return res.status(400).json({ message: 'Invalid provider type' });
+    if (!providerType) {
+      return res.status(400).json({ message: 'Provider type is required. Please select either Local Host or Experience Provider.' });
     }
+    
+    if (!validProviderTypes.includes(providerType)) {
+      return res.status(400).json({ 
+        message: 'Invalid provider type. Only Local Host and Experience Provider are allowed for signup.' 
+      });
+    }
+
+    const finalProviderType = providerType;
 
     // Set role for backward compatibility (map providerType to role)
     let finalRole = null;
     if (finalProviderType === 'EXPERIENCE_HOST') {
       finalRole = role || 'Host'; // Default to Host if not specified
-    } else if (finalProviderType === 'GUIDE') {
-      finalRole = 'Guide';
     }
+    // LOCAL_HOST doesn't need a role
 
     // Normalize phone number (remove spaces, dashes, etc.)
     const normalizedPhone = normalizePhoneNumber(phoneNumber);
@@ -1089,13 +1095,20 @@ router.post('/google/complete', async (req, res) => {
         return res.status(400).json({ message: 'Provider type is required for host accounts' });
       }
 
+      // Validate providerType - only allow LOCAL_HOST and EXPERIENCE_HOST
+      const validProviderTypes = ['EXPERIENCE_HOST', 'LOCAL_HOST'];
+      if (!validProviderTypes.includes(providerType)) {
+        return res.status(400).json({ 
+          message: 'Invalid provider type. Only Local Host and Experience Provider are allowed for signup.' 
+        });
+      }
+
       // Map providerType to role if needed (for EXPERIENCE_HOST)
       let finalRole = null;
       if (providerType === 'EXPERIENCE_HOST') {
         finalRole = role || 'Host';
-      } else if (providerType === 'GUIDE') {
-        finalRole = 'Guide';
       }
+      // LOCAL_HOST doesn't need a role
 
       // Check if host already exists
       const existingHost = await Host.findOne({

@@ -106,6 +106,11 @@ const userSchema = new mongoose.Schema({
       default: Date.now
     }
   },
+  preferredCurrency: {
+    type: String,
+    default: 'USD',
+    uppercase: true
+  },
   tripWallet: {
     balance: {
       type: Number,

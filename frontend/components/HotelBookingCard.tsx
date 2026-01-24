@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { getImageUrl } from '@/lib/imageUtils';
+import { useCurrency } from '@/lib/CurrencyContext';
 
 interface Hotel {
   _id: string;
@@ -33,6 +34,7 @@ interface HotelBookingCardProps {
 
 export default function HotelBookingCard({ hotel, isSelected, onSelect, date }: HotelBookingCardProps) {
   const [showDetails, setShowDetails] = useState(false);
+  const { formatPrice } = useCurrency();
 
   // Get main image - use centralized utility
   const getMainImage = () => {
@@ -126,7 +128,7 @@ export default function HotelBookingCard({ hotel, isSelected, onSelect, date }: 
           <div className="flex items-start justify-between gap-3 mb-3">
             <h3 className="font-bold text-gray-900 text-lg flex-1 line-clamp-2">{hotel.name}</h3>
             <div className="flex-shrink-0 text-right">
-              <p className="text-2xl font-bold text-primary-600">${hotel.pricePerNight}</p>
+              <p className="text-2xl font-bold text-primary-600">{formatPrice(hotel.pricePerNight, 'USD')}</p>
               <p className="text-xs text-gray-500">per night</p>
             </div>
           </div>
@@ -222,7 +224,7 @@ export default function HotelBookingCard({ hotel, isSelected, onSelect, date }: 
                   )}
                 </div>
                 <div className="text-right">
-                  <p className="text-3xl font-bold text-primary-600">${hotel.pricePerNight}</p>
+                  <p className="text-3xl font-bold text-primary-600">{formatPrice(hotel.pricePerNight, 'USD')}</p>
                   <p className="text-sm text-gray-500">per night</p>
                 </div>
               </div>

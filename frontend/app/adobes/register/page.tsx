@@ -12,7 +12,7 @@ const PROPERTY_TYPES = ['Traditional Home', 'Heritage House', 'Village Home', 'F
 const CULTURAL_CATEGORIES = ['Cooking', 'Craft', 'Music', 'Dance', 'Ritual', 'Festival', 'Agriculture', 'Traditional Medicine', 'Other'];
 const SIGNIFICANCE_TYPES = ['Cultural', 'Historical', 'Religious', 'Natural', 'Artistic', 'Other'];
 
-export default function RegisterAdobePage() {
+export default function RegisterAbodePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -21,7 +21,7 @@ export default function RegisterAdobePage() {
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   
   const [formData, setFormData] = useState({
-    adobeDetails: {
+    abodeDetails: {
       description: '',
       capacity: 2,
       bedrooms: 1,
@@ -125,12 +125,12 @@ export default function RegisterAdobePage() {
   };
 
   const addAmenity = () => {
-    if (newAmenity.trim() && !formData.adobeDetails.amenities.includes(newAmenity.trim())) {
+    if (newAmenity.trim() && !formData.abodeDetails.amenities.includes(newAmenity.trim())) {
       setFormData(prev => ({
         ...prev,
-        adobeDetails: {
-          ...prev.adobeDetails,
-          amenities: [...prev.adobeDetails.amenities, newAmenity.trim()],
+        abodeDetails: {
+          ...prev.abodeDetails,
+          amenities: [...prev.abodeDetails.amenities, newAmenity.trim()],
         },
       }));
       setNewAmenity('');
@@ -140,20 +140,20 @@ export default function RegisterAdobePage() {
   const removeAmenity = (index: number) => {
     setFormData(prev => ({
       ...prev,
-      adobeDetails: {
-        ...prev.adobeDetails,
-        amenities: prev.adobeDetails.amenities.filter((_, i) => i !== index),
+      abodeDetails: {
+        ...prev.abodeDetails,
+        amenities: prev.abodeDetails.amenities.filter((_, i) => i !== index),
       },
     }));
   };
 
   const addHouseRule = () => {
-    if (newHouseRule.trim() && !formData.adobeDetails.houseRules.includes(newHouseRule.trim())) {
+    if (newHouseRule.trim() && !formData.abodeDetails.houseRules.includes(newHouseRule.trim())) {
       setFormData(prev => ({
         ...prev,
-        adobeDetails: {
-          ...prev.adobeDetails,
-          houseRules: [...prev.adobeDetails.houseRules, newHouseRule.trim()],
+        abodeDetails: {
+          ...prev.abodeDetails,
+          houseRules: [...prev.abodeDetails.houseRules, newHouseRule.trim()],
         },
       }));
       setNewHouseRule('');
@@ -163,9 +163,9 @@ export default function RegisterAdobePage() {
   const removeHouseRule = (index: number) => {
     setFormData(prev => ({
       ...prev,
-      adobeDetails: {
-        ...prev.adobeDetails,
-        houseRules: prev.adobeDetails.houseRules.filter((_, i) => i !== index),
+      abodeDetails: {
+        ...prev.abodeDetails,
+        houseRules: prev.abodeDetails.houseRules.filter((_, i) => i !== index),
       },
     }));
   };
@@ -281,7 +281,7 @@ export default function RegisterAdobePage() {
 
     try {
       // Validate required fields
-      if (!formData.adobeDetails.description.trim()) {
+      if (!formData.abodeDetails.description.trim()) {
         throw new Error('Description is required');
       }
       if (!formData.location.state || !formData.location.district) {
@@ -298,7 +298,7 @@ export default function RegisterAdobePage() {
       }
 
       const formDataToSend = new FormData();
-      formDataToSend.append('adobeDetails', JSON.stringify(formData.adobeDetails));
+      formDataToSend.append('abodeDetails', JSON.stringify(formData.abodeDetails));
       formDataToSend.append('culturalPractices', JSON.stringify(formData.culturalPractices));
       formDataToSend.append('nearbyPlaces', JSON.stringify(formData.nearbyPlaces));
       formDataToSend.append('availability', JSON.stringify(formData.availability));
@@ -318,7 +318,7 @@ export default function RegisterAdobePage() {
         formDataToSend.append('images', file);
       });
 
-      const response = await api.post('/adobes/register', formDataToSend, {
+      const response = await api.post('/abodes/register', formDataToSend, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -331,8 +331,8 @@ export default function RegisterAdobePage() {
         }, 2000);
       }
     } catch (err: any) {
-      console.error('Error registering adobe:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to register adobe');
+      console.error('Error registering abode:', err);
+      setError(err.response?.data?.message || err.message || 'Failed to register abode');
     } finally {
       setLoading(false);
     }
@@ -349,7 +349,7 @@ export default function RegisterAdobePage() {
           className="mb-8"
         >
           <h1 className="text-display-md font-serif text-charcoal-700 mb-4">
-            Register Your Adobe
+            Register Your Abode
           </h1>
           <p className="text-lg text-charcoal-600">
             Share your home and culture with travelers. Create an authentic experience that connects people.
@@ -364,7 +364,7 @@ export default function RegisterAdobePage() {
 
         {success && (
           <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg">
-            Adobe registered successfully! Redirecting...
+            Abode registered successfully! Redirecting...
           </div>
         )}
 
@@ -384,14 +384,14 @@ export default function RegisterAdobePage() {
                   Description *
                 </label>
                 <textarea
-                  value={formData.adobeDetails.description}
+                  value={formData.abodeDetails.description}
                   onChange={(e) => setFormData(prev => ({
                     ...prev,
-                    adobeDetails: { ...prev.adobeDetails, description: e.target.value },
+                    abodeDetails: { ...prev.abodeDetails, description: e.target.value },
                   }))}
                   rows={5}
                   className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                  placeholder="Describe your adobe, what makes it special, and what guests can expect..."
+                  placeholder="Describe your abode, what makes it special, and what guests can expect..."
                   required
                 />
               </div>
@@ -402,10 +402,10 @@ export default function RegisterAdobePage() {
                     Property Type *
                   </label>
                   <select
-                    value={formData.adobeDetails.propertyType}
+                    value={formData.abodeDetails.propertyType}
                     onChange={(e) => setFormData(prev => ({
                       ...prev,
-                      adobeDetails: { ...prev.adobeDetails, propertyType: e.target.value },
+                      abodeDetails: { ...prev.abodeDetails, propertyType: e.target.value },
                     }))}
                     className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
                   >
@@ -421,10 +421,10 @@ export default function RegisterAdobePage() {
                   </label>
                   <input
                     type="number"
-                    value={formData.adobeDetails.capacity}
+                    value={formData.abodeDetails.capacity}
                     onChange={(e) => setFormData(prev => ({
                       ...prev,
-                      adobeDetails: { ...prev.adobeDetails, capacity: Number(e.target.value) },
+                      abodeDetails: { ...prev.abodeDetails, capacity: Number(e.target.value) },
                     }))}
                     min="1"
                     className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
@@ -438,10 +438,10 @@ export default function RegisterAdobePage() {
                   </label>
                   <input
                     type="number"
-                    value={formData.adobeDetails.bedrooms}
+                    value={formData.abodeDetails.bedrooms}
                     onChange={(e) => setFormData(prev => ({
                       ...prev,
-                      adobeDetails: { ...prev.adobeDetails, bedrooms: Number(e.target.value) },
+                      abodeDetails: { ...prev.abodeDetails, bedrooms: Number(e.target.value) },
                     }))}
                     min="1"
                     className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
@@ -455,10 +455,10 @@ export default function RegisterAdobePage() {
                   </label>
                   <input
                     type="number"
-                    value={formData.adobeDetails.bathrooms}
+                    value={formData.abodeDetails.bathrooms}
                     onChange={(e) => setFormData(prev => ({
                       ...prev,
-                      adobeDetails: { ...prev.adobeDetails, bathrooms: Number(e.target.value) },
+                      abodeDetails: { ...prev.abodeDetails, bathrooms: Number(e.target.value) },
                     }))}
                     min="1"
                     className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
@@ -717,9 +717,9 @@ export default function RegisterAdobePage() {
                 </button>
               </div>
               
-              {formData.adobeDetails.amenities.length > 0 && (
+              {formData.abodeDetails.amenities.length > 0 && (
                 <div className="flex flex-wrap gap-2">
-                  {formData.adobeDetails.amenities.map((amenity, index) => (
+                  {formData.abodeDetails.amenities.map((amenity, index) => (
                     <span
                       key={index}
                       className="px-3 py-1 bg-cream-500 text-charcoal-700 rounded-full text-sm flex items-center gap-2"
@@ -767,9 +767,9 @@ export default function RegisterAdobePage() {
                 </button>
               </div>
               
-              {formData.adobeDetails.houseRules.length > 0 && (
+              {formData.abodeDetails.houseRules.length > 0 && (
                 <ul className="space-y-2">
-                  {formData.adobeDetails.houseRules.map((rule, index) => (
+                  {formData.abodeDetails.houseRules.map((rule, index) => (
                     <li
                       key={index}
                       className="flex items-center justify-between p-3 bg-cream-50 rounded-lg"
@@ -1046,7 +1046,7 @@ export default function RegisterAdobePage() {
                 className="rounded-lg border border-charcoal-200 p-4"
               />
               <p className="text-sm text-charcoal-500">
-                Select dates when your adobe is available for guests. You can update this later.
+                Select dates when your abode is available for guests. You can update this later.
               </p>
             </div>
           </motion.div>
@@ -1070,7 +1070,7 @@ export default function RegisterAdobePage() {
               disabled={loading}
               className="px-8 py-3 bg-heritage-gold text-white font-semibold rounded-lg hover:bg-heritage-gold-dark transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Registering...' : 'Register Adobe'}
+              {loading ? 'Registering...' : 'Register Abode'}
             </button>
           </motion.div>
         </form>

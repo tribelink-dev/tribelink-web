@@ -26,6 +26,43 @@ router.get('/me', authenticate, requireUser, checkDBConnection, async (req, res)
   }
 });
 
+// Update user profile
+router.patch('/me', authenticate, requireUser, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Update allowed fields
+    const allowedFields = ['preferredCurrency', 'name'];
+    allowedFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        user[field] = req.body[field];
+      }
+    });
+
+    // Update preferences if provided
+    if (req.body.preferences) {
+      const { travelStyle, pace, transport } = req.body.preferences;
+      if (travelStyle !== undefined) user.preferences.travelStyle = travelStyle;
+      if (pace !== undefined) user.preferences.pace = pace;
+      if (transport !== undefined) user.preferences.transport = transport;
+    }
+
+    await user.save();
+
+    // Return updated user without password
+    const updatedUser = await User.findById(req.user._id).select('-password');
+    res.json({ 
+      message: 'Profile updated successfully', 
+      user: updatedUser 
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Submit KYT Questionnaire
 router.post('/kyt', authenticate, requireUser, async (req, res) => {
   try {
