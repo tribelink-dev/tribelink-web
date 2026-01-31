@@ -100,7 +100,7 @@ export default function AbodeDashboard() {
       });
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      toast.addToast('Failed to load dashboard data', 'error');
+      toast.error('Failed to load dashboard data');
     } finally {
       setStatsLoading(false);
     }
