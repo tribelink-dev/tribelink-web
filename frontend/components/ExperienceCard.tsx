@@ -75,8 +75,8 @@ export default function ExperienceCard({
       providerName = experience.provider;
     } else if (experience.provider.name) {
       providerName = experience.provider.name;
-    } else if (experience.provider._id) {
-      // Provider exists but no name, try to get from other fields
+    } else {
+      // Provider exists but no name
       providerName = 'Experience Host';
     }
   }
