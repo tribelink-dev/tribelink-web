@@ -77,7 +77,7 @@ export default function ManageAbodePage() {
     } catch (err: any) {
       console.error('Error fetching abodes:', err);
       setError(err.response?.data?.message || 'Failed to load abodes');
-      toast.addToast('Failed to load abodes', 'error');
+      toast.error('Failed to load abodes');
     } finally {
       setLoading(false);
     }
@@ -90,11 +90,11 @@ export default function ManageAbodePage() {
 
     try {
       await api.delete(`/abodes/${id}`);
-      toast.addToast('Abode deleted successfully', 'success');
+      toast.success('Abode deleted successfully');
       fetchAbodes();
     } catch (err: any) {
       console.error('Error deleting abode:', err);
-      toast.addToast(err.response?.data?.message || 'Failed to delete abode', 'error');
+      toast.error(err.response?.data?.message || 'Failed to delete abode');
     }
   };
 
