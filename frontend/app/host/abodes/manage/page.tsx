@@ -166,7 +166,7 @@ export default function ManageAbodePage() {
                     <div className="md:w-1/3 h-64 md:h-auto relative">
                       {abode.images && abode.images.length > 0 ? (
                         <img
-                          src={getImageUrl(abode.images.find(img => img.isMain)?.url || abode.images[0].url)}
+                          src={getImageUrl(abode.images.find(img => img.isMain)?.url || abode.images[0].url) || undefined}
                           alt={abode.abodeDetails.description.substring(0, 50)}
                           className="w-full h-full object-cover"
                         />
