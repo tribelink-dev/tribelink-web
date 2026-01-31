@@ -43,6 +43,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // Check if user is a host/provider - if so, skip /user/me call
+      if (typeof window !== 'undefined') {
+        const userType = localStorage.getItem('userType');
+        const hostData = localStorage.getItem('host');
+        
+        // If user is a host/provider, don't call /user/me endpoint
+        if (userType === 'host' || hostData) {
+          // Use stored user data if available, otherwise set loading to false
+          const storedUser = localStorage.getItem('user');
+          if (storedUser) {
+            try {
+              const parsedUser = JSON.parse(storedUser);
+              setUser(parsedUser);
+            } catch (parseErr) {
+              console.error('Error parsing stored user:', parseErr);
+            }
+          }
+          setLoading(false);
+          return;
+        }
+      }
+
       try {
         const response = await api.get('/user/me');
         if (response.data.user) {
@@ -59,8 +81,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             localStorage.setItem('user', JSON.stringify(updatedUser));
           }
         }
-      } catch (err) {
+      } catch (err: any) {
+        // Only log error if it's not a 403 (which is expected for hosts)
+        if (err.response?.status !== 403) {
         console.error('Error fetching user data:', err);
+        }
         // If fetch fails and we have stored user, use it
         if (typeof window !== 'undefined') {
           const storedUser = localStorage.getItem('user');

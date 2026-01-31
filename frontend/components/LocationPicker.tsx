@@ -33,6 +33,14 @@ export default function LocationPicker({
   const [selectedLng, setSelectedLng] = useState<number | null>(initialLng || null);
   const [address, setAddress] = useState<string>('');
 
+  // Update selected coordinates when initial values change
+  useEffect(() => {
+    if (initialLat && initialLng) {
+      setSelectedLat(initialLat);
+      setSelectedLng(initialLng);
+    }
+  }, [initialLat, initialLng]);
+
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || '';
 
   // District coordinates fallback (Kerala districts)
@@ -59,13 +67,16 @@ export default function LocationPicker({
 
   // Set initial center based on district or default
   useEffect(() => {
-    if (district && districtCoordinates[district] && !selectedLat && !selectedLng) {
+    if (initialLat && initialLng) {
+      setSelectedLat(initialLat);
+      setSelectedLng(initialLng);
+    } else if (district && districtCoordinates[district] && !selectedLat && !selectedLng) {
       const coords = districtCoordinates[district];
       setSelectedLat(coords.lat);
       setSelectedLng(coords.lng);
       onLocationChange(coords.lat, coords.lng);
     }
-  }, [district]);
+  }, [district, initialLat, initialLng]);
 
   const handleMapClick = useCallback((event: any) => {
     const { lng, lat } = event.lngLat;

@@ -968,3 +968,47 @@ body {
   cursor: pointer !important;
 }
 
+/* Amber theme for abode date picker */
+.rdp-amber {
+  --rdp-cell-size: 44px;
+  --rdp-accent-color: #d97706;
+  --rdp-background-color: #fef3c7;
+  --rdp-accent-color-dark: #b45309;
+}
+
+.rdp-amber .rdp-day_selected,
+.rdp-amber .rdp-day_selected:focus-visible,
+.rdp-amber .rdp-day_selected:hover {
+  background: linear-gradient(135deg, #d97706 0%, #ea580c 100%) !important;
+  color: white !important;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.3);
+}
+
+.rdp-amber .rdp-day:hover:not([disabled]):not(.rdp-day_selected) {
+  background-color: #fef3c7 !important;
+  color: #92400e !important;
+}
+
+.rdp-amber .rdp-day_today {
+  background-color: #fef3c7 !important;
+  color: #92400e !important;
+  font-weight: 700;
+  border: 2px solid #f59e0b !important;
+}
+
+.rdp-amber .rdp-nav_button:hover {
+  background-color: #fef3c7 !important;
+  border-color: #f59e0b !important;
+}
+
+.rdp-amber .rdp-caption_label {
+  color: #92400e !important;
+  font-weight: 700;
+}
+
+.rdp-amber .rdp-head_cell {
+  color: #d97706 !important;
+  font-weight: 600;
+}
+

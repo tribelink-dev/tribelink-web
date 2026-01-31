@@ -163,16 +163,48 @@ router.post('/register', authenticate, requireHost, upload.array('images', 10), 
       return res.status(400).json({ message: 'Local host profile already exists' });
     }
 
-    const {
-      abodeDetails,
-      culturalPractices,
-      nearbyPlaces,
-      availability,
-      pricing,
-      languages,
-      familyInfo,
-      location
-    } = req.body;
+    // Parse JSON strings from FormData (multipart/form-data sends JSON as strings)
+    let abodeDetails, culturalPractices, nearbyPlaces, availability, pricing, languages, familyInfo, location;
+    
+    try {
+      abodeDetails = typeof req.body.abodeDetails === 'string' 
+        ? JSON.parse(req.body.abodeDetails) 
+        : req.body.abodeDetails;
+      
+      culturalPractices = typeof req.body.culturalPractices === 'string'
+        ? JSON.parse(req.body.culturalPractices)
+        : req.body.culturalPractices;
+      
+      nearbyPlaces = typeof req.body.nearbyPlaces === 'string'
+        ? JSON.parse(req.body.nearbyPlaces)
+        : req.body.nearbyPlaces;
+      
+      availability = typeof req.body.availability === 'string'
+        ? JSON.parse(req.body.availability)
+        : req.body.availability;
+      
+      pricing = typeof req.body.pricing === 'string'
+        ? JSON.parse(req.body.pricing)
+        : req.body.pricing;
+      
+      languages = typeof req.body.languages === 'string'
+        ? JSON.parse(req.body.languages)
+        : req.body.languages;
+      
+      familyInfo = typeof req.body.familyInfo === 'string'
+        ? JSON.parse(req.body.familyInfo)
+        : req.body.familyInfo;
+      
+      location = typeof req.body.location === 'string'
+        ? JSON.parse(req.body.location)
+        : req.body.location;
+    } catch (parseError) {
+      console.error('Error parsing JSON fields:', parseError);
+      return res.status(400).json({ 
+        message: 'Invalid JSON data in form fields',
+        error: parseError.message 
+      });
+    }
 
     // Handle image uploads
     const images = [];
@@ -186,39 +218,54 @@ router.post('/register', authenticate, requireHost, upload.array('images', 10), 
       });
     }
 
+    // Validate required fields
+    if (!abodeDetails?.title || !abodeDetails.title.trim()) {
+      return res.status(400).json({ message: 'Abode title is required' });
+    }
+    if (!abodeDetails?.description || !abodeDetails.description.trim()) {
+      return res.status(400).json({ message: 'Abode description is required' });
+    }
+    if (!location?.state || !location.state.trim()) {
+      return res.status(400).json({ message: 'State is required' });
+    }
+    if (!location?.district || !location.district.trim()) {
+      return res.status(400).json({ message: 'District is required' });
+    }
+
     const localHost = new LocalHost({
       providerId,
       abodeDetails: {
-        description: abodeDetails?.description || '',
-        capacity: abodeDetails?.capacity || 2,
-        bedrooms: abodeDetails?.bedrooms || 1,
-        bathrooms: abodeDetails?.bathrooms || 1,
-        amenities: abodeDetails?.amenities || [],
-        houseRules: abodeDetails?.houseRules || [],
-        propertyType: abodeDetails?.propertyType || 'Traditional Home'
+        title: abodeDetails.title.trim(),
+        description: abodeDetails.description || '',
+        capacity: Number(abodeDetails.capacity) || 2,
+        bedrooms: Number(abodeDetails.bedrooms) || 1,
+        bathrooms: Number(abodeDetails.bathrooms) || 1,
+        amenities: Array.isArray(abodeDetails.amenities) ? abodeDetails.amenities : [],
+        houseRules: Array.isArray(abodeDetails.houseRules) ? abodeDetails.houseRules : [],
+        propertyType: abodeDetails.propertyType || 'Traditional Home'
       },
-      culturalPractices: culturalPractices || [],
-      nearbyPlaces: nearbyPlaces || [],
-      availability: availability || [],
+      culturalPractices: Array.isArray(culturalPractices) ? culturalPractices : [],
+      nearbyPlaces: Array.isArray(nearbyPlaces) ? nearbyPlaces : [],
+      availability: Array.isArray(availability) ? availability : [],
       pricing: {
-        pricePerNight: pricing?.pricePerNight || 0,
-        currency: pricing?.currency || 'USD',
-        weeklyDiscount: pricing?.weeklyDiscount || 0,
-        monthlyDiscount: pricing?.monthlyDiscount || 0
+        pricePerNight: Number(pricing?.pricePerNight) || 0,
+        currency: pricing?.currency || 'INR',
+        weeklyDiscount: Number(pricing?.weeklyDiscount) || 0,
+        monthlyDiscount: Number(pricing?.monthlyDiscount) || 0
       },
       images,
-      languages: languages || [],
+      languages: Array.isArray(languages) ? languages : [],
       familyInfo: familyInfo || {},
       location: {
         country: location?.country || 'India',
-        state: location?.state || '',
-        district: location?.district || '',
+        state: location.state || '',
+        district: location.district || '',
         address: location?.address || '',
         coordinates: {
-          lat: location?.coordinates?.lat || 0,
-          lng: location?.coordinates?.lng || 0
+          lat: Number(location?.coordinates?.lat) || 0,
+          lng: Number(location?.coordinates?.lng) || 0
         },
-        nearbyLandmarks: location?.nearbyLandmarks || []
+        nearbyLandmarks: Array.isArray(location?.nearbyLandmarks) ? location.nearbyLandmarks : []
       }
     });
 
@@ -249,24 +296,72 @@ router.put('/:id', authenticate, requireHost, upload.array('images', 10), async 
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    const {
-      abodeDetails,
-      culturalPractices,
-      nearbyPlaces,
-      availability,
-      pricing,
-      languages,
-      familyInfo,
-      location
-    } = req.body;
+    // Parse JSON strings from FormData (multipart/form-data sends JSON as strings)
+    let abodeDetails, culturalPractices, nearbyPlaces, availability, pricing, languages, familyInfo, location;
+    
+    try {
+      if (req.body.abodeDetails) {
+        abodeDetails = typeof req.body.abodeDetails === 'string' 
+          ? JSON.parse(req.body.abodeDetails) 
+          : req.body.abodeDetails;
+      }
+      
+      if (req.body.culturalPractices) {
+        culturalPractices = typeof req.body.culturalPractices === 'string'
+          ? JSON.parse(req.body.culturalPractices)
+          : req.body.culturalPractices;
+      }
+      
+      if (req.body.nearbyPlaces) {
+        nearbyPlaces = typeof req.body.nearbyPlaces === 'string'
+          ? JSON.parse(req.body.nearbyPlaces)
+          : req.body.nearbyPlaces;
+      }
+      
+      if (req.body.availability) {
+        availability = typeof req.body.availability === 'string'
+          ? JSON.parse(req.body.availability)
+          : req.body.availability;
+      }
+      
+      if (req.body.pricing) {
+        pricing = typeof req.body.pricing === 'string'
+          ? JSON.parse(req.body.pricing)
+          : req.body.pricing;
+      }
+      
+      if (req.body.languages) {
+        languages = typeof req.body.languages === 'string'
+          ? JSON.parse(req.body.languages)
+          : req.body.languages;
+      }
+      
+      if (req.body.familyInfo) {
+        familyInfo = typeof req.body.familyInfo === 'string'
+          ? JSON.parse(req.body.familyInfo)
+          : req.body.familyInfo;
+      }
+      
+      if (req.body.location) {
+        location = typeof req.body.location === 'string'
+          ? JSON.parse(req.body.location)
+          : req.body.location;
+      }
+    } catch (parseError) {
+      console.error('Error parsing JSON fields:', parseError);
+      return res.status(400).json({ 
+        message: 'Invalid JSON data in form fields',
+        error: parseError.message 
+      });
+    }
 
     // Update fields
     if (abodeDetails) localHost.abodeDetails = { ...localHost.abodeDetails, ...abodeDetails };
-    if (culturalPractices) localHost.culturalPractices = culturalPractices;
-    if (nearbyPlaces) localHost.nearbyPlaces = nearbyPlaces;
-    if (availability) localHost.availability = availability;
+    if (culturalPractices) localHost.culturalPractices = Array.isArray(culturalPractices) ? culturalPractices : localHost.culturalPractices;
+    if (nearbyPlaces) localHost.nearbyPlaces = Array.isArray(nearbyPlaces) ? nearbyPlaces : localHost.nearbyPlaces;
+    if (availability) localHost.availability = Array.isArray(availability) ? availability : localHost.availability;
     if (pricing) localHost.pricing = { ...localHost.pricing, ...pricing };
-    if (languages) localHost.languages = languages;
+    if (languages) localHost.languages = Array.isArray(languages) ? languages : localHost.languages;
     if (familyInfo) localHost.familyInfo = { ...localHost.familyInfo, ...familyInfo };
     if (location) localHost.location = { ...localHost.location, ...location };
 
@@ -289,6 +384,43 @@ router.put('/:id', authenticate, requireHost, upload.array('images', 10), async 
     });
   } catch (error) {
     console.error('Error updating local host:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get abodes by owner (for abode host dashboard)
+router.get('/owner/my-abodes', authenticate, requireHost, async (req, res) => {
+  try {
+    // Check if provider is LOCAL_HOST type
+    if (req.user.providerType !== 'LOCAL_HOST') {
+      return res.status(403).json({ 
+        message: 'Access denied. Only LOCAL_HOST providers can access this endpoint.' 
+      });
+    }
+
+    const abodes = await LocalHost.find({ providerId: req.user._id })
+      .populate('providerId', 'name email phoneNumber profilePicture rating ratingCount')
+      .sort({ createdAt: -1 });
+
+    // Normalize image URLs
+    const baseUrl = getBaseUrlFromRequest(req);
+    const normalizedAbodes = abodes.map(abode => {
+      const abodeObj = abode.toObject();
+      if (abodeObj.images && abodeObj.images.length > 0) {
+        abodeObj.images = abodeObj.images.map(img => ({
+          ...img,
+          url: img.url.startsWith('http') ? img.url : `${baseUrl}${img.url}`
+        }));
+      }
+      return abodeObj;
+    });
+
+    res.json({
+      success: true,
+      abodes: normalizedAbodes
+    });
+  } catch (error) {
+    console.error('Error fetching abodes by owner:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -336,6 +468,45 @@ router.get('/:id/bookings', authenticate, requireHost, async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching bookings:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Delete local host profile
+router.delete('/:id', authenticate, requireHost, async (req, res) => {
+  try {
+    const localHost = await LocalHost.findById(req.params.id);
+
+    if (!localHost) {
+      return res.status(404).json({ message: 'Local host not found' });
+    }
+
+    // Verify ownership
+    if (localHost.providerId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Check if there are any active bookings
+    const activeBookings = await Booking.countDocuments({
+      'abodeStay.localHost': req.params.id,
+      bookingType: 'ABODE_STAY',
+      status: { $in: ['PENDING', 'CONFIRMED'] }
+    });
+
+    if (activeBookings > 0) {
+      return res.status(400).json({ 
+        message: 'Cannot delete abode with active bookings. Please cancel or complete all bookings first.' 
+      });
+    }
+
+    await LocalHost.findByIdAndDelete(req.params.id);
+
+    res.json({
+      success: true,
+      message: 'Local host profile deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting local host:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

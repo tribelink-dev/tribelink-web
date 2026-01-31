@@ -80,12 +80,17 @@ let upload;
 
 if (isCloudinaryConfigured) {
   // Use Cloudinary storage
+  // IMPORTANT: Use minimal params to avoid signature issues
+  // multer-storage-cloudinary automatically generates signatures, and adding
+  // format/quality/transformation params can cause mismatches
   storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: async (req, file) => {
       // Determine folder based on route
       let folder = 'tribelink/experiences';
-      if (req.originalUrl?.includes('/hotels')) {
+      if (req.originalUrl?.includes('/abodes') || req.originalUrl?.includes('/adobes')) {
+        folder = 'tribelink/abodes';
+      } else if (req.originalUrl?.includes('/hotels')) {
         folder = 'tribelink/hotels';
       } else if (req.originalUrl?.includes('/drivers')) {
         folder = 'tribelink/drivers';
@@ -95,16 +100,15 @@ if (isCloudinaryConfigured) {
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
       const publicId = `${folder}/${uniqueSuffix}`;
 
+      // Return ONLY essential params - no format, quality, or transformation
+      // These cause signature mismatches because multer-storage-cloudinary
+      // handles signature generation internally and expects specific param formats
       return {
         folder: folder,
         public_id: publicId,
-        resource_type: 'auto', // Automatically detect image/video
-        format: 'webp', // Convert to WebP for better compression
-        quality: 'auto:good', // Automatic quality optimization
-        transformation: [
-          { width: 1920, height: 1080, crop: 'limit' }, // Max dimensions
-          { quality: 'auto:good' }
-        ]
+        resource_type: 'auto' // Automatically detect image/video
+        // NOTE: Apply format/quality transformations when SERVING images, not during upload
+        // Example: imageUrl + '?f=webp&q=auto:good' when displaying
       };
     },
   });
@@ -135,7 +139,9 @@ if (isCloudinaryConfigured) {
     filename: function (req, file, cb) {
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
       let prefix = 'experience';
-      if (req.originalUrl?.includes('/hotels')) {
+      if (req.originalUrl?.includes('/abodes') || req.originalUrl?.includes('/adobes')) {
+        prefix = 'abode';
+      } else if (req.originalUrl?.includes('/hotels')) {
         prefix = 'hotel';
       } else if (req.originalUrl?.includes('/drivers')) {
         prefix = 'driver';
@@ -156,4 +162,3 @@ if (isCloudinaryConfigured) {
 }
 
 module.exports = upload;
-

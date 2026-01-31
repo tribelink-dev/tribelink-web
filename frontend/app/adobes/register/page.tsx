@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
+import AbodeSidebar from '@/components/AbodeSidebar';
+import LocationPicker from '@/components/LocationPicker';
 import { INDIAN_STATES, DISTRICTS_BY_STATE } from '@/lib/indianStates';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const PROPERTY_TYPES = ['Traditional Home', 'Heritage House', 'Village Home', 'Farmhouse', 'Cottage', 'Other'];
 const CULTURAL_CATEGORIES = ['Cooking', 'Craft', 'Music', 'Dance', 'Ritual', 'Festival', 'Agriculture', 'Traditional Medicine', 'Other'];
@@ -19,9 +21,12 @@ export default function RegisterAbodePage() {
   const [success, setSuccess] = useState(false);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [currentStep, setCurrentStep] = useState(1);
+  const totalSteps = 6;
   
   const [formData, setFormData] = useState({
     abodeDetails: {
+      title: '',
       description: '',
       capacity: 2,
       bedrooms: 1,
@@ -74,9 +79,10 @@ export default function RegisterAbodePage() {
   const [newLanguage, setNewLanguage] = useState('');
   const [newLandmark, setNewLandmark] = useState('');
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
+  const [alwaysAvailable, setAlwaysAvailable] = useState(false);
+  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
 
   useEffect(() => {
-    // Check if user is logged in as LOCAL_HOST
     if (typeof window !== 'undefined') {
       const host = localStorage.getItem('host');
       const token = localStorage.getItem('token');
@@ -274,6 +280,106 @@ export default function RegisterAbodePage() {
     }
   };
 
+  const handleRangeSelect = (range: { from?: Date; to?: Date } | undefined) => {
+    if (range) {
+      setDateRange(range);
+      if (range.from && range.to) {
+        const dates: Date[] = [];
+        const from = new Date(range.from);
+        const to = new Date(range.to);
+        
+        for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
+          dates.push(new Date(d));
+        }
+        handleDateSelect(dates);
+      } else if (range.from) {
+        setSelectedDates([range.from]);
+        handleDateSelect([range.from]);
+      }
+    }
+  };
+
+  // Quick selection helpers
+  const selectNext30Days = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endDate = new Date(today);
+    endDate.setDate(today.getDate() + 29);
+    setDateRange({ from: today, to: endDate });
+    handleRangeSelect({ from: today, to: endDate });
+  };
+
+  const selectNext90Days = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endDate = new Date(today);
+    endDate.setDate(today.getDate() + 89);
+    setDateRange({ from: today, to: endDate });
+    handleRangeSelect({ from: today, to: endDate });
+  };
+
+  const selectNext6Months = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endDate = new Date(today);
+    endDate.setMonth(today.getMonth() + 6);
+    setDateRange({ from: today, to: endDate });
+    handleRangeSelect({ from: today, to: endDate });
+  };
+
+  const selectAllWeekends = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dates: Date[] = [];
+    const endDate = new Date(today);
+    endDate.setMonth(today.getMonth() + 6);
+    
+    for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
+      const dayOfWeek = d.getDay();
+      if (dayOfWeek === 0 || dayOfWeek === 6) {
+        dates.push(new Date(d));
+      }
+    }
+    handleDateSelect([...selectedDates, ...dates]);
+  };
+
+  const selectAllWeekdays = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dates: Date[] = [];
+    const endDate = new Date(today);
+    endDate.setMonth(today.getMonth() + 6);
+    
+    for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
+      const dayOfWeek = d.getDay();
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        dates.push(new Date(d));
+      }
+    }
+    handleDateSelect([...selectedDates, ...dates]);
+  };
+
+  const clearAllDates = () => {
+    setSelectedDates([]);
+    setDateRange({});
+    setFormData(prev => ({ ...prev, availability: [] }));
+  };
+
+  const handleAlwaysAvailableToggle = (checked: boolean) => {
+    setAlwaysAvailable(checked);
+    if (checked) {
+      // Select next 365 days when "always available" is enabled
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const endDate = new Date(today);
+      endDate.setDate(today.getDate() + 364);
+      setDateRange({ from: today, to: endDate });
+      handleRangeSelect({ from: today, to: endDate });
+    } else {
+      clearAllDates();
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -281,6 +387,12 @@ export default function RegisterAbodePage() {
 
     try {
       // Validate required fields
+      if (!formData.abodeDetails.title.trim()) {
+        throw new Error('Catchy title is required');
+      }
+      if (formData.abodeDetails.title.length > 100) {
+        throw new Error('Title must be 100 characters or less');
+      }
       if (!formData.abodeDetails.description.trim()) {
         throw new Error('Description is required');
       }
@@ -327,7 +439,7 @@ export default function RegisterAbodePage() {
       if (response.data.success) {
         setSuccess(true);
         setTimeout(() => {
-          router.push('/host/dashboard');
+          router.push('/host/abodes/dashboard');
         }, 2000);
       }
     } catch (err: any) {
@@ -340,742 +452,930 @@ export default function RegisterAbodePage() {
 
   const districts = formData.location.state ? DISTRICTS_BY_STATE[formData.location.state] || [] : [];
 
+  const steps = [
+    { number: 1, title: 'Basic Info', icon: '🏠' },
+    { number: 2, title: 'Location', icon: '📍' },
+    { number: 3, title: 'Pricing', icon: '💰' },
+    { number: 4, title: 'Images', icon: '📸' },
+    { number: 5, title: 'Details', icon: '✨' },
+    { number: 6, title: 'Review', icon: '✓' },
+  ];
+
   return (
-    <div className="min-h-screen bg-off-white pt-24 pb-16">
-      <div className="section-container-luxury max-w-4xl">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <h1 className="text-display-md font-serif text-charcoal-700 mb-4">
-            Register Your Abode
-          </h1>
-          <p className="text-lg text-charcoal-600">
-            Share your home and culture with travelers. Create an authentic experience that connects people.
-          </p>
-        </motion.div>
-
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg">
-            Abode registered successfully! Redirecting...
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Basic Details */}
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100">
+      <AbodeSidebar />
+      <div className="lg:ml-72">
+        <div className="p-6 md:p-8 lg:p-10">
+          {/* Header */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="bg-white rounded-2xl shadow-luxury p-6"
+            className="mb-8"
           >
-            <h2 className="text-2xl font-semibold text-charcoal-700 mb-6">Basic Details</h2>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-charcoal-700 mb-2">
-                  Description *
-                </label>
-                <textarea
-                  value={formData.abodeDetails.description}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    abodeDetails: { ...prev.abodeDetails, description: e.target.value },
-                  }))}
-                  rows={5}
-                  className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                  placeholder="Describe your abode, what makes it special, and what guests can expect..."
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-charcoal-700 mb-2">
-                    Property Type *
-                  </label>
-                  <select
-                    value={formData.abodeDetails.propertyType}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      abodeDetails: { ...prev.abodeDetails, propertyType: e.target.value },
-                    }))}
-                    className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                  >
-                    {PROPERTY_TYPES.map(type => (
-                      <option key={type} value={type}>{type}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-charcoal-700 mb-2">
-                    Capacity (Guests) *
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.abodeDetails.capacity}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      abodeDetails: { ...prev.abodeDetails, capacity: Number(e.target.value) },
-                    }))}
-                    min="1"
-                    className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-charcoal-700 mb-2">
-                    Bedrooms *
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.abodeDetails.bedrooms}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      abodeDetails: { ...prev.abodeDetails, bedrooms: Number(e.target.value) },
-                    }))}
-                    min="1"
-                    className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-charcoal-700 mb-2">
-                    Bathrooms *
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.abodeDetails.bathrooms}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      abodeDetails: { ...prev.abodeDetails, bathrooms: Number(e.target.value) },
-                    }))}
-                    min="1"
-                    className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Location */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-white rounded-2xl shadow-luxury p-6"
-          >
-            <h2 className="text-2xl font-semibold text-charcoal-700 mb-6">Location</h2>
-            
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-charcoal-700 mb-2">
-                    State *
-                  </label>
-                  <select
-                    value={formData.location.state}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      location: { ...prev.location, state: e.target.value, district: '' },
-                    }))}
-                    className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                    required
-                  >
-                    <option value="">Select State</option>
-                    {INDIAN_STATES.map(state => (
-                      <option key={state} value={state}>{state}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-charcoal-700 mb-2">
-                    District *
-                  </label>
-                  <select
-                    value={formData.location.district}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      location: { ...prev.location, district: e.target.value },
-                    }))}
-                    disabled={!formData.location.state || districts.length === 0}
-                    className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold disabled:bg-charcoal-50"
-                    required
-                  >
-                    <option value="">Select District</option>
-                    {districts.map(district => (
-                      <option key={district} value={district}>{district}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-charcoal-700 mb-2">
-                  Address
-                </label>
-                <input
-                  type="text"
-                  value={formData.location.address}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    location: { ...prev.location, address: e.target.value },
-                  }))}
-                  className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                  placeholder="Street address (optional)"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-charcoal-700 mb-2">
-                    Latitude *
-                  </label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={formData.location.coordinates.lat}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      location: {
-                        ...prev.location,
-                        coordinates: { ...prev.location.coordinates, lat: Number(e.target.value) },
-                      },
-                    }))}
-                    className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-charcoal-700 mb-2">
-                    Longitude *
-                  </label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={formData.location.coordinates.lng}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      location: {
-                        ...prev.location,
-                        coordinates: { ...prev.location.coordinates, lng: Number(e.target.value) },
-                      },
-                    }))}
-                    className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Pricing */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-white rounded-2xl shadow-luxury p-6"
-          >
-            <h2 className="text-2xl font-semibold text-charcoal-700 mb-6">Pricing</h2>
-            
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-charcoal-700 mb-2">
-                    Price per Night (₹) *
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.pricing.pricePerNight}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      pricing: { ...prev.pricing, pricePerNight: e.target.value },
-                    }))}
-                    min="0"
-                    step="0.01"
-                    className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-charcoal-700 mb-2">
-                    Weekly Discount (%)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.pricing.weeklyDiscount}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      pricing: { ...prev.pricing, weeklyDiscount: Number(e.target.value) },
-                    }))}
-                    min="0"
-                    max="100"
-                    className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-charcoal-700 mb-2">
-                    Monthly Discount (%)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.pricing.monthlyDiscount}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      pricing: { ...prev.pricing, monthlyDiscount: Number(e.target.value) },
-                    }))}
-                    min="0"
-                    max="100"
-                    className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                  />
-                </div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Images */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="bg-white rounded-2xl shadow-luxury p-6"
-          >
-            <h2 className="text-2xl font-semibold text-charcoal-700 mb-6">Images *</h2>
-            
-            <div className="space-y-4">
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageChange}
-                className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-              />
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-800 via-orange-700 to-amber-800 p-8 md:p-12 shadow-2xl">
+              <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl -mr-48 -mt-48"></div>
+              <div className="absolute bottom-0 left-0 w-72 h-72 bg-orange-500/10 rounded-full blur-2xl -ml-36 -mb-36"></div>
               
-              {imagePreviews.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {imagePreviews.map((preview, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={preview}
-                        alt={`Preview ${index + 1}`}
-                        className="w-full h-32 object-cover rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeImage(index)}
-                        className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+              <div className="relative z-10">
+                <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+                  Register Your Abode
+                </h1>
+                <p className="text-white/90 text-lg md:text-xl">
+                  Share your home and culture with travelers. Create an authentic experience that connects people.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Progress Steps */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8"
+          >
+            <div className="bg-white rounded-2xl shadow-xl border border-amber-100 p-6">
+              <div className="flex items-center justify-between">
+                {steps.map((step, index) => (
+                  <div key={step.number} className="flex items-center flex-1">
+                    <div className="flex flex-col items-center flex-1">
+                      <div
+                        className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg transition-all ${
+                          currentStep >= step.number
+                            ? 'bg-gradient-to-br from-amber-600 to-orange-600 text-white shadow-lg'
+                            : 'bg-amber-100 text-amber-600'
+                        }`}
                       >
-                        ×
-                      </button>
+                        {currentStep > step.number ? '✓' : step.number}
+                      </div>
+                      <span className={`mt-2 text-sm font-medium ${
+                        currentStep >= step.number ? 'text-amber-700' : 'text-amber-400'
+                      }`}>
+                        {step.title}
+                      </span>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </motion.div>
-
-          {/* Amenities */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="bg-white rounded-2xl shadow-luxury p-6"
-          >
-            <h2 className="text-2xl font-semibold text-charcoal-700 mb-6">Amenities</h2>
-            
-            <div className="space-y-4">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newAmenity}
-                  onChange={(e) => setNewAmenity(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addAmenity())}
-                  placeholder="e.g., WiFi, Kitchen, Air Conditioning"
-                  className="flex-1 px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                />
-                <button
-                  type="button"
-                  onClick={addAmenity}
-                  className="px-6 py-2.5 bg-heritage-gold text-white rounded-lg hover:bg-heritage-gold-dark transition-all"
-                >
-                  Add
-                </button>
-              </div>
-              
-              {formData.abodeDetails.amenities.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {formData.abodeDetails.amenities.map((amenity, index) => (
-                    <span
-                      key={index}
-                      className="px-3 py-1 bg-cream-500 text-charcoal-700 rounded-full text-sm flex items-center gap-2"
-                    >
-                      {amenity}
-                      <button
-                        type="button"
-                        onClick={() => removeAmenity(index)}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </motion.div>
-
-          {/* House Rules */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="bg-white rounded-2xl shadow-luxury p-6"
-          >
-            <h2 className="text-2xl font-semibold text-charcoal-700 mb-6">House Rules</h2>
-            
-            <div className="space-y-4">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newHouseRule}
-                  onChange={(e) => setNewHouseRule(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addHouseRule())}
-                  placeholder="e.g., No smoking, Respect local customs"
-                  className="flex-1 px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                />
-                <button
-                  type="button"
-                  onClick={addHouseRule}
-                  className="px-6 py-2.5 bg-heritage-gold text-white rounded-lg hover:bg-heritage-gold-dark transition-all"
-                >
-                  Add
-                </button>
-              </div>
-              
-              {formData.abodeDetails.houseRules.length > 0 && (
-                <ul className="space-y-2">
-                  {formData.abodeDetails.houseRules.map((rule, index) => (
-                    <li
-                      key={index}
-                      className="flex items-center justify-between p-3 bg-cream-50 rounded-lg"
-                    >
-                      <span className="text-charcoal-700">{rule}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeHouseRule(index)}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        Remove
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </motion.div>
-
-          {/* Cultural Practices */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7 }}
-            className="bg-white rounded-2xl shadow-luxury p-6"
-          >
-            <h2 className="text-2xl font-semibold text-charcoal-700 mb-6">Cultural Practices</h2>
-            
-            <div className="space-y-4">
-              {formData.culturalPractices.map((practice, index) => (
-                <div key={index} className="p-4 border border-charcoal-200 rounded-lg space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-medium text-charcoal-700">Practice {index + 1}</h3>
-                    <button
-                      type="button"
-                      onClick={() => removeCulturalPractice(index)}
-                      className="text-red-500 hover:text-red-700 text-sm"
-                    >
-                      Remove
-                    </button>
+                    {index < steps.length - 1 && (
+                      <div className={`flex-1 h-1 mx-2 rounded ${
+                        currentStep > step.number ? 'bg-amber-600' : 'bg-amber-200'
+                      }`}></div>
+                    )}
                   </div>
-                  <input
-                    type="text"
-                    value={practice.practice}
-                    onChange={(e) => updateCulturalPractice(index, 'practice', e.target.value)}
-                    placeholder="Practice name (e.g., Traditional Cooking)"
-                    className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                  />
-                  <select
-                    value={practice.category}
-                    onChange={(e) => updateCulturalPractice(index, 'category', e.target.value)}
-                    className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                  >
-                    {CULTURAL_CATEGORIES.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                  <textarea
-                    value={practice.description}
-                    onChange={(e) => updateCulturalPractice(index, 'description', e.target.value)}
-                    placeholder="Description of the practice..."
-                    rows={3}
-                    className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                  />
-                </div>
-              ))}
-              
-              <button
-                type="button"
-                onClick={addCulturalPractice}
-                className="px-6 py-2.5 border border-heritage-gold text-heritage-gold rounded-lg hover:bg-heritage-gold hover:text-white transition-all"
+                ))}
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Error/Success Messages */}
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-lg shadow-lg"
               >
-                + Add Cultural Practice
-              </button>
-            </div>
-          </motion.div>
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  {error}
+                </div>
+              </motion.div>
+            )}
 
-          {/* Nearby Places */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8 }}
-            className="bg-white rounded-2xl shadow-luxury p-6"
-          >
-            <h2 className="text-2xl font-semibold text-charcoal-700 mb-6">Nearby Cultural & Historical Places</h2>
-            
-            <div className="space-y-4">
-              {formData.nearbyPlaces.map((place, index) => (
-                <div key={index} className="p-4 border border-charcoal-200 rounded-lg space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-medium text-charcoal-700">Place {index + 1}</h3>
-                    <button
-                      type="button"
-                      onClick={() => removeNearbyPlace(index)}
-                      className="text-red-500 hover:text-red-700 text-sm"
-                    >
-                      Remove
-                    </button>
+            {success && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="mb-6 p-4 bg-green-50 border-l-4 border-green-500 text-green-700 rounded-lg shadow-lg"
+              >
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Abode registered successfully! Redirecting to dashboard...
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Step 1: Basic Info */}
+            {currentStep === 1 && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="bg-white rounded-2xl shadow-xl border border-amber-100 p-8"
+              >
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 bg-gradient-to-br from-amber-600 to-orange-600 rounded-xl flex items-center justify-center text-white text-2xl">
+                    🏠
                   </div>
-                  <input
-                    type="text"
-                    value={place.name}
-                    onChange={(e) => updateNearbyPlace(index, 'name', e.target.value)}
-                    placeholder="Place name"
-                    className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                  />
-                  <select
-                    value={place.significance}
-                    onChange={(e) => updateNearbyPlace(index, 'significance', e.target.value)}
-                    className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                  >
-                    {SIGNIFICANCE_TYPES.map(type => (
-                      <option key={type} value={type}>{type}</option>
-                    ))}
-                  </select>
-                  <div className="grid grid-cols-2 gap-3">
-                    <input
-                      type="number"
-                      value={place.distance}
-                      onChange={(e) => updateNearbyPlace(index, 'distance', Number(e.target.value))}
-                      placeholder="Distance (km)"
-                      min="0"
-                      step="0.1"
-                      className="px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                    />
+                  <h2 className="text-2xl font-bold text-amber-900">Basic Information</h2>
+                </div>
+
+                <div className="space-y-6">
+                  {/* Title */}
+                  <div>
+                    <label className="block text-sm font-semibold text-amber-900 mb-2">
+                      Catchy Title * <span className="text-amber-600 text-xs font-normal">(Max 100 characters)</span>
+                    </label>
                     <input
                       type="text"
-                      value={place.description}
-                      onChange={(e) => updateNearbyPlace(index, 'description', e.target.value)}
-                      placeholder="Description"
-                      className="px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
+                      value={formData.abodeDetails.title}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        abodeDetails: { ...prev.abodeDetails, title: e.target.value },
+                      }))}
+                      maxLength={100}
+                      className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all text-lg"
+                      placeholder="e.g., 'Cozy Heritage Home in the Heart of Kerala'"
+                      required
+                    />
+                    <p className="mt-1 text-sm text-amber-600">
+                      {formData.abodeDetails.title.length}/100 characters
+                    </p>
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <label className="block text-sm font-semibold text-amber-900 mb-2">
+                      Description *
+                    </label>
+                    <textarea
+                      value={formData.abodeDetails.description}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        abodeDetails: { ...prev.abodeDetails, description: e.target.value },
+                      }))}
+                      rows={6}
+                      className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all resize-none"
+                      placeholder="Describe your abode, what makes it special, and what guests can expect..."
+                      required
+                    />
+                  </div>
+
+                  {/* Property Details Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-amber-900 mb-2">
+                        Property Type *
+                      </label>
+                      <select
+                        value={formData.abodeDetails.propertyType}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          abodeDetails: { ...prev.abodeDetails, propertyType: e.target.value },
+                        }))}
+                        className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                      >
+                        {PROPERTY_TYPES.map(type => (
+                          <option key={type} value={type}>{type}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-amber-900 mb-2">
+                        Capacity *
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.abodeDetails.capacity}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          abodeDetails: { ...prev.abodeDetails, capacity: Number(e.target.value) },
+                        }))}
+                        min="1"
+                        className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-amber-900 mb-2">
+                        Bedrooms *
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.abodeDetails.bedrooms}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          abodeDetails: { ...prev.abodeDetails, bedrooms: Number(e.target.value) },
+                        }))}
+                        min="1"
+                        className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-amber-900 mb-2">
+                        Bathrooms *
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.abodeDetails.bathrooms}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          abodeDetails: { ...prev.abodeDetails, bathrooms: Number(e.target.value) },
+                        }))}
+                        min="1"
+                        className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-8 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(2)}
+                    className="px-8 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all shadow-lg"
+                  >
+                    Next: Location →
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Step 2: Location */}
+            {currentStep === 2 && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="bg-white rounded-2xl shadow-xl border border-amber-100 p-8"
+              >
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 bg-gradient-to-br from-amber-600 to-orange-600 rounded-xl flex items-center justify-center text-white text-2xl">
+                    📍
+                  </div>
+                  <h2 className="text-2xl font-bold text-amber-900">Location Details</h2>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-amber-900 mb-2">
+                        State *
+                      </label>
+                      <select
+                        value={formData.location.state}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          location: { ...prev.location, state: e.target.value, district: '' },
+                        }))}
+                        className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                        required
+                      >
+                        <option value="">Select State</option>
+                        {INDIAN_STATES.map(state => (
+                          <option key={state} value={state}>{state}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-amber-900 mb-2">
+                        District *
+                      </label>
+                      <select
+                        value={formData.location.district}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          location: { ...prev.location, district: e.target.value },
+                        }))}
+                        disabled={!formData.location.state || districts.length === 0}
+                        className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all disabled:bg-amber-50 disabled:cursor-not-allowed"
+                        required
+                      >
+                        <option value="">Select District</option>
+                        {districts.map(district => (
+                          <option key={district} value={district}>{district}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-amber-900 mb-2">
+                      Street Address
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.location.address}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        location: { ...prev.location, address: e.target.value },
+                      }))}
+                      className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                      placeholder="Street address (optional)"
+                    />
+                  </div>
+
+                  {/* Map Location Picker */}
+                  <div>
+                    <label className="block text-sm font-semibold text-amber-900 mb-2">
+                      Exact Location on Map *
+                    </label>
+                    <LocationPicker
+                      district={formData.location.district}
+                      state={formData.location.state}
+                      initialLat={formData.location.coordinates.lat || undefined}
+                      initialLng={formData.location.coordinates.lng || undefined}
+                      onLocationChange={(lat, lng) => {
+                        setFormData(prev => ({
+                          ...prev,
+                          location: {
+                            ...prev.location,
+                            coordinates: { lat, lng },
+                          },
+                        }));
+                      }}
+                      required
                     />
                   </div>
                 </div>
-              ))}
-              
-              <button
-                type="button"
-                onClick={addNearbyPlace}
-                className="px-6 py-2.5 border border-heritage-gold text-heritage-gold rounded-lg hover:bg-heritage-gold hover:text-white transition-all"
+
+                <div className="mt-8 flex justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(1)}
+                    className="px-8 py-3 border-2 border-amber-300 text-amber-700 font-semibold rounded-xl hover:bg-amber-50 transition-all"
+                  >
+                    ← Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(3)}
+                    className="px-8 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all shadow-lg"
+                  >
+                    Next: Pricing →
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Step 3: Pricing */}
+            {currentStep === 3 && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="bg-white rounded-2xl shadow-xl border border-amber-100 p-8"
               >
-                + Add Nearby Place
-              </button>
-            </div>
-          </motion.div>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 bg-gradient-to-br from-amber-600 to-orange-600 rounded-xl flex items-center justify-center text-white text-2xl">
+                    💰
+                  </div>
+                  <h2 className="text-2xl font-bold text-amber-900">Pricing Information</h2>
+                </div>
 
-          {/* Languages */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.9 }}
-            className="bg-white rounded-2xl shadow-luxury p-6"
-          >
-            <h2 className="text-2xl font-semibold text-charcoal-700 mb-6">Languages Spoken</h2>
-            
-            <div className="space-y-4">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newLanguage}
-                  onChange={(e) => setNewLanguage(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addLanguage())}
-                  placeholder="e.g., English, Hindi, Malayalam"
-                  className="flex-1 px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                />
-                <button
-                  type="button"
-                  onClick={addLanguage}
-                  className="px-6 py-2.5 bg-heritage-gold text-white rounded-lg hover:bg-heritage-gold-dark transition-all"
-                >
-                  Add
-                </button>
-              </div>
-              
-              {formData.languages.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {formData.languages.map((lang, index) => (
-                    <span
-                      key={index}
-                      className="px-3 py-1 bg-cream-500 text-charcoal-700 rounded-full text-sm flex items-center gap-2"
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-amber-900 mb-2">
+                        Price per Night (₹) *
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.pricing.pricePerNight}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          pricing: { ...prev.pricing, pricePerNight: e.target.value },
+                        }))}
+                        min="0"
+                        step="0.01"
+                        className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-amber-900 mb-2">
+                        Weekly Discount (%)
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.pricing.weeklyDiscount}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          pricing: { ...prev.pricing, weeklyDiscount: Number(e.target.value) },
+                        }))}
+                        min="0"
+                        max="100"
+                        className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-amber-900 mb-2">
+                        Monthly Discount (%)
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.pricing.monthlyDiscount}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          pricing: { ...prev.pricing, monthlyDiscount: Number(e.target.value) },
+                        }))}
+                        min="0"
+                        max="100"
+                        className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-8 flex justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(2)}
+                    className="px-8 py-3 border-2 border-amber-300 text-amber-700 font-semibold rounded-xl hover:bg-amber-50 transition-all"
+                  >
+                    ← Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(4)}
+                    className="px-8 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all shadow-lg"
+                  >
+                    Next: Images →
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Step 4: Images */}
+            {currentStep === 4 && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="bg-white rounded-2xl shadow-xl border border-amber-100 p-8"
+              >
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 bg-gradient-to-br from-amber-600 to-orange-600 rounded-xl flex items-center justify-center text-white text-2xl">
+                    📸
+                  </div>
+                  <h2 className="text-2xl font-bold text-amber-900">Upload Images</h2>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="border-2 border-dashed border-amber-300 rounded-xl p-8 text-center hover:border-amber-400 transition-all">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageChange}
+                      className="hidden"
+                      id="image-upload"
+                    />
+                    <label
+                      htmlFor="image-upload"
+                      className="cursor-pointer flex flex-col items-center"
                     >
-                      {lang}
-                      <button
-                        type="button"
-                        onClick={() => removeLanguage(index)}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </motion.div>
+                      <svg className="w-16 h-16 text-amber-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <p className="text-amber-700 font-semibold mb-2">Click to upload images</p>
+                      <p className="text-sm text-amber-600">Up to 10 images, max 5MB each</p>
+                    </label>
+                  </div>
 
-          {/* Family Info */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.0 }}
-            className="bg-white rounded-2xl shadow-luxury p-6"
-          >
-            <h2 className="text-2xl font-semibold text-charcoal-700 mb-6">Family Information</h2>
-            
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-charcoal-700 mb-2">
-                    Family Size
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.familyInfo.familySize}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      familyInfo: { ...prev.familyInfo, familySize: e.target.value },
-                    }))}
-                    min="1"
-                    className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                  />
+                  {imagePreviews.length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {imagePreviews.map((preview, index) => (
+                        <motion.div
+                          key={index}
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="relative group"
+                        >
+                          <img
+                            src={preview}
+                            alt={`Preview ${index + 1}`}
+                            className="w-full h-32 object-cover rounded-xl shadow-md"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeImage(index)}
+                            className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-lg"
+                          >
+                            ×
+                          </button>
+                          {index === 0 && (
+                            <span className="absolute bottom-2 left-2 px-2 py-1 bg-amber-600 text-white text-xs rounded-full">
+                              Main
+                            </span>
+                          )}
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-charcoal-700 mb-2">
-                    Generations
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.familyInfo.generations}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      familyInfo: { ...prev.familyInfo, generations: e.target.value },
-                    }))}
-                    min="1"
-                    className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                  />
+                <div className="mt-8 flex justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(3)}
+                    className="px-8 py-3 border-2 border-amber-300 text-amber-700 font-semibold rounded-xl hover:bg-amber-50 transition-all"
+                  >
+                    ← Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(5)}
+                    className="px-8 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all shadow-lg"
+                  >
+                    Next: Details →
+                  </button>
                 </div>
-              </div>
+              </motion.div>
+            )}
 
-              <div>
-                <label className="block text-sm font-medium text-charcoal-700 mb-2">
-                  Family Background/Story
-                </label>
-                <textarea
-                  value={formData.familyInfo.background}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    familyInfo: { ...prev.familyInfo, background: e.target.value },
-                  }))}
-                  rows={5}
-                  className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                  placeholder="Share your family's story, traditions, and background..."
-                />
-              </div>
-            </div>
-          </motion.div>
+            {/* Step 5: Additional Details */}
+            {currentStep === 5 && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-6"
+              >
+                {/* Amenities */}
+                <div className="bg-white rounded-2xl shadow-xl border border-amber-100 p-8">
+                  <h3 className="text-xl font-bold text-amber-900 mb-4">Amenities</h3>
+                  <div className="flex gap-2 mb-4">
+                    <input
+                      type="text"
+                      value={newAmenity}
+                      onChange={(e) => setNewAmenity(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addAmenity())}
+                      placeholder="e.g., WiFi, Kitchen, Air Conditioning"
+                      className="flex-1 px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={addAmenity}
+                      className="px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all"
+                    >
+                      Add
+                    </button>
+                  </div>
+                  {formData.abodeDetails.amenities.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {formData.abodeDetails.amenities.map((amenity, index) => (
+                        <span
+                          key={index}
+                          className="px-4 py-2 bg-amber-100 text-amber-800 rounded-full text-sm font-medium flex items-center gap-2"
+                        >
+                          {amenity}
+                          <button
+                            type="button"
+                            onClick={() => removeAmenity(index)}
+                            className="text-amber-600 hover:text-amber-800"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-          {/* Availability */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.1 }}
-            className="bg-white rounded-2xl shadow-luxury p-6"
-          >
-            <h2 className="text-2xl font-semibold text-charcoal-700 mb-6">Availability</h2>
-            
-            <div className="space-y-4">
-              <DayPicker
-                mode="multiple"
-                selected={selectedDates}
-                onSelect={(dates) => handleDateSelect(dates as Date[])}
-                disabled={(date) => date < new Date()}
-                className="rounded-lg border border-charcoal-200 p-4"
-              />
-              <p className="text-sm text-charcoal-500">
-                Select dates when your abode is available for guests. You can update this later.
-              </p>
-            </div>
-          </motion.div>
+                {/* House Rules */}
+                <div className="bg-white rounded-2xl shadow-xl border border-amber-100 p-8">
+                  <h3 className="text-xl font-bold text-amber-900 mb-4">House Rules</h3>
+                  <div className="flex gap-2 mb-4">
+                    <input
+                      type="text"
+                      value={newHouseRule}
+                      onChange={(e) => setNewHouseRule(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addHouseRule())}
+                      placeholder="e.g., No smoking, Respect local customs"
+                      className="flex-1 px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={addHouseRule}
+                      className="px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all"
+                    >
+                      Add
+                    </button>
+                  </div>
+                  {formData.abodeDetails.houseRules.length > 0 && (
+                    <ul className="space-y-2">
+                      {formData.abodeDetails.houseRules.map((rule, index) => (
+                        <li
+                          key={index}
+                          className="flex items-center justify-between p-3 bg-amber-50 rounded-lg"
+                        >
+                          <span className="text-amber-900">{rule}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeHouseRule(index)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            Remove
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
 
-          {/* Submit Button */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.2 }}
-            className="flex justify-end gap-4"
-          >
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="px-8 py-3 border border-charcoal-200 text-charcoal-700 rounded-lg hover:bg-charcoal-50 transition-all"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-8 py-3 bg-heritage-gold text-white font-semibold rounded-lg hover:bg-heritage-gold-dark transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Registering...' : 'Register Abode'}
-            </button>
-          </motion.div>
-        </form>
+                {/* Languages */}
+                <div className="bg-white rounded-2xl shadow-xl border border-amber-100 p-8">
+                  <h3 className="text-xl font-bold text-amber-900 mb-4">Languages Spoken</h3>
+                  <div className="flex gap-2 mb-4">
+                    <input
+                      type="text"
+                      value={newLanguage}
+                      onChange={(e) => setNewLanguage(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addLanguage())}
+                      placeholder="e.g., English, Hindi, Malayalam"
+                      className="flex-1 px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={addLanguage}
+                      className="px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all"
+                    >
+                      Add
+                    </button>
+                  </div>
+                  {formData.languages.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {formData.languages.map((lang, index) => (
+                        <span
+                          key={index}
+                          className="px-4 py-2 bg-amber-100 text-amber-800 rounded-full text-sm font-medium flex items-center gap-2"
+                        >
+                          {lang}
+                          <button
+                            type="button"
+                            onClick={() => removeLanguage(index)}
+                            className="text-amber-600 hover:text-amber-800"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Availability */}
+                <div className="bg-white rounded-2xl shadow-xl border border-amber-100 p-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-bold text-amber-900">Availability Calendar</h3>
+                    {selectedDates.length > 0 && (
+                      <span className="px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-full text-sm font-semibold shadow-md">
+                        {selectedDates.length} date{selectedDates.length !== 1 ? 's' : ''} selected
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Always Available Toggle */}
+                  <div className="mb-6 p-5 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border-2 border-green-200">
+                    <label className="flex items-center gap-4 cursor-pointer">
+                      <div className="relative">
+                        <input
+                          type="checkbox"
+                          checked={alwaysAvailable}
+                          onChange={(e) => handleAlwaysAvailableToggle(e.target.checked)}
+                          className="sr-only"
+                        />
+                        <div className={`w-14 h-8 rounded-full transition-all duration-300 ${
+                          alwaysAvailable 
+                            ? 'bg-gradient-to-r from-green-500 to-emerald-600' 
+                            : 'bg-gray-300'
+                        }`}>
+                          <div className={`w-6 h-6 bg-white rounded-full shadow-lg transform transition-transform duration-300 mt-1 ${
+                            alwaysAvailable ? 'translate-x-7' : 'translate-x-1'
+                          }`}></div>
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl">✅</span>
+                          <div>
+                            <p className="font-bold text-green-900">Always Available</p>
+                            <p className="text-sm text-green-700">Enable this if your abode is available year-round. You can still block specific dates later.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+
+                  {!alwaysAvailable && (
+                    <>
+                      {/* Quick Actions */}
+                      <div className="mb-6 p-5 bg-amber-50 rounded-xl border-2 border-amber-200">
+                        <p className="text-sm font-bold text-amber-900 mb-4 flex items-center gap-2">
+                          <span className="text-xl">⚡</span>
+                          Quick Selection (Click to apply):
+                        </p>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          <button
+                            type="button"
+                            onClick={selectNext30Days}
+                            className="px-4 py-3 bg-white border-2 border-amber-300 text-amber-700 rounded-xl hover:bg-amber-100 hover:border-amber-500 hover:shadow-md transition-all text-sm font-semibold transform hover:scale-105"
+                          >
+                            📅 30 Days
+                          </button>
+                          <button
+                            type="button"
+                            onClick={selectNext90Days}
+                            className="px-4 py-3 bg-white border-2 border-amber-300 text-amber-700 rounded-xl hover:bg-amber-100 hover:border-amber-500 hover:shadow-md transition-all text-sm font-semibold transform hover:scale-105"
+                          >
+                            📅 90 Days
+                          </button>
+                          <button
+                            type="button"
+                            onClick={selectNext6Months}
+                            className="px-4 py-3 bg-white border-2 border-amber-300 text-amber-700 rounded-xl hover:bg-amber-100 hover:border-amber-500 hover:shadow-md transition-all text-sm font-semibold transform hover:scale-105"
+                          >
+                            📅 6 Months
+                          </button>
+                          <button
+                            type="button"
+                            onClick={selectAllWeekends}
+                            className="px-4 py-3 bg-white border-2 border-purple-300 text-purple-700 rounded-xl hover:bg-purple-50 hover:border-purple-500 hover:shadow-md transition-all text-sm font-semibold transform hover:scale-105"
+                          >
+                            🎉 Weekends
+                          </button>
+                          <button
+                            type="button"
+                            onClick={selectAllWeekdays}
+                            className="px-4 py-3 bg-white border-2 border-blue-300 text-blue-700 rounded-xl hover:bg-blue-50 hover:border-blue-500 hover:shadow-md transition-all text-sm font-semibold transform hover:scale-105"
+                          >
+                            💼 Weekdays
+                          </button>
+                          {selectedDates.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={clearAllDates}
+                              className="px-4 py-3 bg-red-50 border-2 border-red-300 text-red-700 rounded-xl hover:bg-red-100 hover:border-red-500 hover:shadow-md transition-all text-sm font-semibold transform hover:scale-105 col-span-2 md:col-span-1"
+                            >
+                              🗑️ Clear All
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Calendar - Supports both range and multiple selection */}
+                      <div className="mb-4">
+                        <p className="text-sm text-amber-700 text-center mb-4 font-medium">
+                          📅 <span className="font-semibold">Click dates to select</span> • Drag to select a range • Click again to deselect
+                        </p>
+                        <div className="flex justify-center">
+                          <DayPicker
+                            mode="multiple"
+                            selected={selectedDates}
+                            onSelect={(dates) => handleDateSelect(dates as Date[])}
+                            disabled={(date) => {
+                              const today = new Date();
+                              today.setHours(0, 0, 0, 0);
+                              return date < today;
+                            }}
+                            numberOfMonths={typeof window !== 'undefined' && window.innerWidth >= 768 ? 2 : 1}
+                            className="rdp-amber"
+                            classNames={{
+                              months: 'flex flex-col sm:flex-row space-y-4 sm:space-x-6 sm:space-y-0',
+                              month: 'space-y-4',
+                              caption: 'flex justify-center pt-1 relative items-center mb-4',
+                              caption_label: 'text-lg font-bold text-amber-900',
+                              nav: 'space-x-1 flex items-center',
+                              nav_button: 'h-10 w-10 bg-transparent p-0 opacity-70 hover:opacity-100 hover:bg-amber-100 rounded-xl transition-all cursor-pointer border-2 border-amber-300 hover:border-amber-500',
+                              nav_button_previous: 'absolute left-1',
+                              nav_button_next: 'absolute right-1',
+                              table: 'w-full border-collapse space-y-1',
+                              head_row: 'flex mb-3',
+                              head_cell: 'text-amber-600 rounded-md w-12 font-bold text-sm uppercase tracking-wider',
+                              row: 'flex w-full mt-2',
+                              cell: 'text-center text-sm p-0 relative',
+                              day: 'h-12 w-12 p-0 font-normal rounded-xl transition-all cursor-pointer hover:bg-amber-100 hover:text-amber-900 text-base',
+                              day_selected: 'bg-gradient-to-br from-amber-600 to-orange-600 text-white hover:from-amber-700 hover:to-orange-700 hover:text-white focus:from-amber-600 focus:to-orange-600 focus:text-white font-bold shadow-lg',
+                              day_today: 'bg-amber-200 text-amber-900 font-bold border-2 border-amber-500',
+                              day_outside: 'text-amber-300 opacity-50',
+                              day_disabled: 'text-amber-200 opacity-30 cursor-not-allowed',
+                              day_hidden: 'invisible',
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Summary */}
+                  {selectedDates.length > 0 && (
+                    <div className="mt-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border-2 border-amber-300">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-gradient-to-br from-amber-600 to-orange-600 rounded-xl flex items-center justify-center text-white text-xl">
+                          ✓
+                        </div>
+                        <div>
+                          <p className="font-bold text-amber-900">
+                            {alwaysAvailable 
+                              ? 'Your abode is set to always available!' 
+                              : `${selectedDates.length} date${selectedDates.length !== 1 ? 's' : ''} selected for availability`
+                            }
+                          </p>
+                          {!alwaysAvailable && dateRange.from && dateRange.to && (
+                            <p className="text-sm text-amber-700 mt-1">
+                              From {dateRange.from.toLocaleDateString()} to {dateRange.to.toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+
+                <div className="mt-8 flex justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(4)}
+                    className="px-8 py-3 border-2 border-amber-300 text-amber-700 font-semibold rounded-xl hover:bg-amber-50 transition-all"
+                  >
+                    ← Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(6)}
+                    className="px-8 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all shadow-lg"
+                  >
+                    Review & Submit →
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Step 6: Review */}
+            {currentStep === 6 && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="bg-white rounded-2xl shadow-xl border border-amber-100 p-8"
+              >
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 bg-gradient-to-br from-amber-600 to-orange-600 rounded-xl flex items-center justify-center text-white text-2xl">
+                    ✓
+                  </div>
+                  <h2 className="text-2xl font-bold text-amber-900">Review & Submit</h2>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="p-6 bg-amber-50 rounded-xl">
+                    <h3 className="font-bold text-amber-900 mb-2">Title</h3>
+                    <p className="text-amber-700">{formData.abodeDetails.title || 'Not set'}</p>
+                  </div>
+
+                  <div className="p-6 bg-amber-50 rounded-xl">
+                    <h3 className="font-bold text-amber-900 mb-2">Location</h3>
+                    <p className="text-amber-700">
+                      {formData.location.district}, {formData.location.state}, {formData.location.country}
+                    </p>
+                  </div>
+
+                  <div className="p-6 bg-amber-50 rounded-xl">
+                    <h3 className="font-bold text-amber-900 mb-2">Pricing</h3>
+                    <p className="text-amber-700">₹{formData.pricing.pricePerNight} per night</p>
+                  </div>
+
+                  <div className="p-6 bg-amber-50 rounded-xl">
+                    <h3 className="font-bold text-amber-900 mb-2">Images</h3>
+                    <p className="text-amber-700">{imageFiles.length} image(s) uploaded</p>
+                  </div>
+                </div>
+
+                <div className="mt-8 flex justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(5)}
+                    className="px-8 py-3 border-2 border-amber-300 text-amber-700 font-semibold rounded-xl hover:bg-amber-50 transition-all"
+                  >
+                    ← Back
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-8 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Registering...' : 'Register Abode'}
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </form>
+        </div>
       </div>
     </div>
   );
 }
-

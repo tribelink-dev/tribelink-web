@@ -2,6 +2,14 @@ import axios from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
+// Warn if using localhost in production
+if (typeof window !== 'undefined' && API_URL.includes('localhost') && window.location.hostname !== 'localhost') {
+  console.error('⚠️ WARNING: Using localhost API URL in production!');
+  console.error('   Current API URL:', API_URL);
+  console.error('   Set NEXT_PUBLIC_API_URL environment variable in Vercel to your production backend URL');
+  console.error('   Example: https://your-backend.onrender.com/api');
+}
+
 const api = axios.create({
   baseURL: API_URL,
   headers: {

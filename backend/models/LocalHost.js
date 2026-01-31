@@ -21,6 +21,12 @@ const localHostSchema = new mongoose.Schema({
   
   // Abode (home) details
   abodeDetails: {
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100 // Catchy title should be concise
+    },
     description: {
       type: String,
       required: true,

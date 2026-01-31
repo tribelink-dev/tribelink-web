@@ -5,8 +5,10 @@ import { useRouter, useParams } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { getImageUrl } from '@/lib/imageUtils';
-import { motion } from 'framer-motion';
+import { useCurrency } from '@/lib/CurrencyContext';
+import { motion, AnimatePresence } from 'framer-motion';
 import { DayPicker } from 'react-day-picker';
+import { Calendar, Users, ChevronLeft, ChevronRight, Star, MapPin, Shield, Home, Bed, Bath, CheckCircle2, Sparkles, Award, Languages } from 'lucide-react';
 import 'react-day-picker/dist/style.css';
 
 interface LocalHost {
@@ -83,6 +85,7 @@ export default function AbodeDetailPage() {
   const router = useRouter();
   const params = useParams();
   const { user } = useAuth();
+  const { formatPrice } = useCurrency();
   const [abode, setAbode] = useState<LocalHost | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -91,7 +94,7 @@ export default function AbodeDetailPage() {
   const [checkOut, setCheckOut] = useState<Date | undefined>();
   const [guests, setGuests] = useState(1);
   const [booking, setBooking] = useState(false);
-  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState<'checkin' | 'checkout' | null>(null);
 
   useEffect(() => {
     if (params.id) {
@@ -175,11 +178,11 @@ export default function AbodeDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-off-white pt-24 pb-16">
-        <div className="section-container-luxury">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pt-24 pb-16">
+        <div className="max-w-7xl mx-auto px-6">
           <div className="animate-pulse space-y-6">
-            <div className="h-96 bg-charcoal-200 rounded-2xl"></div>
-            <div className="h-64 bg-charcoal-200 rounded-2xl"></div>
+            <div className="h-96 bg-gray-200 rounded-3xl"></div>
+            <div className="h-64 bg-gray-200 rounded-3xl"></div>
           </div>
         </div>
       </div>
@@ -222,18 +225,18 @@ export default function AbodeDetailPage() {
   const totalPrice = basePrice - discount;
 
   return (
-    <div className="min-h-screen bg-off-white pt-24 pb-16">
-      <div className="section-container-luxury">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pt-20 pb-16">
+      <div className="max-w-7xl mx-auto px-6">
         {/* Back Button */}
-        <button
+        <motion.button
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
           onClick={() => router.back()}
-          className="mb-6 flex items-center gap-2 text-charcoal-600 hover:text-charcoal-800 transition-colors"
+          className="mb-8 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back
-        </button>
+          <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+          <span className="font-medium">Back</span>
+        </motion.button>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
@@ -242,32 +245,65 @@ export default function AbodeDetailPage() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-2xl shadow-luxury overflow-hidden"
+              className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100"
             >
-              <div className="relative w-full h-96 bg-gradient-to-br from-charcoal-200 to-charcoal-300">
+              <div className="relative w-full h-[500px] bg-gradient-to-br from-gray-200 to-gray-300 overflow-hidden">
                 {imageUrl ? (
-                  <img
+                  <motion.img
+                    key={selectedImageIndex}
                     src={imageUrl}
                     alt={abode.abodeDetails.description}
                     className="w-full h-full object-cover"
+                    initial={{ opacity: 0, scale: 1.1 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.5 }}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <span className="text-8xl">🏠</span>
+                    <Home className="w-24 h-24 text-gray-400" />
                   </div>
+                )}
+                
+                {/* Image Navigation */}
+                {abode.images.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => setSelectedImageIndex((prev) => (prev - 1 + abode.images.length) % abode.images.length)}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center shadow-xl hover:scale-110 transition-all"
+                    >
+                      <ChevronLeft className="w-6 h-6 text-gray-700" />
+                    </button>
+                    <button
+                      onClick={() => setSelectedImageIndex((prev) => (prev + 1) % abode.images.length)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center shadow-xl hover:scale-110 transition-all"
+                    >
+                      <ChevronRight className="w-6 h-6 text-gray-700" />
+                    </button>
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                      {abode.images.slice(0, 5).map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setSelectedImageIndex(idx)}
+                          className={`h-2 rounded-full transition-all ${
+                            selectedImageIndex === idx ? 'w-8 bg-white' : 'w-2 bg-white/50'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </>
                 )}
               </div>
               
               {abode.images.length > 1 && (
-                <div className="p-4 grid grid-cols-5 gap-2">
+                <div className="p-4 grid grid-cols-5 gap-3">
                   {abode.images.slice(0, 5).map((img, index) => (
                     <button
                       key={index}
                       onClick={() => setSelectedImageIndex(index)}
-                      className={`relative h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                      className={`relative h-20 rounded-xl overflow-hidden border-2 transition-all ${
                         selectedImageIndex === index
-                          ? 'border-heritage-gold'
-                          : 'border-transparent hover:border-charcoal-200'
+                          ? 'border-heritage-gold shadow-lg'
+                          : 'border-transparent hover:border-gray-300'
                       }`}
                     >
                       <img
@@ -286,64 +322,65 @@ export default function AbodeDetailPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="bg-white rounded-2xl shadow-luxury p-6"
+              className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100"
             >
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h1 className="text-display-md font-serif text-charcoal-700 mb-2">
-                    {abode.providerId.name}'s Abode
-                  </h1>
-                  <div className="flex items-center gap-2 text-charcoal-600 mb-4">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <span>{abode.location.district}, {abode.location.state}, {abode.location.country}</span>
+              <div className="flex items-start justify-between mb-6">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-4">
                     {abode.isVerified && (
-                      <span className="px-2 py-1 bg-heritage-gold text-white text-xs font-semibold rounded">
-                        ✓ Verified
-                      </span>
+                      <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
+                        <Shield className="w-4 h-4" />
+                        <span className="text-sm font-bold">Verified</span>
+                      </div>
+                    )}
+                    {abode.culturalPractices && abode.culturalPractices.length > 0 && (
+                      <div className="bg-gradient-to-r from-purple-500/90 to-indigo-500/90 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
+                        <Sparkles className="w-4 h-4" />
+                        <span className="text-sm font-semibold">Cultural Experience</span>
+                      </div>
                     )}
                   </div>
+                  <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+                    {abode.providerId.name}'s {abode.abodeDetails.propertyType}
+                  </h1>
+                  <div className="flex items-center gap-2 text-gray-600 mb-6">
+                    <MapPin className="w-5 h-5" />
+                    <span className="text-lg">{abode.location.district}, {abode.location.state}, {abode.location.country}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <svg className="w-6 h-6 text-heritage-gold" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                  </svg>
-                  <span className="text-xl font-semibold text-charcoal-700">
-                    {abode.rating.toFixed(1)}
-                  </span>
-                  <span className="text-charcoal-500">
-                    ({abode.ratingCount})
-                  </span>
-                </div>
+                {abode.rating > 0 && (
+                  <div className="flex items-center gap-2 bg-white rounded-2xl px-4 py-3 shadow-lg border border-gray-200">
+                    <Star className="w-6 h-6 fill-amber-400 text-amber-400" />
+                    <div>
+                      <span className="text-2xl font-bold text-gray-900">{abode.rating.toFixed(1)}</span>
+                      {abode.ratingCount > 0 && (
+                        <span className="text-sm text-gray-600 ml-1">({abode.ratingCount})</span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Property Details */}
-              <div className="flex flex-wrap gap-4 text-sm text-charcoal-600 mb-6">
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                  {abode.abodeDetails.capacity} guests
+              <div className="flex flex-wrap items-center gap-6 pt-6 border-t border-gray-200">
+                <div className="flex items-center gap-2 text-gray-700">
+                  <Users className="w-5 h-5 text-gray-500" />
+                  <span className="font-semibold">{abode.abodeDetails.capacity} guests</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                  </svg>
-                  {abode.abodeDetails.bedrooms} bedroom{abode.abodeDetails.bedrooms !== 1 ? 's' : ''}
+                <div className="flex items-center gap-2 text-gray-700">
+                  <Bed className="w-5 h-5 text-gray-500" />
+                  <span className="font-semibold">{abode.abodeDetails.bedrooms} bedroom{abode.abodeDetails.bedrooms !== 1 ? 's' : ''}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  {abode.abodeDetails.bathrooms} bathroom{abode.abodeDetails.bathrooms !== 1 ? 's' : ''}
+                <div className="flex items-center gap-2 text-gray-700">
+                  <Bath className="w-5 h-5 text-gray-500" />
+                  <span className="font-semibold">{abode.abodeDetails.bathrooms} bathroom{abode.abodeDetails.bathrooms !== 1 ? 's' : ''}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="px-3 py-1 bg-cream-500 text-charcoal-700 text-xs font-semibold rounded-full">
-                    {abode.abodeDetails.propertyType}
-                  </span>
-                </div>
+                {abode.languages && abode.languages.length > 0 && (
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <Languages className="w-5 h-5 text-gray-500" />
+                    <span className="font-semibold">{abode.languages.join(', ')}</span>
+                  </div>
+                )}
               </div>
             </motion.div>
 
@@ -352,10 +389,10 @@ export default function AbodeDetailPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="bg-white rounded-2xl shadow-luxury p-6"
+              className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100"
             >
-              <h2 className="text-2xl font-semibold text-charcoal-700 mb-4">About this abode</h2>
-              <p className="text-charcoal-600 leading-relaxed whitespace-pre-line">
+              <h2 className="text-3xl font-bold text-gray-900 mb-6">About this abode</h2>
+              <p className="text-gray-700 leading-relaxed text-lg whitespace-pre-line">
                 {abode.abodeDetails.description}
               </p>
             </motion.div>
@@ -494,54 +531,107 @@ export default function AbodeDetailPage() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
-              className="sticky top-24 bg-white rounded-2xl shadow-luxury p-6 border border-charcoal-100"
+              className="sticky top-24 bg-white rounded-3xl shadow-xl p-8 border border-gray-200"
             >
-              <div className="mb-6">
-                <div className="text-3xl font-bold text-charcoal-700 mb-1">
-                  ₹{abode.pricing.pricePerNight}
-                  <span className="text-lg font-normal text-charcoal-500">/night</span>
+              {/* Price */}
+              <div className="mb-8 pb-8 border-b border-gray-200">
+                <div className="flex items-baseline gap-2 mb-2">
+                  <span className="text-4xl font-bold text-gray-900">
+                    {formatPrice(abode.pricing.pricePerNight, abode.pricing.currency || 'INR')}
+                  </span>
+                  <span className="text-lg text-gray-600">/night</span>
                 </div>
                 {abode.pricing.weeklyDiscount && (
-                  <p className="text-sm text-charcoal-500">
+                  <p className="text-sm text-gray-500 flex items-center gap-1">
+                    <Award className="w-4 h-4 text-heritage-gold" />
                     {abode.pricing.weeklyDiscount}% off for 7+ nights
                   </p>
                 )}
               </div>
 
               {/* Date Selection */}
-              <div className="mb-6 space-y-4">
+              <div className="mb-8 space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-charcoal-700 mb-2">
+                  <label className="block text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
                     Check-in
                   </label>
-                  <DayPicker
-                    mode="single"
-                    selected={checkIn}
-                    onSelect={setCheckIn}
-                    disabled={(date) => date < new Date()}
-                    className="rounded-lg border border-charcoal-200 p-2"
-                  />
+                  <button
+                    onClick={() => setShowDatePicker(showDatePicker === 'checkin' ? null : 'checkin')}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl hover:border-heritage-gold transition-colors text-left flex items-center justify-between"
+                  >
+                    <span className={checkIn ? 'text-gray-900 font-medium' : 'text-gray-400'}>
+                      {checkIn ? checkIn.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Select date'}
+                    </span>
+                    <Calendar className="w-5 h-5 text-gray-400" />
+                  </button>
+                  <AnimatePresence>
+                    {showDatePicker === 'checkin' && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="mt-3 bg-white border-2 border-gray-200 rounded-xl p-4 shadow-xl"
+                      >
+                        <DayPicker
+                          mode="single"
+                          selected={checkIn}
+                          onSelect={(date) => {
+                            setCheckIn(date);
+                            setShowDatePicker(null);
+                          }}
+                          disabled={(date) => date < new Date()}
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
+                
                 <div>
-                  <label className="block text-sm font-medium text-charcoal-700 mb-2">
+                  <label className="block text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
                     Check-out
                   </label>
-                  <DayPicker
-                    mode="single"
-                    selected={checkOut}
-                    onSelect={setCheckOut}
-                    disabled={(date) => !checkIn || date <= checkIn}
-                    className="rounded-lg border border-charcoal-200 p-2"
-                  />
+                  <button
+                    onClick={() => setShowDatePicker(showDatePicker === 'checkout' ? null : 'checkout')}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl hover:border-heritage-gold transition-colors text-left flex items-center justify-between"
+                  >
+                    <span className={checkOut ? 'text-gray-900 font-medium' : 'text-gray-400'}>
+                      {checkOut ? checkOut.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Select date'}
+                    </span>
+                    <Calendar className="w-5 h-5 text-gray-400" />
+                  </button>
+                  <AnimatePresence>
+                    {showDatePicker === 'checkout' && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="mt-3 bg-white border-2 border-gray-200 rounded-xl p-4 shadow-xl"
+                      >
+                        <DayPicker
+                          mode="single"
+                          selected={checkOut}
+                          onSelect={(date) => {
+                            setCheckOut(date);
+                            setShowDatePicker(null);
+                          }}
+                          disabled={(date) => !checkIn || date <= checkIn}
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
+                
                 <div>
-                  <label className="block text-sm font-medium text-charcoal-700 mb-2">
+                  <label className="block text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                    <Users className="w-4 h-4" />
                     Guests
                   </label>
                   <select
                     value={guests}
                     onChange={(e) => setGuests(Number(e.target.value))}
-                    className="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold transition-all font-medium"
                   >
                     {[...Array(abode.abodeDetails.capacity)].map((_, i) => (
                       <option key={i + 1} value={i + 1}>
@@ -554,38 +644,50 @@ export default function AbodeDetailPage() {
 
               {/* Price Breakdown */}
               {nights > 0 && (
-                <div className="mb-6 p-4 bg-cream-50 rounded-lg space-y-2">
-                  <div className="flex justify-between text-sm text-charcoal-600">
-                    <span>₹{abode.pricing.pricePerNight} × {nights} nights</span>
-                    <span>₹{basePrice}</span>
+                <div className="mb-8 p-6 bg-gradient-to-br from-heritage-gold/5 to-cream-500/10 rounded-2xl border border-heritage-gold/20 space-y-3">
+                  <div className="flex justify-between text-sm text-gray-700">
+                    <span>{formatPrice(abode.pricing.pricePerNight, abode.pricing.currency || 'INR')} × {nights} nights</span>
+                    <span className="font-semibold">{formatPrice(basePrice, abode.pricing.currency || 'INR')}</span>
                   </div>
                   {discount > 0 && (
-                    <div className="flex justify-between text-sm text-green-600">
+                    <div className="flex justify-between text-sm text-emerald-600 font-semibold">
                       <span>Discount</span>
-                      <span>-₹{discount.toFixed(2)}</span>
+                      <span>-{formatPrice(discount, abode.pricing.currency || 'INR')}</span>
                     </div>
                   )}
-                  <div className="border-t border-charcoal-200 pt-2 flex justify-between font-semibold text-charcoal-700">
+                  <div className="border-t border-gray-300 pt-3 flex justify-between font-bold text-lg text-gray-900">
                     <span>Total</span>
-                    <span>₹{totalPrice.toFixed(2)}</span>
+                    <span>{formatPrice(totalPrice, abode.pricing.currency || 'INR')}</span>
                   </div>
                 </div>
               )}
 
               {/* Book Button */}
-              <button
+              <motion.button
                 onClick={handleBooking}
                 disabled={!checkIn || !checkOut || booking}
-                className="w-full px-6 py-4 bg-heritage-gold text-white font-semibold rounded-lg hover:bg-heritage-gold-dark transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full px-6 py-4 bg-gradient-to-r from-heritage-gold to-heritage-gold-dark text-white font-bold text-lg rounded-xl shadow-xl hover:shadow-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {booking ? 'Booking...' : 'Reserve Now'}
-              </button>
+                {booking ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                    <span>Booking...</span>
+                  </>
+                ) : (
+                  <>
+                    <Calendar className="w-5 h-5" />
+                    Reserve Now
+                  </>
+                )}
+              </motion.button>
 
               {!user && (
-                <p className="mt-4 text-sm text-center text-charcoal-500">
+                <p className="mt-4 text-sm text-center text-gray-600">
                   <button
-                    onClick={() => router.push('/login?redirect=/abodes/' + params.id)}
-                    className="text-heritage-gold hover:underline"
+                    onClick={() => router.push(`/login?redirect=${encodeURIComponent(`/adobes/${params.id}`)}`)}
+                    className="text-heritage-gold hover:underline font-semibold"
                   >
                     Sign in
                   </button>

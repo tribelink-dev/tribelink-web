@@ -4,7 +4,7 @@ export function getProviderDashboard(providerType: string): string {
     case 'GUIDE':
       return '/provider/guides';
     case 'LOCAL_HOST':
-      return '/host/dashboard'; // Local hosts use same dashboard as experience hosts
+      return '/host/abodes/dashboard'; // Unique dashboard for abode hosts
     case 'ACCOMMODATION_PROVIDER':
       return '/provider/hotels';
     case 'EXPERIENCE_HOST':
