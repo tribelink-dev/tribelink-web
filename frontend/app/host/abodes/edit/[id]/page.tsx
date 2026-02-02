@@ -204,6 +204,53 @@ export default function EditAbodePage() {
     setExistingImages(prev => prev.filter((_, i) => i !== index));
   };
 
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [draggedExistingIndex, setDraggedExistingIndex] = useState<number | null>(null);
+
+  const handleDragStart = (index: number, isExisting: boolean = false) => {
+    if (isExisting) {
+      setDraggedExistingIndex(index);
+    } else {
+      setDraggedIndex(index);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number, isExisting: boolean = false) => {
+    e.preventDefault();
+    if (isExisting) {
+      if (draggedExistingIndex === null || draggedExistingIndex === dropIndex) {
+        setDraggedExistingIndex(null);
+        return;
+      }
+      const newImages = [...existingImages];
+      const draggedImage = newImages[draggedExistingIndex];
+      newImages.splice(draggedExistingIndex, 1);
+      newImages.splice(dropIndex, 0, draggedImage);
+      setExistingImages(newImages);
+      setDraggedExistingIndex(null);
+    } else {
+      if (draggedIndex === null || draggedIndex === dropIndex) {
+        setDraggedIndex(null);
+        return;
+      }
+      const newImageFiles = [...imageFiles];
+      const newImagePreviews = [...imagePreviews];
+      const draggedFile = newImageFiles[draggedIndex];
+      const draggedPreview = newImagePreviews[draggedIndex];
+      newImageFiles.splice(draggedIndex, 1);
+      newImagePreviews.splice(draggedIndex, 1);
+      newImageFiles.splice(dropIndex, 0, draggedFile);
+      newImagePreviews.splice(dropIndex, 0, draggedPreview);
+      setImageFiles(newImageFiles);
+      setImagePreviews(newImagePreviews);
+      setDraggedIndex(null);
+    }
+  };
+
   const addAmenity = () => {
     if (newAmenity.trim() && !formData.abodeDetails.amenities.includes(newAmenity.trim())) {
       setFormData(prev => ({
@@ -383,6 +430,24 @@ export default function EditAbodePage() {
     handleRangeSelect({ from: today, to: endDate });
   };
 
+  const selectNext30DaysFromSelected = () => {
+    let startDate: Date;
+    if (selectedDates.length > 0) {
+      // Use the first selected date
+      startDate = new Date(selectedDates[0]);
+      startDate.setHours(0, 0, 0, 0);
+    } else {
+      // Use today if no date is selected
+      startDate = new Date();
+      startDate.setHours(0, 0, 0, 0);
+    }
+    
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + 29);
+    setDateRange({ from: startDate, to: endDate });
+    handleRangeSelect({ from: startDate, to: endDate });
+  };
+
   const selectNext90Days = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -531,12 +596,12 @@ export default function EditAbodePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <AbodeSidebar />
         <div className="lg:ml-72 flex items-center justify-center min-h-screen">
           <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-amber-600 border-t-transparent mb-4"></div>
-            <div className="text-xl font-medium text-amber-900">Loading abode details...</div>
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-slate-600 border-t-transparent mb-4"></div>
+            <div className="text-xl font-medium text-slate-900">Loading abode details...</div>
           </div>
         </div>
       </div>
@@ -544,27 +609,36 @@ export default function EditAbodePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <AbodeSidebar />
       <div className="lg:ml-72">
         <div className="p-6 md:p-8 lg:p-10">
-          {/* Header */}
+          {/* Modern Header */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-8"
+            className="mb-10"
           >
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-800 via-orange-700 to-amber-800 p-8 md:p-12 shadow-2xl">
-              <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl -mr-48 -mt-48"></div>
-              <div className="absolute bottom-0 left-0 w-72 h-72 bg-orange-500/10 rounded-full blur-2xl -ml-36 -mb-36"></div>
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-800 via-indigo-700 to-slate-800 p-8 md:p-12 shadow-2xl">
+              <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl -mr-48 -mt-48"></div>
+              <div className="absolute bottom-0 left-0 w-72 h-72 bg-slate-500/10 rounded-full blur-2xl -ml-36 -mb-36"></div>
               
               <div className="relative z-10">
-                <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-                  Edit Your Abode
-                </h1>
-                <p className="text-white/90 text-lg md:text-xl">
-                  Update your abode information and make it even more appealing to travelers.
-                </p>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/30">
+                    <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">
+                      Edit Your Abode
+                    </h1>
+                    <p className="text-white/90 text-lg">
+                      Update your abode information and make it even more appealing to travelers.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -574,9 +648,14 @@ export default function EditAbodePage() {
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-lg shadow-lg"
+              className="mb-6 p-4 bg-red-50 border-2 border-red-200 text-red-700 rounded-xl shadow-lg"
             >
-              {error}
+              <div className="flex items-center gap-3">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+                {error}
+              </div>
             </motion.div>
           )}
 
@@ -584,9 +663,14 @@ export default function EditAbodePage() {
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-6 p-4 bg-green-50 border-l-4 border-green-500 text-green-700 rounded-lg shadow-lg"
+              className="mb-6 p-4 bg-green-50 border-2 border-green-200 text-green-700 rounded-xl shadow-lg"
             >
-              Abode updated successfully! Redirecting...
+              <div className="flex items-center gap-3">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                Abode updated successfully! Redirecting...
+              </div>
             </motion.div>
           )}
 
@@ -595,14 +679,19 @@ export default function EditAbodePage() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-2xl shadow-xl border border-amber-100 p-8"
+              className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8"
             >
-              <h2 className="text-2xl font-bold text-amber-900 mb-6">Basic Information</h2>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-slate-600 to-indigo-600 rounded-xl flex items-center justify-center text-white text-2xl">
+                  📝
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900">Basic Information</h2>
+              </div>
 
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-semibold text-amber-900 mb-2">
-                    Catchy Title * <span className="text-amber-600 text-xs font-normal">(Max 100 characters)</span>
+                  <label className="block text-sm font-semibold text-slate-900 mb-2">
+                    Catchy Title * <span className="text-slate-600 text-xs font-normal">(Max 100 characters)</span>
                   </label>
                   <input
                     type="text"
@@ -612,17 +701,17 @@ export default function EditAbodePage() {
                       abodeDetails: { ...prev.abodeDetails, title: e.target.value },
                     }))}
                     maxLength={100}
-                    className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all text-lg"
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all text-lg"
                     placeholder="e.g., 'Cozy Heritage Home in the Heart of Kerala'"
                     required
                   />
-                  <p className="mt-1 text-sm text-amber-600">
+                    <p className="mt-1 text-sm text-slate-600">
                     {formData.abodeDetails.title.length}/100 characters
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-amber-900 mb-2">
+                    <label className="block text-sm font-semibold text-slate-900 mb-2">
                     Description *
                   </label>
                   <textarea
@@ -632,7 +721,7 @@ export default function EditAbodePage() {
                       abodeDetails: { ...prev.abodeDetails, description: e.target.value },
                     }))}
                     rows={6}
-                    className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all resize-none"
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all resize-none"
                     placeholder="Describe your abode..."
                     required
                   />
@@ -640,7 +729,7 @@ export default function EditAbodePage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-amber-900 mb-2">
+                    <label className="block text-sm font-semibold text-slate-900 mb-2">
                       Property Type *
                     </label>
                     <select
@@ -649,7 +738,7 @@ export default function EditAbodePage() {
                         ...prev,
                         abodeDetails: { ...prev.abodeDetails, propertyType: e.target.value },
                       }))}
-                      className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                     >
                       {PROPERTY_TYPES.map(type => (
                         <option key={type} value={type}>{type}</option>
@@ -658,7 +747,7 @@ export default function EditAbodePage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-amber-900 mb-2">
+                    <label className="block text-sm font-semibold text-slate-900 mb-2">
                       Capacity *
                     </label>
                     <input
@@ -669,13 +758,13 @@ export default function EditAbodePage() {
                         abodeDetails: { ...prev.abodeDetails, capacity: Number(e.target.value) },
                       }))}
                       min="1"
-                      className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-amber-900 mb-2">
+                    <label className="block text-sm font-semibold text-slate-900 mb-2">
                       Bedrooms *
                     </label>
                     <input
@@ -686,13 +775,13 @@ export default function EditAbodePage() {
                         abodeDetails: { ...prev.abodeDetails, bedrooms: Number(e.target.value) },
                       }))}
                       min="1"
-                      className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-amber-900 mb-2">
+                    <label className="block text-sm font-semibold text-slate-900 mb-2">
                       Bathrooms *
                     </label>
                     <input
@@ -703,7 +792,7 @@ export default function EditAbodePage() {
                         abodeDetails: { ...prev.abodeDetails, bathrooms: Number(e.target.value) },
                       }))}
                       min="1"
-                      className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                       required
                     />
                   </div>
@@ -716,14 +805,19 @@ export default function EditAbodePage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="bg-white rounded-2xl shadow-xl border border-amber-100 p-8"
+              className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8"
             >
-              <h2 className="text-2xl font-bold text-amber-900 mb-6">Location</h2>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-slate-600 to-indigo-600 rounded-xl flex items-center justify-center text-white text-2xl">
+                  📍
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900">Location</h2>
+              </div>
 
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-amber-900 mb-2">
+                    <label className="block text-sm font-semibold text-slate-900 mb-2">
                       State *
                     </label>
                     <select
@@ -732,7 +826,7 @@ export default function EditAbodePage() {
                         ...prev,
                         location: { ...prev.location, state: e.target.value, district: '' },
                       }))}
-                      className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                       required
                     >
                       <option value="">Select State</option>
@@ -743,7 +837,7 @@ export default function EditAbodePage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-amber-900 mb-2">
+                    <label className="block text-sm font-semibold text-slate-900 mb-2">
                       District *
                     </label>
                     <select
@@ -753,7 +847,7 @@ export default function EditAbodePage() {
                         location: { ...prev.location, district: e.target.value },
                       }))}
                       disabled={!formData.location.state || districts.length === 0}
-                      className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all disabled:bg-amber-50 disabled:cursor-not-allowed"
+                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all disabled:bg-slate-50 disabled:cursor-not-allowed"
                       required
                     >
                       <option value="">Select District</option>
@@ -765,7 +859,7 @@ export default function EditAbodePage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-amber-900 mb-2">
+                    <label className="block text-sm font-semibold text-slate-900 mb-2">
                     Street Address
                   </label>
                   <input
@@ -775,14 +869,14 @@ export default function EditAbodePage() {
                       ...prev,
                       location: { ...prev.location, address: e.target.value },
                     }))}
-                    className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                     placeholder="Street address (optional)"
                   />
                 </div>
 
                 {/* Map Location Picker */}
                 <div>
-                  <label className="block text-sm font-semibold text-amber-900 mb-2">
+                    <label className="block text-sm font-semibold text-slate-900 mb-2">
                     Exact Location on Map *
                   </label>
                   <LocationPicker
@@ -802,13 +896,18 @@ export default function EditAbodePage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="bg-white rounded-2xl shadow-xl border border-amber-100 p-8"
+              className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8"
             >
-              <h2 className="text-2xl font-bold text-amber-900 mb-6">Pricing</h2>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-slate-600 to-indigo-600 rounded-xl flex items-center justify-center text-white text-2xl">
+                  💰
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900">Pricing</h2>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-amber-900 mb-2">
+                    <label className="block text-sm font-semibold text-slate-900 mb-2">
                     Price per Night (₹) *
                   </label>
                   <input
@@ -820,13 +919,13 @@ export default function EditAbodePage() {
                     }))}
                     min="0"
                     step="0.01"
-                    className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-amber-900 mb-2">
+                    <label className="block text-sm font-semibold text-slate-900 mb-2">
                     Weekly Discount (%)
                   </label>
                   <input
@@ -838,12 +937,12 @@ export default function EditAbodePage() {
                     }))}
                     min="0"
                     max="100"
-                    className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-amber-900 mb-2">
+                    <label className="block text-sm font-semibold text-slate-900 mb-2">
                     Monthly Discount (%)
                   </label>
                   <input
@@ -855,7 +954,7 @@ export default function EditAbodePage() {
                     }))}
                     min="0"
                     max="100"
-                    className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                   />
                 </div>
               </div>
@@ -866,23 +965,43 @@ export default function EditAbodePage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="bg-white rounded-2xl shadow-xl border border-amber-100 p-8"
+              className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8"
             >
-              <h2 className="text-2xl font-bold text-amber-900 mb-6">Images</h2>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-slate-600 to-indigo-600 rounded-xl flex items-center justify-center text-white text-2xl">
+                  🖼️
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900">Images</h2>
+              </div>
 
               <div className="space-y-6">
                 {/* Existing Images */}
                 {existingImages.length > 0 && (
                   <div>
-                    <h3 className="text-lg font-semibold text-amber-900 mb-4">Current Images</h3>
+                    <h3 className="text-lg font-semibold text-slate-900 mb-4">Current Images</h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       {existingImages.map((img, index) => (
-                        <div key={index} className="relative group">
+                        <div
+                          key={index}
+                          draggable
+                          onDragStart={() => handleDragStart(index, true)}
+                          onDragOver={(e) => handleDragOver(e, index)}
+                          onDrop={(e) => handleDrop(e, index, true)}
+                          className={`relative group cursor-move ${
+                            draggedExistingIndex === index ? 'opacity-50' : ''
+                          }`}
+                        >
                           <img
                             src={img.url}
                             alt={`Existing ${index + 1}`}
-                            className="w-full h-32 object-cover rounded-xl"
+                            className="w-full h-32 object-cover rounded-xl shadow-md"
                           />
+                          <div className="absolute top-2 left-2 px-2 py-1 bg-black/50 text-white text-xs rounded-full flex items-center gap-1">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                            </svg>
+                            {index + 1}
+                          </div>
                           <button
                             type="button"
                             onClick={() => removeExistingImage(index)}
@@ -898,8 +1017,8 @@ export default function EditAbodePage() {
 
                 {/* New Images */}
                 <div>
-                  <h3 className="text-lg font-semibold text-amber-900 mb-4">Add New Images</h3>
-                  <div className="border-2 border-dashed border-amber-300 rounded-xl p-8 text-center hover:border-amber-400 transition-all">
+                  <h3 className="text-lg font-semibold text-slate-900 mb-4">Add New Images</h3>
+                  <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-slate-400 transition-all">
                     <input
                       type="file"
                       accept="image/*"
@@ -912,33 +1031,53 @@ export default function EditAbodePage() {
                       htmlFor="image-upload"
                       className="cursor-pointer flex flex-col items-center"
                     >
-                      <svg className="w-16 h-16 text-amber-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-16 h-16 text-slate-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
-                      <p className="text-amber-700 font-semibold mb-2">Click to upload images</p>
-                      <p className="text-sm text-amber-600">Up to 10 images, max 5MB each</p>
+                      <p className="text-slate-700 font-semibold mb-2">Click to upload images</p>
+                      <p className="text-sm text-slate-600">Up to 10 images, max 5MB each</p>
                     </label>
                   </div>
 
                   {imagePreviews.length > 0 && (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                       {imagePreviews.map((preview, index) => (
-                        <div key={index} className="relative group">
+                        <div
+                          key={index}
+                          draggable
+                          onDragStart={() => handleDragStart(index, false)}
+                          onDragOver={(e) => handleDragOver(e, index)}
+                          onDrop={(e) => handleDrop(e, index, false)}
+                          className={`relative group cursor-move ${
+                            draggedIndex === index ? 'opacity-50' : ''
+                          }`}
+                        >
                           <img
                             src={preview}
                             alt={`Preview ${index + 1}`}
-                            className="w-full h-32 object-cover rounded-xl"
+                            className="w-full h-32 object-cover rounded-xl shadow-md"
                           />
+                          <div className="absolute top-2 left-2 px-2 py-1 bg-black/50 text-white text-xs rounded-full flex items-center gap-1">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                            </svg>
+                            {existingImages.length + index + 1}
+                          </div>
                           <button
                             type="button"
                             onClick={() => removeImage(index)}
-                            className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                            className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-lg hover:bg-red-600 z-10"
                           >
                             ×
                           </button>
                         </div>
                       ))}
                     </div>
+                  )}
+                  {(existingImages.length > 1 || imagePreviews.length > 1) && (
+                    <p className="mt-2 text-sm text-slate-600 text-center">
+                      💡 Drag images to rearrange. The first image will be your main photo.
+                    </p>
                   )}
                 </div>
               </div>
@@ -952,8 +1091,13 @@ export default function EditAbodePage() {
               className="space-y-6"
             >
               {/* Amenities */}
-              <div className="bg-white rounded-2xl shadow-xl border border-amber-100 p-8">
-                <h3 className="text-xl font-bold text-amber-900 mb-4">Amenities</h3>
+              <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-gradient-to-br from-slate-600 to-indigo-600 rounded-xl flex items-center justify-center text-white">
+                    ⭐
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900">Amenities</h3>
+                </div>
                 <div className="flex gap-2 mb-4">
                   <input
                     type="text"
@@ -961,12 +1105,12 @@ export default function EditAbodePage() {
                     onChange={(e) => setNewAmenity(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addAmenity())}
                     placeholder="e.g., WiFi, Kitchen, Air Conditioning"
-                    className="flex-1 px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                    className="flex-1 px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                   />
                   <button
                     type="button"
                     onClick={addAmenity}
-                    className="px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all"
+                    className="px-6 py-3 bg-gradient-to-r from-slate-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-slate-700 hover:to-indigo-700 transition-all"
                   >
                     Add
                   </button>
@@ -976,13 +1120,13 @@ export default function EditAbodePage() {
                     {formData.abodeDetails.amenities.map((amenity, index) => (
                       <span
                         key={index}
-                        className="px-4 py-2 bg-amber-100 text-amber-800 rounded-full text-sm font-medium flex items-center gap-2"
+                        className="px-4 py-2 bg-slate-100 text-slate-800 rounded-full text-sm font-medium flex items-center gap-2"
                       >
                         {amenity}
                         <button
                           type="button"
                           onClick={() => removeAmenity(index)}
-                          className="text-amber-600 hover:text-amber-800"
+                          className="text-slate-600 hover:text-slate-800"
                         >
                           ×
                         </button>
@@ -993,8 +1137,13 @@ export default function EditAbodePage() {
               </div>
 
               {/* House Rules */}
-              <div className="bg-white rounded-2xl shadow-xl border border-amber-100 p-8">
-                <h3 className="text-xl font-bold text-amber-900 mb-4">House Rules</h3>
+              <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-gradient-to-br from-slate-600 to-indigo-600 rounded-xl flex items-center justify-center text-white">
+                    📋
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900">House Rules</h3>
+                </div>
                 <div className="flex gap-2 mb-4">
                   <input
                     type="text"
@@ -1002,12 +1151,12 @@ export default function EditAbodePage() {
                     onChange={(e) => setNewHouseRule(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addHouseRule())}
                     placeholder="e.g., No smoking, Respect local customs"
-                    className="flex-1 px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                    className="flex-1 px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                   />
                   <button
                     type="button"
                     onClick={addHouseRule}
-                    className="px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all"
+                    className="px-6 py-3 bg-gradient-to-r from-slate-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-slate-700 hover:to-indigo-700 transition-all"
                   >
                     Add
                   </button>
@@ -1017,13 +1166,13 @@ export default function EditAbodePage() {
                     {formData.abodeDetails.houseRules.map((rule, index) => (
                       <li
                         key={index}
-                        className="flex items-center justify-between p-3 bg-amber-50 rounded-lg"
-                      >
-                        <span className="text-amber-900">{rule}</span>
+                        className="flex items-center justify-between p-4 bg-gradient-to-r from-slate-50 to-indigo-50 rounded-xl border border-slate-200 hover:shadow-md transition-all"
+                        >
+                          <span className="text-slate-900 font-medium">{rule}</span>
                         <button
                           type="button"
                           onClick={() => removeHouseRule(index)}
-                          className="text-red-500 hover:text-red-700"
+                          className="px-3 py-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-all font-medium"
                         >
                           Remove
                         </button>
@@ -1034,8 +1183,13 @@ export default function EditAbodePage() {
               </div>
 
               {/* Languages */}
-              <div className="bg-white rounded-2xl shadow-xl border border-amber-100 p-8">
-                <h3 className="text-xl font-bold text-amber-900 mb-4">Languages Spoken</h3>
+              <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-gradient-to-br from-slate-600 to-indigo-600 rounded-xl flex items-center justify-center text-white">
+                    🗣️
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900">Languages Spoken</h3>
+                </div>
                 <div className="flex gap-2 mb-4">
                   <input
                     type="text"
@@ -1043,12 +1197,12 @@ export default function EditAbodePage() {
                     onChange={(e) => setNewLanguage(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addLanguage())}
                     placeholder="e.g., English, Hindi, Malayalam"
-                    className="flex-1 px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                    className="flex-1 px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                   />
                   <button
                     type="button"
                     onClick={addLanguage}
-                    className="px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all"
+                    className="px-6 py-3 bg-gradient-to-r from-slate-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-slate-700 hover:to-indigo-700 transition-all"
                   >
                     Add
                   </button>
@@ -1058,13 +1212,13 @@ export default function EditAbodePage() {
                     {formData.languages.map((lang, index) => (
                       <span
                         key={index}
-                        className="px-4 py-2 bg-amber-100 text-amber-800 rounded-full text-sm font-medium flex items-center gap-2"
+                        className="px-4 py-2 bg-slate-100 text-slate-800 rounded-full text-sm font-medium flex items-center gap-2"
                       >
                         {lang}
                         <button
                           type="button"
                           onClick={() => removeLanguage(index)}
-                          className="text-amber-600 hover:text-amber-800"
+                          className="text-slate-600 hover:text-slate-800"
                         >
                           ×
                         </button>
@@ -1075,11 +1229,16 @@ export default function EditAbodePage() {
               </div>
 
               {/* Availability */}
-              <div className="bg-white rounded-2xl shadow-xl border border-amber-100 p-8">
+              <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xl font-bold text-amber-900">Availability Calendar</h3>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-slate-600 to-indigo-600 rounded-xl flex items-center justify-center text-white">
+                      📅
+                    </div>
+                    <h3 className="text-xl font-bold text-slate-900">Availability Calendar</h3>
+                  </div>
                   {selectedDates.length > 0 && (
-                    <span className="px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-full text-sm font-semibold shadow-md">
+                    <span className="px-4 py-2 bg-gradient-to-r from-slate-600 to-indigo-600 text-white rounded-full text-sm font-semibold shadow-md">
                       {selectedDates.length} date{selectedDates.length !== 1 ? 's' : ''} selected
                     </span>
                   )}
@@ -1120,30 +1279,30 @@ export default function EditAbodePage() {
                 {!alwaysAvailable && (
                   <>
                     {/* Quick Actions */}
-                    <div className="mb-6 p-5 bg-amber-50 rounded-xl border-2 border-amber-200">
-                      <p className="text-sm font-bold text-amber-900 mb-4 flex items-center gap-2">
+                    <div className="mb-6 p-5 bg-slate-50 rounded-xl border-2 border-slate-200">
+                      <p className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
                         <span className="text-xl">⚡</span>
                         Quick Selection (Click to apply):
                       </p>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <button
                           type="button"
-                          onClick={selectNext30Days}
-                          className="px-4 py-3 bg-white border-2 border-amber-300 text-amber-700 rounded-xl hover:bg-amber-100 hover:border-amber-500 hover:shadow-md transition-all text-sm font-semibold transform hover:scale-105"
+                          onClick={selectNext30DaysFromSelected}
+                          className="px-4 py-3 bg-white border-2 border-indigo-300 text-indigo-700 rounded-xl hover:bg-indigo-50 hover:border-indigo-500 hover:shadow-md transition-all text-sm font-semibold transform hover:scale-105"
                         >
-                          📅 30 Days
+                          📅 30 Days (from selected)
                         </button>
                         <button
                           type="button"
                           onClick={selectNext90Days}
-                          className="px-4 py-3 bg-white border-2 border-amber-300 text-amber-700 rounded-xl hover:bg-amber-100 hover:border-amber-500 hover:shadow-md transition-all text-sm font-semibold transform hover:scale-105"
+                          className="px-4 py-3 bg-white border-2 border-slate-300 text-slate-700 rounded-xl hover:bg-slate-100 hover:border-slate-500 hover:shadow-md transition-all text-sm font-semibold transform hover:scale-105"
                         >
                           📅 90 Days
                         </button>
                         <button
                           type="button"
                           onClick={selectNext6Months}
-                          className="px-4 py-3 bg-white border-2 border-amber-300 text-amber-700 rounded-xl hover:bg-amber-100 hover:border-amber-500 hover:shadow-md transition-all text-sm font-semibold transform hover:scale-105"
+                          className="px-4 py-3 bg-white border-2 border-slate-300 text-slate-700 rounded-xl hover:bg-slate-100 hover:border-slate-500 hover:shadow-md transition-all text-sm font-semibold transform hover:scale-105"
                         >
                           📅 6 Months
                         </button>
@@ -1175,7 +1334,7 @@ export default function EditAbodePage() {
 
                     {/* Calendar */}
                     <div className="mb-4">
-                      <p className="text-sm text-amber-700 text-center mb-4 font-medium">
+                      <p className="text-sm text-slate-700 text-center mb-4 font-medium">
                         📅 <span className="font-semibold">Click dates to select</span> • Click again to deselect
                       </p>
                       <div className="flex justify-center">
@@ -1189,26 +1348,26 @@ export default function EditAbodePage() {
                             return date < today;
                           }}
                           numberOfMonths={typeof window !== 'undefined' && window.innerWidth >= 768 ? 2 : 1}
-                          className="rdp-amber"
+                            className="rdp-slate"
                           classNames={{
                             months: 'flex flex-col sm:flex-row space-y-4 sm:space-x-6 sm:space-y-0',
                             month: 'space-y-4',
                             caption: 'flex justify-center pt-1 relative items-center mb-4',
-                            caption_label: 'text-lg font-bold text-amber-900',
+                            caption_label: 'text-lg font-bold text-slate-900',
                             nav: 'space-x-1 flex items-center',
-                            nav_button: 'h-10 w-10 bg-transparent p-0 opacity-70 hover:opacity-100 hover:bg-amber-100 rounded-xl transition-all cursor-pointer border-2 border-amber-300 hover:border-amber-500',
+                            nav_button: 'h-10 w-10 bg-transparent p-0 opacity-70 hover:opacity-100 hover:bg-slate-100 rounded-xl transition-all cursor-pointer border-2 border-slate-300 hover:border-slate-500',
                             nav_button_previous: 'absolute left-1',
                             nav_button_next: 'absolute right-1',
                             table: 'w-full border-collapse space-y-1',
                             head_row: 'flex mb-3',
-                            head_cell: 'text-amber-600 rounded-md w-12 font-bold text-sm uppercase tracking-wider',
+                            head_cell: 'text-slate-600 rounded-md w-12 font-bold text-sm uppercase tracking-wider',
                             row: 'flex w-full mt-2',
                             cell: 'text-center text-sm p-0 relative',
-                            day: 'h-12 w-12 p-0 font-normal rounded-xl transition-all cursor-pointer hover:bg-amber-100 hover:text-amber-900 text-base',
-                            day_selected: 'bg-gradient-to-br from-amber-600 to-orange-600 text-white hover:from-amber-700 hover:to-orange-700 hover:text-white focus:from-amber-600 focus:to-orange-600 focus:text-white font-bold shadow-lg',
-                            day_today: 'bg-amber-200 text-amber-900 font-bold border-2 border-amber-500',
-                            day_outside: 'text-amber-300 opacity-50',
-                            day_disabled: 'text-amber-200 opacity-30 cursor-not-allowed',
+                            day: 'h-12 w-12 p-0 font-normal rounded-xl transition-all cursor-pointer hover:bg-slate-100 hover:text-slate-900 text-base',
+                            day_selected: 'bg-gradient-to-br from-slate-600 to-indigo-600 text-white hover:from-slate-700 hover:to-indigo-700 hover:text-white focus:from-slate-600 focus:to-indigo-600 focus:text-white font-bold shadow-lg',
+                            day_today: 'bg-slate-200 text-slate-900 font-bold border-2 border-slate-500',
+                            day_outside: 'text-slate-300 opacity-50',
+                            day_disabled: 'text-slate-200 opacity-30 cursor-not-allowed',
                             day_hidden: 'invisible',
                           }}
                         />
@@ -1219,20 +1378,20 @@ export default function EditAbodePage() {
 
                 {/* Summary */}
                 {selectedDates.length > 0 && (
-                  <div className="mt-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border-2 border-amber-300">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-gradient-to-br from-amber-600 to-orange-600 rounded-xl flex items-center justify-center text-white text-xl">
-                        ✓
-                      </div>
-                      <div>
-                        <p className="font-bold text-amber-900">
-                          {alwaysAvailable 
-                            ? 'Your abode is set to always available!' 
-                            : `${selectedDates.length} date${selectedDates.length !== 1 ? 's' : ''} selected for availability`
-                          }
-                        </p>
-                        {!alwaysAvailable && dateRange.from && dateRange.to && (
-                          <p className="text-sm text-amber-700 mt-1">
+                    <div className="mt-6 p-4 bg-gradient-to-r from-slate-50 to-indigo-50 rounded-xl border-2 border-slate-300">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-gradient-to-br from-slate-600 to-indigo-600 rounded-xl flex items-center justify-center text-white text-xl">
+                          ✓
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-900">
+                            {alwaysAvailable 
+                              ? 'Your abode is set to always available!' 
+                              : `${selectedDates.length} date${selectedDates.length !== 1 ? 's' : ''} selected for availability`
+                            }
+                          </p>
+                          {!alwaysAvailable && dateRange.from && dateRange.to && (
+                            <p className="text-sm text-slate-700 mt-1">
                             From {dateRange.from.toLocaleDateString()} to {dateRange.to.toLocaleDateString()}
                           </p>
                         )}
@@ -1254,14 +1413,14 @@ export default function EditAbodePage() {
               <button
                 type="button"
                 onClick={() => router.push('/host/abodes/manage')}
-                className="px-8 py-3 border-2 border-amber-300 text-amber-700 font-semibold rounded-xl hover:bg-amber-50 transition-all"
+                className="px-8 py-3 border-2 border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-all"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={saving}
-                className="px-8 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-8 py-3 bg-gradient-to-r from-slate-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-slate-700 hover:to-indigo-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? 'Saving...' : 'Save Changes'}
               </button>

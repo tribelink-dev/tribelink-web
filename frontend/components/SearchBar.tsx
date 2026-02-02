@@ -76,24 +76,22 @@ export default function SearchBar({ className = '', variant = 'homepage' }: Sear
   }, []);
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative z-20 ${className}`}>
       <motion.div
         initial={isHomepage ? { scale: 0.95, opacity: 0, y: 10 } : {}}
         animate={isHomepage ? { scale: 1, opacity: 1, y: 0 } : {}}
         transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
         className={`
           ${isHomepage 
-            ? 'bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-100/50 p-2' 
-            : 'bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-100/50 p-1.5'
+            ? 'flex items-center gap-2 h-20' 
+            : 'bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200/50 p-1.5 flex items-center gap-1 h-16'
           }
-          flex items-center gap-1
-          ${isHomepage ? 'h-20' : 'h-16'}
         `}
       >
         {/* Location */}
         <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
           onClick={() => {
             setActiveField('location');
             setShowLocationMenu(true);
@@ -101,27 +99,29 @@ export default function SearchBar({ className = '', variant = 'homepage' }: Sear
             setShowGuestsMenu(false);
           }}
           className={`
-            flex-1 px-6 py-4 text-left rounded-2xl transition-all duration-300 relative group
+            flex-1 px-6 py-4 text-left rounded-2xl transition-all duration-300 relative
             ${activeField === 'location' 
-              ? 'bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-300 shadow-lg' 
-              : 'hover:bg-gray-50 border-2 border-transparent'
+              ? 'bg-gradient-to-r from-heritage-gold/10 via-heritage-gold-dark/10 to-heritage-gold/10' 
+              : 'hover:bg-gray-50/50'
             }
             ${isHomepage ? 'min-w-[220px]' : 'min-w-[180px]'}
           `}
         >
           <div className="flex items-center gap-2 mb-1">
-            <MapPin className={`w-4 h-4 ${activeField === 'location' ? 'text-indigo-600' : 'text-gray-400'} transition-colors`} />
-            <div className="text-xs font-bold text-gray-700 uppercase tracking-wide">Where</div>
+            <MapPin className={`w-4 h-4 ${activeField === 'location' ? 'text-heritage-gold' : 'text-gray-500'} transition-colors`} />
+            <div className={`text-xs font-bold uppercase tracking-wide transition-colors ${
+              activeField === 'location' ? 'text-heritage-gold' : 'text-gray-600'
+            }`}>Where</div>
           </div>
           <div className={`text-sm font-semibold truncate transition-colors ${
-            location ? 'text-gray-900' : 'text-gray-400'
+            location ? 'text-gray-900' : 'text-gray-500'
           }`}>
             {location || 'Search destinations'}
           </div>
           {activeField === 'location' && (
             <motion.div
               layoutId="activeFieldIndicator"
-              className="absolute inset-0 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 pointer-events-none"
+              className="absolute inset-0 rounded-2xl bg-gradient-to-r from-heritage-gold/5 via-heritage-gold-dark/5 to-heritage-gold/5 pointer-events-none"
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             />
           )}
@@ -129,8 +129,8 @@ export default function SearchBar({ className = '', variant = 'homepage' }: Sear
 
         {/* Check-in */}
         <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
           onClick={() => {
             setActiveField('checkIn');
             setShowDateMenu(true);
@@ -138,27 +138,29 @@ export default function SearchBar({ className = '', variant = 'homepage' }: Sear
             setShowGuestsMenu(false);
           }}
           className={`
-            flex-1 px-6 py-4 text-left rounded-2xl transition-all duration-300 relative group
+            flex-1 px-6 py-4 text-left rounded-2xl transition-all duration-300 relative
             ${activeField === 'checkIn' || activeField === 'checkOut'
-              ? 'bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-300 shadow-lg' 
-              : 'hover:bg-gray-50 border-2 border-transparent'
+              ? 'bg-gradient-to-r from-heritage-gold/10 via-heritage-gold-dark/10 to-heritage-gold/10' 
+              : 'hover:bg-gray-50/50'
             }
             ${isHomepage ? 'min-w-[160px]' : 'min-w-[140px]'}
           `}
         >
           <div className="flex items-center gap-2 mb-1">
-            <Calendar className={`w-4 h-4 ${activeField === 'checkIn' || activeField === 'checkOut' ? 'text-indigo-600' : 'text-gray-400'} transition-colors`} />
-            <div className="text-xs font-bold text-gray-700 uppercase tracking-wide">Check in</div>
+            <Calendar className={`w-4 h-4 ${activeField === 'checkIn' || activeField === 'checkOut' ? 'text-heritage-gold' : 'text-gray-500'} transition-colors`} />
+            <div className={`text-xs font-bold uppercase tracking-wide transition-colors ${
+              activeField === 'checkIn' || activeField === 'checkOut' ? 'text-heritage-gold' : 'text-gray-600'
+            }`}>Check in</div>
           </div>
           <div className={`text-sm font-semibold transition-colors ${
-            checkIn ? 'text-gray-900' : 'text-gray-400'
+            checkIn ? 'text-gray-900' : 'text-gray-500'
           }`}>
             {checkIn ? format(checkIn, 'MMM dd') : 'Add date'}
           </div>
           {(activeField === 'checkIn' || activeField === 'checkOut') && (
             <motion.div
               layoutId="activeFieldIndicator"
-              className="absolute inset-0 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 pointer-events-none"
+              className="absolute inset-0 rounded-2xl bg-gradient-to-r from-heritage-gold/5 via-heritage-gold-dark/5 to-heritage-gold/5 pointer-events-none"
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             />
           )}
@@ -166,8 +168,8 @@ export default function SearchBar({ className = '', variant = 'homepage' }: Sear
 
         {/* Check-out */}
         <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
           onClick={() => {
             setActiveField('checkOut');
             setShowDateMenu(true);
@@ -175,27 +177,29 @@ export default function SearchBar({ className = '', variant = 'homepage' }: Sear
             setShowGuestsMenu(false);
           }}
           className={`
-            flex-1 px-6 py-4 text-left rounded-2xl transition-all duration-300 relative group
+            flex-1 px-6 py-4 text-left rounded-2xl transition-all duration-300 relative
             ${activeField === 'checkIn' || activeField === 'checkOut'
-              ? 'bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-300 shadow-lg' 
-              : 'hover:bg-gray-50 border-2 border-transparent'
+              ? 'bg-gradient-to-r from-heritage-gold/10 via-heritage-gold-dark/10 to-heritage-gold/10' 
+              : 'hover:bg-gray-50/50'
             }
             ${isHomepage ? 'min-w-[160px]' : 'min-w-[140px]'}
           `}
         >
           <div className="flex items-center gap-2 mb-1">
-            <Calendar className={`w-4 h-4 ${activeField === 'checkIn' || activeField === 'checkOut' ? 'text-indigo-600' : 'text-gray-400'} transition-colors`} />
-            <div className="text-xs font-bold text-gray-700 uppercase tracking-wide">Check out</div>
+            <Calendar className={`w-4 h-4 ${activeField === 'checkIn' || activeField === 'checkOut' ? 'text-heritage-gold' : 'text-gray-500'} transition-colors`} />
+            <div className={`text-xs font-bold uppercase tracking-wide transition-colors ${
+              activeField === 'checkIn' || activeField === 'checkOut' ? 'text-heritage-gold' : 'text-gray-600'
+            }`}>Check out</div>
           </div>
           <div className={`text-sm font-semibold transition-colors ${
-            checkOut ? 'text-gray-900' : 'text-gray-400'
+            checkOut ? 'text-gray-900' : 'text-gray-500'
           }`}>
             {checkOut ? format(checkOut, 'MMM dd') : 'Add date'}
           </div>
           {(activeField === 'checkIn' || activeField === 'checkOut') && (
             <motion.div
               layoutId="activeFieldIndicator"
-              className="absolute inset-0 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 pointer-events-none"
+              className="absolute inset-0 rounded-2xl bg-gradient-to-r from-heritage-gold/5 via-heritage-gold-dark/5 to-heritage-gold/5 pointer-events-none"
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             />
           )}
@@ -203,8 +207,8 @@ export default function SearchBar({ className = '', variant = 'homepage' }: Sear
 
         {/* Guests */}
         <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
           onClick={() => {
             setActiveField('guests');
             setShowGuestsMenu(true);
@@ -212,27 +216,29 @@ export default function SearchBar({ className = '', variant = 'homepage' }: Sear
             setShowDateMenu(false);
           }}
           className={`
-            flex-1 px-6 py-4 text-left rounded-2xl transition-all duration-300 relative group
+            flex-1 px-6 py-4 text-left rounded-2xl transition-all duration-300 relative
             ${activeField === 'guests' 
-              ? 'bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-300 shadow-lg' 
-              : 'hover:bg-gray-50 border-2 border-transparent'
+              ? 'bg-gradient-to-r from-heritage-gold/10 via-heritage-gold-dark/10 to-heritage-gold/10' 
+              : 'hover:bg-gray-50/50'
             }
             ${isHomepage ? 'min-w-[160px]' : 'min-w-[140px]'}
           `}
         >
           <div className="flex items-center gap-2 mb-1">
-            <Users className={`w-4 h-4 ${activeField === 'guests' ? 'text-indigo-600' : 'text-gray-400'} transition-colors`} />
-            <div className="text-xs font-bold text-gray-700 uppercase tracking-wide">Who</div>
+            <Users className={`w-4 h-4 ${activeField === 'guests' ? 'text-heritage-gold' : 'text-gray-500'} transition-colors`} />
+            <div className={`text-xs font-bold uppercase tracking-wide transition-colors ${
+              activeField === 'guests' ? 'text-heritage-gold' : 'text-gray-600'
+            }`}>Who</div>
           </div>
           <div className={`text-sm font-semibold transition-colors ${
-            guests > 0 ? 'text-gray-900' : 'text-gray-400'
+            guests > 0 ? 'text-gray-900' : 'text-gray-500'
           }`}>
             {guests} {guests === 1 ? 'guest' : 'guests'}
           </div>
           {activeField === 'guests' && (
             <motion.div
               layoutId="activeFieldIndicator"
-              className="absolute inset-0 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 pointer-events-none"
+              className="absolute inset-0 rounded-2xl bg-gradient-to-r from-heritage-gold/5 via-heritage-gold-dark/5 to-heritage-gold/5 pointer-events-none"
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             />
           )}
@@ -244,12 +250,12 @@ export default function SearchBar({ className = '', variant = 'homepage' }: Sear
           whileTap={{ scale: 0.95 }}
           onClick={handleSearch}
           className={`
-            ml-2 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600
-            hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700
+            ml-2 rounded-2xl bg-gradient-to-r from-heritage-gold via-heritage-gold-dark to-heritage-gold
+            hover:from-heritage-gold-dark hover:via-heritage-gold hover:to-heritage-gold-dark
             text-white transition-all duration-300
             ${isHomepage ? 'w-16 h-16' : 'w-14 h-14'}
             flex items-center justify-center
-            shadow-lg hover:shadow-xl
+            shadow-xl hover:shadow-2xl
             relative overflow-hidden group
           `}
         >
@@ -270,18 +276,18 @@ export default function SearchBar({ className = '', variant = 'homepage' }: Sear
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
               transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-              className="absolute top-full left-0 mt-3 w-96 bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden z-50"
+              className="absolute top-full left-0 mt-3 w-96 bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden z-[100]"
             >
               {/* Search Input */}
-              <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-indigo-50/50 to-purple-50/50">
+              <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-heritage-gold/5 via-heritage-gold-dark/5 to-heritage-gold/5">
                 <div className="relative">
-                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600" />
+                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-heritage-gold" />
                   <input
                     type="text"
                     value={locationSearch}
                     onChange={(e) => setLocationSearch(e.target.value)}
                     placeholder="Search destinations..."
-                    className="w-full pl-12 pr-10 py-3.5 bg-white border-2 border-indigo-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-medium transition-all"
+                    className="w-full pl-12 pr-10 py-3.5 bg-white border-2 border-heritage-gold/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold text-sm font-medium transition-all"
                     autoFocus
                   />
                   {locationSearch && (
@@ -312,17 +318,17 @@ export default function SearchBar({ className = '', variant = 'homepage' }: Sear
                           setShowLocationMenu(false);
                           setActiveField(null);
                         }}
-                        className="w-full text-left px-4 py-3.5 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 rounded-xl transition-all group"
+                        className="w-full text-left px-4 py-3.5 hover:bg-gradient-to-r hover:from-heritage-gold/10 hover:via-heritage-gold-dark/10 hover:to-heritage-gold/10 rounded-xl transition-all group"
                       >
                         <div className="flex items-center gap-3">
                           <span className="text-2xl">{dest.icon}</span>
                           <div className="flex-1">
-                            <div className="font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">
+                            <div className="font-bold text-gray-900 group-hover:text-heritage-gold transition-colors">
                               {dest.name}
                             </div>
                             <div className="text-sm text-gray-500 mt-0.5">{dest.description}</div>
                           </div>
-                          <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-indigo-600 rotate-[-90deg] transition-all" />
+                          <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-heritage-gold rotate-[-90deg] transition-all" />
                         </div>
                       </motion.button>
                     ))}
@@ -349,13 +355,13 @@ export default function SearchBar({ className = '', variant = 'homepage' }: Sear
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className="absolute top-full left-0 mt-3 bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 z-50"
+            className="absolute top-full left-0 mt-3 bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 z-[100]"
           >
             <div className="mb-4">
               <h3 className="text-lg font-bold text-gray-900 mb-1">Select dates</h3>
               <p className="text-sm text-gray-500">Choose your check-in and check-out dates</p>
             </div>
-            <div className="[&_.rdp]:m-0 [&_.rdp-month]:m-0 [&_.rdp-table]:w-full [&_.rdp-day_selected]:!bg-gradient-to-r [&_.rdp-day_selected]:!from-indigo-600 [&_.rdp-day_selected]:!to-purple-600 [&_.rdp-day_selected]:!text-white [&_.rdp-day_selected]:!font-bold [&_.rdp-day_range_start]:!bg-gradient-to-r [&_.rdp-day_range_start]:!from-indigo-600 [&_.rdp-day_range_start]:!to-purple-600 [&_.rdp-day_range_end]:!bg-gradient-to-r [&_.rdp-day_range_end]:!from-indigo-600 [&_.rdp-day_range_end]:!to-purple-600 [&_.rdp-day]:rounded-xl [&_.rdp-day]:mx-0.5 [&_.rdp-day]:h-10 [&_.rdp-day]:w-10 [&_.rdp-day]:hover:!bg-indigo-100 [&_.rdp-day]:transition-all">
+            <div className="[&_.rdp]:m-0 [&_.rdp-month]:m-0 [&_.rdp-table]:w-full [&_.rdp-day_selected]:!bg-gradient-to-r [&_.rdp-day_selected]:!from-heritage-gold [&_.rdp-day_selected]:!via-heritage-gold-dark [&_.rdp-day_selected]:!to-heritage-gold [&_.rdp-day_selected]:!text-white [&_.rdp-day_selected]:!font-bold [&_.rdp-day_range_start]:!bg-gradient-to-r [&_.rdp-day_range_start]:!from-heritage-gold [&_.rdp-day_range_start]:!via-heritage-gold-dark [&_.rdp-day_range_start]:!to-heritage-gold [&_.rdp-day_range_end]:!bg-gradient-to-r [&_.rdp-day_range_end]:!from-heritage-gold [&_.rdp-day_range_end]:!via-heritage-gold-dark [&_.rdp-day_range_end]:!to-heritage-gold [&_.rdp-day]:rounded-xl [&_.rdp-day]:mx-0.5 [&_.rdp-day]:h-10 [&_.rdp-day]:w-10 [&_.rdp-day]:hover:!bg-heritage-gold/20 [&_.rdp-day]:transition-all">
               <DayPicker
                 mode="range"
                 selected={{ from: checkIn, to: checkOut }}
@@ -414,14 +420,14 @@ export default function SearchBar({ className = '', variant = 'homepage' }: Sear
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className="absolute top-full right-0 mt-3 w-80 bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 z-50"
+            className="absolute top-full right-0 mt-3 w-80 bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 z-[100]"
           >
             <div className="mb-4">
               <h3 className="text-lg font-bold text-gray-900 mb-1">Guests</h3>
               <p className="text-sm text-gray-500">How many guests are staying?</p>
             </div>
             <div className="space-y-6">
-              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-50/50 to-purple-50/50 rounded-2xl border-2 border-indigo-100">
+              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-heritage-gold/10 via-heritage-gold-dark/10 to-heritage-gold/10 rounded-2xl border-2 border-heritage-gold/30">
                 <div>
                   <div className="font-bold text-gray-900 mb-1">Adults</div>
                   <div className="text-sm text-gray-500">Ages 13 or above</div>
@@ -432,7 +438,7 @@ export default function SearchBar({ className = '', variant = 'homepage' }: Sear
                     whileTap={{ scale: 0.9 }}
                     onClick={() => setGuests(Math.max(1, guests - 1))}
                     disabled={guests <= 1}
-                    className="w-10 h-10 rounded-xl border-2 border-gray-300 disabled:border-gray-200 disabled:opacity-50 flex items-center justify-center hover:border-indigo-500 hover:bg-indigo-50 transition-all disabled:cursor-not-allowed"
+                    className="w-10 h-10 rounded-xl border-2 border-gray-300 disabled:border-gray-200 disabled:opacity-50 flex items-center justify-center hover:border-heritage-gold hover:bg-heritage-gold/10 transition-all disabled:cursor-not-allowed"
                   >
                     <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M20 12H4" />
@@ -443,7 +449,7 @@ export default function SearchBar({ className = '', variant = 'homepage' }: Sear
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={() => setGuests(guests + 1)}
-                    className="w-10 h-10 rounded-xl border-2 border-gray-300 flex items-center justify-center hover:border-indigo-500 hover:bg-indigo-50 transition-all"
+                    className="w-10 h-10 rounded-xl border-2 border-gray-300 flex items-center justify-center hover:border-heritage-gold hover:bg-heritage-gold/10 transition-all"
                   >
                     <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
@@ -458,7 +464,7 @@ export default function SearchBar({ className = '', variant = 'homepage' }: Sear
                   setShowGuestsMenu(false);
                   setActiveField(null);
                 }}
-                className="w-full py-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl"
+                className="w-full py-4 bg-gradient-to-r from-heritage-gold via-heritage-gold-dark to-heritage-gold hover:from-heritage-gold-dark hover:via-heritage-gold hover:to-heritage-gold-dark text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl"
               >
                 Done
               </motion.button>
@@ -474,7 +480,7 @@ export default function SearchBar({ className = '', variant = 'homepage' }: Sear
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+            className="fixed inset-0 z-[90] bg-black/30 backdrop-blur-sm"
             onClick={() => {
               setShowLocationMenu(false);
               setShowDateMenu(false);

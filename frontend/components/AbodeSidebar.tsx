@@ -69,9 +69,9 @@ export default function AbodeSidebar() {
       {/* Mobile menu button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="lg:hidden fixed top-4 left-4 z-40 p-3 bg-white rounded-xl shadow-lg border border-amber-200 hover:shadow-xl transition-all"
+        className="lg:hidden fixed top-4 left-4 z-40 p-3 bg-white rounded-xl shadow-lg border border-slate-200 hover:shadow-xl transition-all"
       >
-        <svg className="w-6 h-6 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-6 h-6 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
         </svg>
       </button>
@@ -79,7 +79,7 @@ export default function AbodeSidebar() {
       {/* Sidebar */}
       <aside
         className={`
-          fixed top-0 left-0 h-full w-72 bg-white/95 backdrop-blur-xl border-r border-amber-200 z-30
+          fixed top-0 left-0 h-full w-72 bg-white/95 backdrop-blur-xl border-r border-slate-200 z-30
           transform transition-transform duration-300 ease-in-out
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
           lg:translate-x-0
@@ -87,8 +87,8 @@ export default function AbodeSidebar() {
         `}
       >
         <div className="flex flex-col h-full">
-          {/* Logo Section - Abode Theme */}
-          <div className="p-6 border-b border-amber-200 bg-gradient-to-r from-amber-800 to-orange-700">
+          {/* Logo Section - Professional Theme */}
+          <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-slate-800 via-indigo-700 to-slate-800">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/30">
                 <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -117,8 +117,8 @@ export default function AbodeSidebar() {
                     w-full flex items-center gap-3 px-4 py-3 rounded-xl
                     transition-all duration-200 relative group
                     ${isActive
-                      ? 'bg-gradient-to-r from-amber-700 to-orange-600 text-white shadow-lg'
-                      : 'text-amber-700 hover:bg-amber-50'
+                      ? 'bg-gradient-to-r from-slate-700 to-indigo-600 text-white shadow-lg'
+                      : 'text-slate-700 hover:bg-slate-50'
                     }
                   `}
                 >
@@ -127,13 +127,13 @@ export default function AbodeSidebar() {
                     <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full"></div>
                   )}
                   
-                  <div className={`flex-shrink-0 ${isActive ? 'text-white' : 'text-amber-500 group-hover:text-amber-600'}`}>
+                  <div className={`flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-slate-600'}`}>
                     {item.icon}
                   </div>
                   <span className="flex-1 text-left font-medium">{item.name}</span>
                   {item.badge && (
                     <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                      isActive ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-600'
+                      isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
                     }`}>
                       {item.badge}
                     </span>
@@ -141,7 +141,7 @@ export default function AbodeSidebar() {
                   
                   {/* Hover arrow */}
                   {!isActive && (
-                    <svg className="w-4 h-4 text-amber-400 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-slate-400 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   )}
@@ -151,7 +151,7 @@ export default function AbodeSidebar() {
           </nav>
 
           {/* Footer */}
-          <div className="p-4 border-t border-amber-200 bg-amber-50/50">
+          <div className="p-4 border-t border-slate-200 bg-slate-50/50">
             <button
               onClick={hostLogout}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-all duration-200 font-medium group"

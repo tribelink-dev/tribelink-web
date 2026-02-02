@@ -108,10 +108,10 @@ export default function AbodeDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-amber-600 border-t-transparent mb-4"></div>
-          <div className="text-xl font-medium text-amber-900">Loading your abode dashboard...</div>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-slate-600 border-t-transparent mb-4"></div>
+          <div className="text-xl font-medium text-slate-900">Loading your abode dashboard...</div>
         </div>
       </div>
     );
@@ -127,9 +127,9 @@ export default function AbodeDashboard() {
         </svg>
       ),
       href: '/adobes/register',
-      color: 'from-amber-600 to-amber-700',
-      bgColor: 'bg-amber-50',
-      textColor: 'text-amber-600',
+      color: 'from-slate-600 to-slate-700',
+      bgColor: 'bg-slate-50',
+      textColor: 'text-slate-600',
       show: !abode
     },
     {
@@ -141,9 +141,9 @@ export default function AbodeDashboard() {
         </svg>
       ),
       href: '/host/abodes/manage',
-      color: 'from-orange-600 to-orange-700',
-      bgColor: 'bg-orange-50',
-      textColor: 'text-orange-600',
+      color: 'from-indigo-600 to-indigo-700',
+      bgColor: 'bg-indigo-50',
+      textColor: 'text-indigo-600',
       show: !!abode
     },
     {
@@ -155,9 +155,9 @@ export default function AbodeDashboard() {
         </svg>
       ),
       href: abode ? `/adobes/my-bookings` : '#',
-      color: 'from-amber-600 to-amber-700',
-      bgColor: 'bg-amber-50',
-      textColor: 'text-amber-600',
+      color: 'from-slate-600 to-slate-700',
+      bgColor: 'bg-slate-50',
+      textColor: 'text-slate-600',
       show: !!abode
     },
     {
@@ -169,39 +169,24 @@ export default function AbodeDashboard() {
         </svg>
       ),
       href: abode ? `/host/abodes/edit/${abode._id}` : '#',
-      color: 'from-amber-600 to-amber-700',
-      bgColor: 'bg-amber-50',
-      textColor: 'text-amber-600',
+      color: 'from-slate-600 to-slate-700',
+      bgColor: 'bg-slate-50',
+      textColor: 'text-slate-600',
       show: !!abode
     },
-    {
-      title: 'View Public Listing',
-      description: 'See how travelers see your abode',
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-        </svg>
-      ),
-      href: abode ? `/adobes/${abode._id}` : '#',
-      color: 'from-amber-600 to-amber-700',
-      bgColor: 'bg-amber-50',
-      textColor: 'text-amber-600',
-      show: !!abode
-    }
   ].filter(action => action.show !== false);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <AbodeSidebar />
       <div className="lg:ml-72">
         <div className="p-6 md:p-8 lg:p-10">
-          {/* Modern Header with Gradient - Abode Theme */}
+          {/* Modern Header with Gradient - Professional Theme */}
           <div className="mb-10 animate-fade-in">
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-800 via-orange-700 to-amber-800 p-8 md:p-12 shadow-2xl">
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-800 via-indigo-700 to-slate-800 p-8 md:p-12 shadow-2xl">
               {/* Decorative Elements */}
-              <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl -mr-48 -mt-48"></div>
-              <div className="absolute bottom-0 left-0 w-72 h-72 bg-orange-500/10 rounded-full blur-2xl -ml-36 -mb-36"></div>
+              <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl -mr-48 -mt-48"></div>
+              <div className="absolute bottom-0 left-0 w-72 h-72 bg-slate-500/10 rounded-full blur-2xl -ml-36 -mb-36"></div>
               
               <div className="relative z-10">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
@@ -229,8 +214,8 @@ export default function AbodeDashboard() {
                   <div className="flex items-center gap-4">
                     <div className="bg-white/20 backdrop-blur-md rounded-2xl px-6 py-4 border border-white/30 shadow-lg">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-amber-400/20 rounded-xl flex items-center justify-center">
-                          <svg className="w-6 h-6 text-amber-300" fill="currentColor" viewBox="0 0 20 20">
+                        <div className="w-10 h-10 bg-indigo-400/20 rounded-xl flex items-center justify-center">
+                          <svg className="w-6 h-6 text-indigo-300" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                           </svg>
                         </div>
@@ -255,7 +240,7 @@ export default function AbodeDashboard() {
               <motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-600 to-amber-700 p-6 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
+                className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-600 to-slate-700 p-6 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16"></div>
                 <div className="relative z-10">
@@ -268,7 +253,7 @@ export default function AbodeDashboard() {
                     <div className="text-white/60 text-sm font-medium">Total</div>
                   </div>
                   <div className="text-4xl font-bold mb-2">{stats.abodes}</div>
-                  <div className="text-amber-100 text-sm font-medium">Active Abodes</div>
+                  <div className="text-slate-100 text-sm font-medium">Active Abodes</div>
                 </div>
               </motion.div>
 
@@ -277,7 +262,7 @@ export default function AbodeDashboard() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-600 to-orange-700 p-6 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
+                className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-700 p-6 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16"></div>
                 <div className="relative z-10">
@@ -290,7 +275,7 @@ export default function AbodeDashboard() {
                     <div className="text-white/60 text-sm font-medium">Total</div>
                   </div>
                   <div className="text-4xl font-bold mb-2">{stats.bookings}</div>
-                  <div className="text-orange-100 text-sm font-medium">Total Bookings</div>
+                  <div className="text-indigo-100 text-sm font-medium">Total Bookings</div>
                 </div>
               </motion.div>
 
@@ -299,7 +284,7 @@ export default function AbodeDashboard() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-600 to-amber-700 p-6 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
+                className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 p-6 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16"></div>
                 <div className="relative z-10">
@@ -312,7 +297,7 @@ export default function AbodeDashboard() {
                     <div className="text-white/60 text-sm font-medium">Total</div>
                   </div>
                   <div className="text-4xl font-bold mb-2">₹{stats.totalRevenue.toLocaleString()}</div>
-                  <div className="text-amber-100 text-sm font-medium">Total Revenue</div>
+                  <div className="text-blue-100 text-sm font-medium">Total Revenue</div>
                 </div>
               </motion.div>
 
@@ -321,7 +306,7 @@ export default function AbodeDashboard() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-600 to-orange-700 p-6 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
+                className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-600 to-teal-700 p-6 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16"></div>
                 <div className="relative z-10">
@@ -334,7 +319,7 @@ export default function AbodeDashboard() {
                     <div className="text-white/60 text-sm font-medium">Pending</div>
                   </div>
                   <div className="text-4xl font-bold mb-2">{stats.pendingBookings}</div>
-                  <div className="text-orange-100 text-sm font-medium">Pending Bookings</div>
+                  <div className="text-teal-100 text-sm font-medium">Pending Bookings</div>
                 </div>
               </motion.div>
             </div>
@@ -344,8 +329,8 @@ export default function AbodeDashboard() {
           <div className="mb-10">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-2xl font-bold text-amber-900 mb-1">Quick Actions</h2>
-                <p className="text-amber-700">Manage your abode and bookings</p>
+                <h2 className="text-2xl font-bold text-slate-900 mb-1">Quick Actions</h2>
+                <p className="text-slate-700">Manage your abode and bookings</p>
               </div>
             </div>
             
@@ -358,7 +343,7 @@ export default function AbodeDashboard() {
                   transition={{ delay: 0.1 * index }}
                   onClick={() => action.href !== '#' && router.push(action.href)}
                   disabled={action.href === '#'}
-                  className="group relative overflow-hidden bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-amber-100 text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="group relative overflow-hidden bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-slate-100 text-left disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {/* Hover gradient overlay */}
                   <div className={`absolute inset-0 bg-gradient-to-br ${action.color} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
@@ -367,13 +352,13 @@ export default function AbodeDashboard() {
                     <div className={`w-14 h-14 ${action.bgColor} rounded-2xl flex items-center justify-center mb-4 group-hover:bg-white/20 group-hover:backdrop-blur-sm transition-all duration-300 ${action.textColor} group-hover:text-white`}>
                       {action.icon}
                     </div>
-                    <h3 className="text-lg font-bold text-amber-900 mb-2 group-hover:text-white transition-colors duration-300">
+                    <h3 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-white transition-colors duration-300">
                       {action.title}
                     </h3>
-                    <p className="text-sm text-amber-700 group-hover:text-white/90 transition-colors duration-300">
+                    <p className="text-sm text-slate-700 group-hover:text-white/90 transition-colors duration-300">
                       {action.description}
                     </p>
-                    <div className="mt-4 flex items-center text-amber-600 group-hover:text-white transition-colors duration-300">
+                    <div className="mt-4 flex items-center text-slate-600 group-hover:text-white transition-colors duration-300">
                       <span className="text-sm font-semibold">Go to {action.title}</span>
                       <svg className="w-4 h-4 ml-2 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -382,7 +367,7 @@ export default function AbodeDashboard() {
                   </div>
                   
                   {/* Decorative corner */}
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-amber-100/10 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-indigo-100/10 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </motion.button>
               ))}
             </div>

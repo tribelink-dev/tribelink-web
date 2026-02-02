@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
-import AirbnbSearchBar from '@/components/AirbnbSearchBar';
+import SearchBar from '@/components/SearchBar';
 import CategoryIcons from '@/components/CategoryIcons';
 import ExperienceDetailModal from '@/components/ExperienceDetailModal';
 import AbodeDetailModal from '@/components/AbodeDetailModal';
@@ -44,6 +44,21 @@ export default function ExplorePage() {
   const { scrollY } = useScroll();
   const heroOpacity = useTransform(scrollY, [0, 300], [1, 0]);
   const heroScale = useTransform(scrollY, [0, 300], [1, 0.95]);
+
+  // Search bar scroll animations - smooth transitions
+  const searchBarHeroOpacity = useTransform(scrollY, [0, 200], [1, 0]);
+  const searchBarHeroY = useTransform(scrollY, [0, 200], [0, -20]);
+  const searchBarHeroScale = useTransform(scrollY, [0, 200], [1, 0.95]);
+  
+  // Sticky search bar animations - appears as hero fades
+  const stickySearchBarOpacity = useTransform(scrollY, [150, 250], [0, 1]);
+  const stickySearchBarY = useTransform(scrollY, [150, 250], [-10, 0]);
+  const stickySearchBarScale = useTransform(scrollY, [150, 400], [0.88, 0.95]);
+  const stickySearchBarShadow = useTransform(
+    scrollY,
+    [150, 400],
+    ['0 2px 8px rgba(0,0,0,0.08)', '0 8px 24px rgba(0,0,0,0.12)']
+  );
 
   // Fetch all abodes when abodes section is toggled
   useEffect(() => {
@@ -296,9 +311,9 @@ export default function ExplorePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className="flex justify-center mb-8"
+            className="flex justify-center mb-8 relative z-10"
           >
-            <div className="inline-flex bg-white/95 backdrop-blur-xl rounded-3xl p-2 shadow-2xl border border-gray-200/50">
+            <div className="inline-flex bg-white/95 backdrop-blur-xl rounded-3xl p-2 shadow-2xl border border-gray-200/50 relative z-10">
               <button
                 onClick={() => setActiveSection('abodes')}
                 className={`relative px-10 py-5 rounded-2xl font-bold text-base transition-all duration-300 ${
@@ -342,15 +357,20 @@ export default function ExplorePage() {
             </div>
           </motion.div>
 
-          {/* Enhanced Search Bar */}
+          {/* Enhanced Search Bar - Hero Position */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4, ease: [0.4, 0, 0.2, 1] }}
-            className="max-w-5xl mx-auto"
+            className="max-w-5xl mx-auto relative z-20"
+            style={{
+              opacity: searchBarHeroOpacity,
+              y: searchBarHeroY,
+              scale: searchBarHeroScale,
+            }}
           >
-            <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 p-2">
-              <AirbnbSearchBar variant="homepage" />
+            <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 p-2 relative z-20">
+              <SearchBar variant="homepage" />
             </div>
           </motion.div>
 
@@ -368,6 +388,27 @@ export default function ExplorePage() {
             >
               <ArrowDown className="w-6 h-6 text-gray-400" />
             </motion.div>
+          </motion.div>
+        </div>
+      </motion.div>
+
+      {/* Sticky Search Bar - Appears Below Navbar on Scroll */}
+      <motion.div
+        className="fixed top-16 left-0 right-0 z-40 pointer-events-none"
+        style={{
+          opacity: stickySearchBarOpacity,
+          y: stickySearchBarY,
+          scale: stickySearchBarScale,
+        }}
+      >
+        <div className="max-w-5xl mx-auto px-6 pt-3 pb-2">
+          <motion.div
+            className="bg-white/95 backdrop-blur-xl rounded-2xl border border-gray-200/60 p-1.5 pointer-events-auto transition-all duration-300"
+            style={{
+              boxShadow: stickySearchBarShadow,
+            }}
+          >
+            <SearchBar variant="navbar" />
           </motion.div>
         </div>
       </motion.div>

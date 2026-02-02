@@ -130,6 +130,40 @@ export default function RegisterAbodePage() {
     setImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      setDraggedIndex(null);
+      return;
+    }
+
+    const newImageFiles = [...imageFiles];
+    const newImagePreviews = [...imagePreviews];
+
+    const draggedFile = newImageFiles[draggedIndex];
+    const draggedPreview = newImagePreviews[draggedIndex];
+
+    newImageFiles.splice(draggedIndex, 1);
+    newImagePreviews.splice(draggedIndex, 1);
+
+    newImageFiles.splice(dropIndex, 0, draggedFile);
+    newImagePreviews.splice(dropIndex, 0, draggedPreview);
+
+    setImageFiles(newImageFiles);
+    setImagePreviews(newImagePreviews);
+    setDraggedIndex(null);
+  };
+
   const addAmenity = () => {
     if (newAmenity.trim() && !formData.abodeDetails.amenities.includes(newAmenity.trim())) {
       setFormData(prev => ({
@@ -309,6 +343,24 @@ export default function RegisterAbodePage() {
     handleRangeSelect({ from: today, to: endDate });
   };
 
+  const selectNext30DaysFromSelected = () => {
+    let startDate: Date;
+    if (selectedDates.length > 0) {
+      // Use the first selected date
+      startDate = new Date(selectedDates[0]);
+      startDate.setHours(0, 0, 0, 0);
+    } else {
+      // Use today if no date is selected
+      startDate = new Date();
+      startDate.setHours(0, 0, 0, 0);
+    }
+    
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + 29);
+    setDateRange({ from: startDate, to: endDate });
+    handleRangeSelect({ from: startDate, to: endDate });
+  };
+
   const selectNext90Days = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -462,7 +514,7 @@ export default function RegisterAbodePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <AbodeSidebar />
       <div className="lg:ml-72">
         <div className="p-6 md:p-8 lg:p-10">
@@ -472,9 +524,9 @@ export default function RegisterAbodePage() {
             animate={{ opacity: 1, y: 0 }}
             className="mb-8"
           >
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-800 via-orange-700 to-amber-800 p-8 md:p-12 shadow-2xl">
-              <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl -mr-48 -mt-48"></div>
-              <div className="absolute bottom-0 left-0 w-72 h-72 bg-orange-500/10 rounded-full blur-2xl -ml-36 -mb-36"></div>
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-800 via-indigo-700 to-slate-800 p-8 md:p-12 shadow-2xl">
+              <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl -mr-48 -mt-48"></div>
+              <div className="absolute bottom-0 left-0 w-72 h-72 bg-slate-500/10 rounded-full blur-2xl -ml-36 -mb-36"></div>
               
               <div className="relative z-10">
                 <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
@@ -493,7 +545,7 @@ export default function RegisterAbodePage() {
             animate={{ opacity: 1, y: 0 }}
             className="mb-8"
           >
-            <div className="bg-white rounded-2xl shadow-xl border border-amber-100 p-6">
+            <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-6">
               <div className="flex items-center justify-between">
                 {steps.map((step, index) => (
                   <div key={step.number} className="flex items-center flex-1">
@@ -501,21 +553,21 @@ export default function RegisterAbodePage() {
                       <div
                         className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg transition-all ${
                           currentStep >= step.number
-                            ? 'bg-gradient-to-br from-amber-600 to-orange-600 text-white shadow-lg'
-                            : 'bg-amber-100 text-amber-600'
+                            ? 'bg-gradient-to-br from-slate-600 to-indigo-600 text-white shadow-lg'
+                            : 'bg-slate-100 text-slate-600'
                         }`}
                       >
                         {currentStep > step.number ? '✓' : step.number}
                       </div>
                       <span className={`mt-2 text-sm font-medium ${
-                        currentStep >= step.number ? 'text-amber-700' : 'text-amber-400'
+                        currentStep >= step.number ? 'text-slate-700' : 'text-slate-400'
                       }`}>
                         {step.title}
                       </span>
                     </div>
                     {index < steps.length - 1 && (
                       <div className={`flex-1 h-1 mx-2 rounded ${
-                        currentStep > step.number ? 'bg-amber-600' : 'bg-amber-200'
+                        currentStep > step.number ? 'bg-slate-600' : 'bg-slate-200'
                       }`}></div>
                     )}
                   </div>
@@ -566,20 +618,20 @@ export default function RegisterAbodePage() {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="bg-white rounded-2xl shadow-xl border border-amber-100 p-8"
+                className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8"
               >
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 bg-gradient-to-br from-amber-600 to-orange-600 rounded-xl flex items-center justify-center text-white text-2xl">
+                  <div className="w-12 h-12 bg-gradient-to-br from-slate-600 to-indigo-600 rounded-xl flex items-center justify-center text-white text-2xl">
                     🏠
                   </div>
-                  <h2 className="text-2xl font-bold text-amber-900">Basic Information</h2>
+                  <h2 className="text-2xl font-bold text-slate-900">Basic Information</h2>
                 </div>
 
                 <div className="space-y-6">
                   {/* Title */}
                   <div>
-                    <label className="block text-sm font-semibold text-amber-900 mb-2">
-                      Catchy Title * <span className="text-amber-600 text-xs font-normal">(Max 100 characters)</span>
+                    <label className="block text-sm font-semibold text-slate-900 mb-2">
+                      Catchy Title * <span className="text-slate-600 text-xs font-normal">(Max 100 characters)</span>
                     </label>
                     <input
                       type="text"
@@ -589,18 +641,18 @@ export default function RegisterAbodePage() {
                         abodeDetails: { ...prev.abodeDetails, title: e.target.value },
                       }))}
                       maxLength={100}
-                      className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all text-lg"
+                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all text-lg"
                       placeholder="e.g., 'Cozy Heritage Home in the Heart of Kerala'"
                       required
                     />
-                    <p className="mt-1 text-sm text-amber-600">
+                    <p className="mt-1 text-sm text-slate-600">
                       {formData.abodeDetails.title.length}/100 characters
                     </p>
                   </div>
 
                   {/* Description */}
                   <div>
-                    <label className="block text-sm font-semibold text-amber-900 mb-2">
+                    <label className="block text-sm font-semibold text-slate-900 mb-2">
                       Description *
                     </label>
                     <textarea
@@ -610,7 +662,7 @@ export default function RegisterAbodePage() {
                         abodeDetails: { ...prev.abodeDetails, description: e.target.value },
                       }))}
                       rows={6}
-                      className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all resize-none"
+                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all resize-none"
                       placeholder="Describe your abode, what makes it special, and what guests can expect..."
                       required
                     />
@@ -619,7 +671,7 @@ export default function RegisterAbodePage() {
                   {/* Property Details Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
-                      <label className="block text-sm font-semibold text-amber-900 mb-2">
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">
                         Property Type *
                       </label>
                       <select
@@ -628,7 +680,7 @@ export default function RegisterAbodePage() {
                           ...prev,
                           abodeDetails: { ...prev.abodeDetails, propertyType: e.target.value },
                         }))}
-                        className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                       >
                         {PROPERTY_TYPES.map(type => (
                           <option key={type} value={type}>{type}</option>
@@ -637,7 +689,7 @@ export default function RegisterAbodePage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-amber-900 mb-2">
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">
                         Capacity *
                       </label>
                       <input
@@ -648,13 +700,13 @@ export default function RegisterAbodePage() {
                           abodeDetails: { ...prev.abodeDetails, capacity: Number(e.target.value) },
                         }))}
                         min="1"
-                        className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                         required
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-amber-900 mb-2">
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">
                         Bedrooms *
                       </label>
                       <input
@@ -665,13 +717,13 @@ export default function RegisterAbodePage() {
                           abodeDetails: { ...prev.abodeDetails, bedrooms: Number(e.target.value) },
                         }))}
                         min="1"
-                        className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                         required
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-amber-900 mb-2">
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">
                         Bathrooms *
                       </label>
                       <input
@@ -682,7 +734,7 @@ export default function RegisterAbodePage() {
                           abodeDetails: { ...prev.abodeDetails, bathrooms: Number(e.target.value) },
                         }))}
                         min="1"
-                        className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                         required
                       />
                     </div>
@@ -693,7 +745,7 @@ export default function RegisterAbodePage() {
                   <button
                     type="button"
                     onClick={() => setCurrentStep(2)}
-                    className="px-8 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all shadow-lg"
+                    className="px-8 py-3 bg-gradient-to-r from-slate-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-slate-700 hover:to-indigo-700 transition-all shadow-lg"
                   >
                     Next: Location →
                   </button>
@@ -707,19 +759,19 @@ export default function RegisterAbodePage() {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="bg-white rounded-2xl shadow-xl border border-amber-100 p-8"
+                className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8"
               >
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 bg-gradient-to-br from-amber-600 to-orange-600 rounded-xl flex items-center justify-center text-white text-2xl">
+                  <div className="w-12 h-12 bg-gradient-to-br from-slate-600 to-indigo-600 rounded-xl flex items-center justify-center text-white text-2xl">
                     📍
                   </div>
-                  <h2 className="text-2xl font-bold text-amber-900">Location Details</h2>
+                  <h2 className="text-2xl font-bold text-slate-900">Location Details</h2>
                 </div>
 
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-semibold text-amber-900 mb-2">
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">
                         State *
                       </label>
                       <select
@@ -728,7 +780,7 @@ export default function RegisterAbodePage() {
                           ...prev,
                           location: { ...prev.location, state: e.target.value, district: '' },
                         }))}
-                        className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                         required
                       >
                         <option value="">Select State</option>
@@ -739,7 +791,7 @@ export default function RegisterAbodePage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-amber-900 mb-2">
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">
                         District *
                       </label>
                       <select
@@ -749,7 +801,7 @@ export default function RegisterAbodePage() {
                           location: { ...prev.location, district: e.target.value },
                         }))}
                         disabled={!formData.location.state || districts.length === 0}
-                        className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all disabled:bg-amber-50 disabled:cursor-not-allowed"
+                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all disabled:bg-slate-50 disabled:cursor-not-allowed"
                         required
                       >
                         <option value="">Select District</option>
@@ -761,7 +813,7 @@ export default function RegisterAbodePage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-amber-900 mb-2">
+                    <label className="block text-sm font-semibold text-slate-900 mb-2">
                       Street Address
                     </label>
                     <input
@@ -771,14 +823,14 @@ export default function RegisterAbodePage() {
                         ...prev,
                         location: { ...prev.location, address: e.target.value },
                       }))}
-                      className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                       placeholder="Street address (optional)"
                     />
                   </div>
 
                   {/* Map Location Picker */}
                   <div>
-                    <label className="block text-sm font-semibold text-amber-900 mb-2">
+                    <label className="block text-sm font-semibold text-slate-900 mb-2">
                       Exact Location on Map *
                     </label>
                     <LocationPicker
@@ -804,14 +856,14 @@ export default function RegisterAbodePage() {
                   <button
                     type="button"
                     onClick={() => setCurrentStep(1)}
-                    className="px-8 py-3 border-2 border-amber-300 text-amber-700 font-semibold rounded-xl hover:bg-amber-50 transition-all"
+                    className="px-8 py-3 border-2 border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-all"
                   >
                     ← Back
                   </button>
                   <button
                     type="button"
                     onClick={() => setCurrentStep(3)}
-                    className="px-8 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all shadow-lg"
+                    className="px-8 py-3 bg-gradient-to-r from-slate-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-slate-700 hover:to-indigo-700 transition-all shadow-lg"
                   >
                     Next: Pricing →
                   </button>
@@ -825,19 +877,19 @@ export default function RegisterAbodePage() {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="bg-white rounded-2xl shadow-xl border border-amber-100 p-8"
+                className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8"
               >
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 bg-gradient-to-br from-amber-600 to-orange-600 rounded-xl flex items-center justify-center text-white text-2xl">
+                  <div className="w-12 h-12 bg-gradient-to-br from-slate-600 to-indigo-600 rounded-xl flex items-center justify-center text-white text-2xl">
                     💰
                   </div>
-                  <h2 className="text-2xl font-bold text-amber-900">Pricing Information</h2>
+                  <h2 className="text-2xl font-bold text-slate-900">Pricing Information</h2>
                 </div>
 
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-sm font-semibold text-amber-900 mb-2">
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">
                         Price per Night (₹) *
                       </label>
                       <input
@@ -849,13 +901,13 @@ export default function RegisterAbodePage() {
                         }))}
                         min="0"
                         step="0.01"
-                        className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                         required
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-amber-900 mb-2">
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">
                         Weekly Discount (%)
                       </label>
                       <input
@@ -867,12 +919,12 @@ export default function RegisterAbodePage() {
                         }))}
                         min="0"
                         max="100"
-                        className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-amber-900 mb-2">
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">
                         Monthly Discount (%)
                       </label>
                       <input
@@ -884,7 +936,7 @@ export default function RegisterAbodePage() {
                         }))}
                         min="0"
                         max="100"
-                        className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                       />
                     </div>
                   </div>
@@ -894,14 +946,14 @@ export default function RegisterAbodePage() {
                   <button
                     type="button"
                     onClick={() => setCurrentStep(2)}
-                    className="px-8 py-3 border-2 border-amber-300 text-amber-700 font-semibold rounded-xl hover:bg-amber-50 transition-all"
+                    className="px-8 py-3 border-2 border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-all"
                   >
                     ← Back
                   </button>
                   <button
                     type="button"
                     onClick={() => setCurrentStep(4)}
-                    className="px-8 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all shadow-lg"
+                    className="px-8 py-3 bg-gradient-to-r from-slate-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-slate-700 hover:to-indigo-700 transition-all shadow-lg"
                   >
                     Next: Images →
                   </button>
@@ -915,17 +967,17 @@ export default function RegisterAbodePage() {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="bg-white rounded-2xl shadow-xl border border-amber-100 p-8"
+                className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8"
               >
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 bg-gradient-to-br from-amber-600 to-orange-600 rounded-xl flex items-center justify-center text-white text-2xl">
+                  <div className="w-12 h-12 bg-gradient-to-br from-slate-600 to-indigo-600 rounded-xl flex items-center justify-center text-white text-2xl">
                     📸
                   </div>
-                  <h2 className="text-2xl font-bold text-amber-900">Upload Images</h2>
+                  <h2 className="text-2xl font-bold text-slate-900">Upload Images</h2>
                 </div>
 
                 <div className="space-y-6">
-                  <div className="border-2 border-dashed border-amber-300 rounded-xl p-8 text-center hover:border-amber-400 transition-all">
+                  <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-slate-400 transition-all">
                     <input
                       type="file"
                       accept="image/*"
@@ -938,11 +990,11 @@ export default function RegisterAbodePage() {
                       htmlFor="image-upload"
                       className="cursor-pointer flex flex-col items-center"
                     >
-                      <svg className="w-16 h-16 text-amber-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-16 h-16 text-slate-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
-                      <p className="text-amber-700 font-semibold mb-2">Click to upload images</p>
-                      <p className="text-sm text-amber-600">Up to 10 images, max 5MB each</p>
+                      <p className="text-slate-700 font-semibold mb-2">Click to upload images</p>
+                      <p className="text-sm text-slate-600">Up to 10 images, max 5MB each</p>
                     </label>
                   </div>
 
@@ -953,22 +1005,34 @@ export default function RegisterAbodePage() {
                           key={index}
                           initial={{ opacity: 0, scale: 0.8 }}
                           animate={{ opacity: 1, scale: 1 }}
-                          className="relative group"
+                          draggable
+                          onDragStart={() => handleDragStart(index)}
+                          onDragOver={(e) => handleDragOver(e, index)}
+                          onDrop={(e) => handleDrop(e, index)}
+                          className={`relative group cursor-move ${
+                            draggedIndex === index ? 'opacity-50' : ''
+                          }`}
                         >
                           <img
                             src={preview}
                             alt={`Preview ${index + 1}`}
                             className="w-full h-32 object-cover rounded-xl shadow-md"
                           />
+                          <div className="absolute top-2 left-2 px-2 py-1 bg-black/50 text-white text-xs rounded-full flex items-center gap-1">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                            </svg>
+                            {index + 1}
+                          </div>
                           <button
                             type="button"
                             onClick={() => removeImage(index)}
-                            className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-lg"
+                            className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-lg hover:bg-red-600 z-10"
                           >
                             ×
                           </button>
                           {index === 0 && (
-                            <span className="absolute bottom-2 left-2 px-2 py-1 bg-amber-600 text-white text-xs rounded-full">
+                            <span className="absolute bottom-2 left-2 px-2 py-1 bg-slate-600 text-white text-xs rounded-full font-semibold">
                               Main
                             </span>
                           )}
@@ -976,20 +1040,25 @@ export default function RegisterAbodePage() {
                       ))}
                     </div>
                   )}
+                  {imagePreviews.length > 1 && (
+                    <p className="mt-2 text-sm text-slate-600 text-center">
+                      💡 Drag images to rearrange. The first image will be your main photo.
+                    </p>
+                  )}
                 </div>
 
                 <div className="mt-8 flex justify-between">
                   <button
                     type="button"
                     onClick={() => setCurrentStep(3)}
-                    className="px-8 py-3 border-2 border-amber-300 text-amber-700 font-semibold rounded-xl hover:bg-amber-50 transition-all"
+                    className="px-8 py-3 border-2 border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-all"
                   >
                     ← Back
                   </button>
                   <button
                     type="button"
                     onClick={() => setCurrentStep(5)}
-                    className="px-8 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all shadow-lg"
+                    className="px-8 py-3 bg-gradient-to-r from-slate-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-slate-700 hover:to-indigo-700 transition-all shadow-lg"
                   >
                     Next: Details →
                   </button>
@@ -1006,8 +1075,8 @@ export default function RegisterAbodePage() {
                 className="space-y-6"
               >
                 {/* Amenities */}
-                <div className="bg-white rounded-2xl shadow-xl border border-amber-100 p-8">
-                  <h3 className="text-xl font-bold text-amber-900 mb-4">Amenities</h3>
+                <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
+                  <h3 className="text-xl font-bold text-slate-900 mb-4">Amenities</h3>
                   <div className="flex gap-2 mb-4">
                     <input
                       type="text"
@@ -1015,12 +1084,12 @@ export default function RegisterAbodePage() {
                       onChange={(e) => setNewAmenity(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addAmenity())}
                       placeholder="e.g., WiFi, Kitchen, Air Conditioning"
-                      className="flex-1 px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                      className="flex-1 px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                     />
                     <button
                       type="button"
                       onClick={addAmenity}
-                      className="px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all"
+                      className="px-6 py-3 bg-gradient-to-r from-slate-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-slate-700 hover:to-indigo-700 transition-all"
                     >
                       Add
                     </button>
@@ -1030,13 +1099,13 @@ export default function RegisterAbodePage() {
                       {formData.abodeDetails.amenities.map((amenity, index) => (
                         <span
                           key={index}
-                          className="px-4 py-2 bg-amber-100 text-amber-800 rounded-full text-sm font-medium flex items-center gap-2"
+                          className="px-4 py-2 bg-slate-100 text-slate-800 rounded-full text-sm font-medium flex items-center gap-2"
                         >
                           {amenity}
                           <button
                             type="button"
                             onClick={() => removeAmenity(index)}
-                            className="text-amber-600 hover:text-amber-800"
+                            className="text-slate-600 hover:text-slate-800"
                           >
                             ×
                           </button>
@@ -1047,8 +1116,8 @@ export default function RegisterAbodePage() {
                 </div>
 
                 {/* House Rules */}
-                <div className="bg-white rounded-2xl shadow-xl border border-amber-100 p-8">
-                  <h3 className="text-xl font-bold text-amber-900 mb-4">House Rules</h3>
+                <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
+                  <h3 className="text-xl font-bold text-slate-900 mb-4">House Rules</h3>
                   <div className="flex gap-2 mb-4">
                     <input
                       type="text"
@@ -1056,12 +1125,12 @@ export default function RegisterAbodePage() {
                       onChange={(e) => setNewHouseRule(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addHouseRule())}
                       placeholder="e.g., No smoking, Respect local customs"
-                      className="flex-1 px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                      className="flex-1 px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                     />
                     <button
                       type="button"
                       onClick={addHouseRule}
-                      className="px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all"
+                      className="px-6 py-3 bg-gradient-to-r from-slate-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-slate-700 hover:to-indigo-700 transition-all"
                     >
                       Add
                     </button>
@@ -1071,9 +1140,9 @@ export default function RegisterAbodePage() {
                       {formData.abodeDetails.houseRules.map((rule, index) => (
                         <li
                           key={index}
-                          className="flex items-center justify-between p-3 bg-amber-50 rounded-lg"
+                          className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
                         >
-                          <span className="text-amber-900">{rule}</span>
+                          <span className="text-slate-900">{rule}</span>
                           <button
                             type="button"
                             onClick={() => removeHouseRule(index)}
@@ -1088,8 +1157,8 @@ export default function RegisterAbodePage() {
                 </div>
 
                 {/* Languages */}
-                <div className="bg-white rounded-2xl shadow-xl border border-amber-100 p-8">
-                  <h3 className="text-xl font-bold text-amber-900 mb-4">Languages Spoken</h3>
+                <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
+                  <h3 className="text-xl font-bold text-slate-900 mb-4">Languages Spoken</h3>
                   <div className="flex gap-2 mb-4">
                     <input
                       type="text"
@@ -1097,12 +1166,12 @@ export default function RegisterAbodePage() {
                       onChange={(e) => setNewLanguage(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addLanguage())}
                       placeholder="e.g., English, Hindi, Malayalam"
-                      className="flex-1 px-4 py-3 border-2 border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                      className="flex-1 px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                     />
                     <button
                       type="button"
                       onClick={addLanguage}
-                      className="px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all"
+                      className="px-6 py-3 bg-gradient-to-r from-slate-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-slate-700 hover:to-indigo-700 transition-all"
                     >
                       Add
                     </button>
@@ -1112,13 +1181,13 @@ export default function RegisterAbodePage() {
                       {formData.languages.map((lang, index) => (
                         <span
                           key={index}
-                          className="px-4 py-2 bg-amber-100 text-amber-800 rounded-full text-sm font-medium flex items-center gap-2"
+                          className="px-4 py-2 bg-slate-100 text-slate-800 rounded-full text-sm font-medium flex items-center gap-2"
                         >
                           {lang}
                           <button
                             type="button"
                             onClick={() => removeLanguage(index)}
-                            className="text-amber-600 hover:text-amber-800"
+                            className="text-slate-600 hover:text-slate-800"
                           >
                             ×
                           </button>
@@ -1133,7 +1202,7 @@ export default function RegisterAbodePage() {
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-xl font-bold text-amber-900">Availability Calendar</h3>
                     {selectedDates.length > 0 && (
-                      <span className="px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-full text-sm font-semibold shadow-md">
+                      <span className="px-4 py-2 bg-gradient-to-r from-slate-600 to-indigo-600 text-white rounded-full text-sm font-semibold shadow-md">
                         {selectedDates.length} date{selectedDates.length !== 1 ? 's' : ''} selected
                       </span>
                     )}
@@ -1174,30 +1243,30 @@ export default function RegisterAbodePage() {
                   {!alwaysAvailable && (
                     <>
                       {/* Quick Actions */}
-                      <div className="mb-6 p-5 bg-amber-50 rounded-xl border-2 border-amber-200">
-                        <p className="text-sm font-bold text-amber-900 mb-4 flex items-center gap-2">
+                      <div className="mb-6 p-5 bg-slate-50 rounded-xl border-2 border-slate-200">
+                        <p className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
                           <span className="text-xl">⚡</span>
                           Quick Selection (Click to apply):
                         </p>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                           <button
                             type="button"
-                            onClick={selectNext30Days}
-                            className="px-4 py-3 bg-white border-2 border-amber-300 text-amber-700 rounded-xl hover:bg-amber-100 hover:border-amber-500 hover:shadow-md transition-all text-sm font-semibold transform hover:scale-105"
+                            onClick={selectNext30DaysFromSelected}
+                            className="px-4 py-3 bg-white border-2 border-indigo-300 text-indigo-700 rounded-xl hover:bg-indigo-50 hover:border-indigo-500 hover:shadow-md transition-all text-sm font-semibold transform hover:scale-105"
                           >
-                            📅 30 Days
+                            📅 30 Days (from selected)
                           </button>
                           <button
                             type="button"
                             onClick={selectNext90Days}
-                            className="px-4 py-3 bg-white border-2 border-amber-300 text-amber-700 rounded-xl hover:bg-amber-100 hover:border-amber-500 hover:shadow-md transition-all text-sm font-semibold transform hover:scale-105"
+                            className="px-4 py-3 bg-white border-2 border-slate-300 text-slate-700 rounded-xl hover:bg-slate-100 hover:border-slate-500 hover:shadow-md transition-all text-sm font-semibold transform hover:scale-105"
                           >
                             📅 90 Days
                           </button>
                           <button
                             type="button"
                             onClick={selectNext6Months}
-                            className="px-4 py-3 bg-white border-2 border-amber-300 text-amber-700 rounded-xl hover:bg-amber-100 hover:border-amber-500 hover:shadow-md transition-all text-sm font-semibold transform hover:scale-105"
+                            className="px-4 py-3 bg-white border-2 border-slate-300 text-slate-700 rounded-xl hover:bg-slate-100 hover:border-slate-500 hover:shadow-md transition-all text-sm font-semibold transform hover:scale-105"
                           >
                             📅 6 Months
                           </button>
@@ -1229,7 +1298,7 @@ export default function RegisterAbodePage() {
 
                       {/* Calendar - Supports both range and multiple selection */}
                       <div className="mb-4">
-                        <p className="text-sm text-amber-700 text-center mb-4 font-medium">
+                        <p className="text-sm text-slate-700 text-center mb-4 font-medium">
                           📅 <span className="font-semibold">Click dates to select</span> • Drag to select a range • Click again to deselect
                         </p>
                         <div className="flex justify-center">
@@ -1243,26 +1312,26 @@ export default function RegisterAbodePage() {
                               return date < today;
                             }}
                             numberOfMonths={typeof window !== 'undefined' && window.innerWidth >= 768 ? 2 : 1}
-                            className="rdp-amber"
+                            className="rdp-slate"
                             classNames={{
                               months: 'flex flex-col sm:flex-row space-y-4 sm:space-x-6 sm:space-y-0',
                               month: 'space-y-4',
                               caption: 'flex justify-center pt-1 relative items-center mb-4',
-                              caption_label: 'text-lg font-bold text-amber-900',
+                              caption_label: 'text-lg font-bold text-slate-900',
                               nav: 'space-x-1 flex items-center',
-                              nav_button: 'h-10 w-10 bg-transparent p-0 opacity-70 hover:opacity-100 hover:bg-amber-100 rounded-xl transition-all cursor-pointer border-2 border-amber-300 hover:border-amber-500',
+                              nav_button: 'h-10 w-10 bg-transparent p-0 opacity-70 hover:opacity-100 hover:bg-slate-100 rounded-xl transition-all cursor-pointer border-2 border-slate-300 hover:border-slate-500',
                               nav_button_previous: 'absolute left-1',
                               nav_button_next: 'absolute right-1',
                               table: 'w-full border-collapse space-y-1',
                               head_row: 'flex mb-3',
-                              head_cell: 'text-amber-600 rounded-md w-12 font-bold text-sm uppercase tracking-wider',
+                              head_cell: 'text-slate-600 rounded-md w-12 font-bold text-sm uppercase tracking-wider',
                               row: 'flex w-full mt-2',
                               cell: 'text-center text-sm p-0 relative',
-                              day: 'h-12 w-12 p-0 font-normal rounded-xl transition-all cursor-pointer hover:bg-amber-100 hover:text-amber-900 text-base',
-                              day_selected: 'bg-gradient-to-br from-amber-600 to-orange-600 text-white hover:from-amber-700 hover:to-orange-700 hover:text-white focus:from-amber-600 focus:to-orange-600 focus:text-white font-bold shadow-lg',
-                              day_today: 'bg-amber-200 text-amber-900 font-bold border-2 border-amber-500',
-                              day_outside: 'text-amber-300 opacity-50',
-                              day_disabled: 'text-amber-200 opacity-30 cursor-not-allowed',
+                              day: 'h-12 w-12 p-0 font-normal rounded-xl transition-all cursor-pointer hover:bg-slate-100 hover:text-slate-900 text-base',
+                              day_selected: 'bg-gradient-to-br from-slate-600 to-indigo-600 text-white hover:from-slate-700 hover:to-indigo-700 hover:text-white focus:from-slate-600 focus:to-indigo-600 focus:text-white font-bold shadow-lg',
+                              day_today: 'bg-slate-200 text-slate-900 font-bold border-2 border-slate-500',
+                              day_outside: 'text-slate-300 opacity-50',
+                              day_disabled: 'text-slate-200 opacity-30 cursor-not-allowed',
                               day_hidden: 'invisible',
                             }}
                           />
@@ -1273,20 +1342,20 @@ export default function RegisterAbodePage() {
 
                   {/* Summary */}
                   {selectedDates.length > 0 && (
-                    <div className="mt-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border-2 border-amber-300">
+                    <div className="mt-6 p-4 bg-gradient-to-r from-slate-50 to-indigo-50 rounded-xl border-2 border-slate-300">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-gradient-to-br from-amber-600 to-orange-600 rounded-xl flex items-center justify-center text-white text-xl">
+                        <div className="w-12 h-12 bg-gradient-to-br from-slate-600 to-indigo-600 rounded-xl flex items-center justify-center text-white text-xl">
                           ✓
                         </div>
                         <div>
-                          <p className="font-bold text-amber-900">
+                          <p className="font-bold text-slate-900">
                             {alwaysAvailable 
                               ? 'Your abode is set to always available!' 
                               : `${selectedDates.length} date${selectedDates.length !== 1 ? 's' : ''} selected for availability`
                             }
                           </p>
                           {!alwaysAvailable && dateRange.from && dateRange.to && (
-                            <p className="text-sm text-amber-700 mt-1">
+                            <p className="text-sm text-slate-700 mt-1">
                               From {dateRange.from.toLocaleDateString()} to {dateRange.to.toLocaleDateString()}
                             </p>
                           )}
@@ -1301,14 +1370,14 @@ export default function RegisterAbodePage() {
                   <button
                     type="button"
                     onClick={() => setCurrentStep(4)}
-                    className="px-8 py-3 border-2 border-amber-300 text-amber-700 font-semibold rounded-xl hover:bg-amber-50 transition-all"
+                    className="px-8 py-3 border-2 border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-all"
                   >
                     ← Back
                   </button>
                   <button
                     type="button"
                     onClick={() => setCurrentStep(6)}
-                    className="px-8 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all shadow-lg"
+                    className="px-8 py-3 bg-gradient-to-r from-slate-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-slate-700 hover:to-indigo-700 transition-all shadow-lg"
                   >
                     Review & Submit →
                   </button>
@@ -1322,36 +1391,36 @@ export default function RegisterAbodePage() {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="bg-white rounded-2xl shadow-xl border border-amber-100 p-8"
+                className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8"
               >
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 bg-gradient-to-br from-amber-600 to-orange-600 rounded-xl flex items-center justify-center text-white text-2xl">
+                  <div className="w-12 h-12 bg-gradient-to-br from-slate-600 to-indigo-600 rounded-xl flex items-center justify-center text-white text-2xl">
                     ✓
                   </div>
-                  <h2 className="text-2xl font-bold text-amber-900">Review & Submit</h2>
+                  <h2 className="text-2xl font-bold text-slate-900">Review & Submit</h2>
                 </div>
 
                 <div className="space-y-6">
-                  <div className="p-6 bg-amber-50 rounded-xl">
-                    <h3 className="font-bold text-amber-900 mb-2">Title</h3>
-                    <p className="text-amber-700">{formData.abodeDetails.title || 'Not set'}</p>
+                  <div className="p-6 bg-slate-50 rounded-xl">
+                    <h3 className="font-bold text-slate-900 mb-2">Title</h3>
+                    <p className="text-slate-700">{formData.abodeDetails.title || 'Not set'}</p>
                   </div>
 
-                  <div className="p-6 bg-amber-50 rounded-xl">
-                    <h3 className="font-bold text-amber-900 mb-2">Location</h3>
-                    <p className="text-amber-700">
+                  <div className="p-6 bg-slate-50 rounded-xl">
+                    <h3 className="font-bold text-slate-900 mb-2">Location</h3>
+                    <p className="text-slate-700">
                       {formData.location.district}, {formData.location.state}, {formData.location.country}
                     </p>
                   </div>
 
-                  <div className="p-6 bg-amber-50 rounded-xl">
-                    <h3 className="font-bold text-amber-900 mb-2">Pricing</h3>
-                    <p className="text-amber-700">₹{formData.pricing.pricePerNight} per night</p>
+                  <div className="p-6 bg-slate-50 rounded-xl">
+                    <h3 className="font-bold text-slate-900 mb-2">Pricing</h3>
+                    <p className="text-slate-700">₹{formData.pricing.pricePerNight} per night</p>
                   </div>
 
-                  <div className="p-6 bg-amber-50 rounded-xl">
-                    <h3 className="font-bold text-amber-900 mb-2">Images</h3>
-                    <p className="text-amber-700">{imageFiles.length} image(s) uploaded</p>
+                  <div className="p-6 bg-slate-50 rounded-xl">
+                    <h3 className="font-bold text-slate-900 mb-2">Images</h3>
+                    <p className="text-slate-700">{imageFiles.length} image(s) uploaded</p>
                   </div>
                 </div>
 
@@ -1359,14 +1428,14 @@ export default function RegisterAbodePage() {
                   <button
                     type="button"
                     onClick={() => setCurrentStep(5)}
-                    className="px-8 py-3 border-2 border-amber-300 text-amber-700 font-semibold rounded-xl hover:bg-amber-50 transition-all"
+                    className="px-8 py-3 border-2 border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-all"
                   >
                     ← Back
                   </button>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="px-8 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-8 py-3 bg-gradient-to-r from-slate-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-slate-700 hover:to-indigo-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? 'Registering...' : 'Register Abode'}
                   </button>

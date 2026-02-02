@@ -1012,3 +1012,47 @@ body {
   font-weight: 600;
 }
 
+/* Slate theme for abode date picker */
+.rdp-slate {
+  --rdp-cell-size: 44px;
+  --rdp-accent-color: #475569;
+  --rdp-background-color: #f1f5f9;
+  --rdp-accent-color-dark: #334155;
+}
+
+.rdp-slate .rdp-day_selected,
+.rdp-slate .rdp-day_selected:focus-visible,
+.rdp-slate .rdp-day_selected:hover {
+  background: linear-gradient(135deg, #475569 0%, #4f46e5 100%) !important;
+  color: white !important;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(71, 85, 105, 0.3);
+}
+
+.rdp-slate .rdp-day:hover:not([disabled]):not(.rdp-day_selected) {
+  background-color: #f1f5f9 !important;
+  color: #334155 !important;
+}
+
+.rdp-slate .rdp-day_today {
+  background-color: #f1f5f9 !important;
+  color: #334155 !important;
+  font-weight: 700;
+  border: 2px solid #64748b !important;
+}
+
+.rdp-slate .rdp-nav_button:hover {
+  background-color: #f1f5f9 !important;
+  border-color: #64748b !important;
+}
+
+.rdp-slate .rdp-caption_label {
+  color: #334155 !important;
+  font-weight: 700;
+}
+
+.rdp-slate .rdp-head_cell {
+  color: #475569 !important;
+  font-weight: 600;
+}
+

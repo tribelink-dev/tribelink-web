@@ -357,7 +357,7 @@ export default function AbodeDetailPage() {
                         <span className="text-sm text-gray-600 ml-1">({abode.ratingCount})</span>
                       )}
                     </div>
-                  </div>
+                </div>
                 )}
               </div>
 
@@ -379,7 +379,7 @@ export default function AbodeDetailPage() {
                   <div className="flex items-center gap-2 text-gray-700">
                     <Languages className="w-5 h-5 text-gray-500" />
                     <span className="font-semibold">{abode.languages.join(', ')}</span>
-                  </div>
+                </div>
                 )}
               </div>
             </motion.div>
@@ -573,15 +573,15 @@ export default function AbodeDetailPage() {
                         exit={{ opacity: 0, y: -10 }}
                         className="mt-3 bg-white border-2 border-gray-200 rounded-xl p-4 shadow-xl"
                       >
-                        <DayPicker
-                          mode="single"
-                          selected={checkIn}
+                  <DayPicker
+                    mode="single"
+                    selected={checkIn}
                           onSelect={(date) => {
                             setCheckIn(date);
                             setShowDatePicker(null);
                           }}
-                          disabled={(date) => date < new Date()}
-                        />
+                    disabled={(date) => date < new Date()}
+                  />
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -609,15 +609,15 @@ export default function AbodeDetailPage() {
                         exit={{ opacity: 0, y: -10 }}
                         className="mt-3 bg-white border-2 border-gray-200 rounded-xl p-4 shadow-xl"
                       >
-                        <DayPicker
-                          mode="single"
-                          selected={checkOut}
+                  <DayPicker
+                    mode="single"
+                    selected={checkOut}
                           onSelect={(date) => {
                             setCheckOut(date);
                             setShowDatePicker(null);
                           }}
-                          disabled={(date) => !checkIn || date <= checkIn}
-                        />
+                    disabled={(date) => !checkIn || date <= checkIn}
+                  />
                       </motion.div>
                     )}
                   </AnimatePresence>

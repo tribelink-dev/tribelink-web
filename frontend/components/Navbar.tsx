@@ -6,7 +6,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { getProviderDashboard } from '@/lib/providerUtils';
 import { useEffect, useState } from 'react';
 import { LOGO_PATH, LOGO_ALT_TEXT } from '@/lib/constants';
-import AirbnbSearchBar from './AirbnbSearchBar';
+import SearchBar from './SearchBar';
 import CurrencySelectorButton from './CurrencySelectorButton';
 
 export default function Navbar() {
@@ -67,6 +67,7 @@ export default function Navbar() {
 
   const isHomepage = pathname === '/';
   const isExplorePage = pathname === '/explore';
+  const isHostDashboard = pathname?.startsWith('/host/') || pathname?.startsWith('/adobes/register') || pathname?.startsWith('/adobes/my-bookings') || pathname?.startsWith('/provider/');
 
   return (
     <nav 
@@ -98,10 +99,10 @@ export default function Navbar() {
               </span>
           </a>
 
-          {/* Search Bar (only on non-homepage and non-explore page) */}
-          {!isHomepage && !isExplorePage && (
+          {/* Search Bar (only on non-homepage, non-explore page, and non-host pages) */}
+          {!isHomepage && !isExplorePage && !isHostDashboard && (
             <div className="flex-1 max-w-xl mx-8 hidden lg:block">
-              <AirbnbSearchBar variant="navbar" />
+              <SearchBar variant="navbar" />
                 </div>
               )}
 
@@ -110,36 +111,6 @@ export default function Navbar() {
             {/* Currency Selector */}
             <CurrencySelectorButton />
             
-            {!user && !isHost && (
-              <>
-                {!isExplorePage && (
-                  <button
-                    onClick={() => router.push('/explore')}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
-                  >
-                    Explore
-                  </button>
-                )}
-                <button
-                  onClick={() => router.push('/host/signup')}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
-                >
-                  Become a Host
-                </button>
-                <button
-                  onClick={() => router.push('/login')}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
-                >
-                  Log in
-                </button>
-                <button
-                  onClick={() => router.push('/signup')}
-                  className="px-4 py-2 text-sm font-semibold text-white bg-gray-900 hover:bg-gray-800 rounded-full transition-colors"
-                >
-                  Sign up
-                </button>
-              </>
-            )}
 
             {(user || isHost) && (
               <>
@@ -151,12 +122,6 @@ export default function Navbar() {
                     Explore
                   </button>
                 )}
-                <button
-                  onClick={() => router.push('/host/signup')}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-full transition-colors hidden md:block"
-                >
-                  Become a Host
-                </button>
                 
                 {/* User Menu */}
                 <div className="relative">
