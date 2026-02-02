@@ -135,45 +135,45 @@ export default function ExperienceDetailModal({
             <div className="bg-white rounded-3xl shadow-2xl max-w-6xl w-full max-h-[95vh] overflow-hidden flex flex-col border border-gray-100">
               {/* Hero Image Section with Overlay Content */}
               <div className="relative h-[45vh] min-h-[400px] max-h-[500px] overflow-hidden bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100">
-                {images.length > 0 ? (
-                  <motion.div
-                    onMouseMove={handleMouseMove}
-                    onMouseLeave={handleMouseLeave}
-                    onClick={() => setIsImageZoomed(!isImageZoomed)}
-                    className="relative w-full h-full cursor-zoom-in"
-                    style={{
-                      rotateX: isImageZoomed ? rotateX : 0,
-                      rotateY: isImageZoomed ? rotateY : 0,
-                      transformStyle: 'preserve-3d',
-                    }}
-                  >
-                    <AnimatePresence mode="wait">
+                    {images.length > 0 ? (
                       <motion.div
-                        key={imageIndex}
+                        onMouseMove={handleMouseMove}
+                        onMouseLeave={handleMouseLeave}
+                        onClick={() => setIsImageZoomed(!isImageZoomed)}
+                        className="relative w-full h-full cursor-zoom-in"
+                        style={{
+                          rotateX: isImageZoomed ? rotateX : 0,
+                          rotateY: isImageZoomed ? rotateY : 0,
+                          transformStyle: 'preserve-3d',
+                        }}
+                      >
+                        <AnimatePresence mode="wait">
+                          <motion.div
+                            key={imageIndex}
                         initial={{ opacity: 0, scale: 1.1 }}
-                        animate={{ opacity: 1, scale: 1 }}
+                            animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 1.1 }}
                         transition={{ duration: 0.5 }}
-                        className="absolute inset-0"
-                      >
-                        {images[imageIndex]?.endsWith('.mp4') || images[imageIndex]?.includes('video') ? (
-                          <video
-                            className="w-full h-full object-cover"
-                            controls
-                            autoPlay
-                            loop
+                            className="absolute inset-0"
                           >
-                            <source src={images[imageIndex]} />
-                          </video>
-                        ) : (
-                          <img
-                            src={images[imageIndex]}
-                            alt={experience.title}
+                            {images[imageIndex]?.endsWith('.mp4') || images[imageIndex]?.includes('video') ? (
+                              <video
+                                className="w-full h-full object-cover"
+                                controls
+                                autoPlay
+                                loop
+                              >
+                                <source src={images[imageIndex]} />
+                              </video>
+                            ) : (
+                              <img
+                                src={images[imageIndex]}
+                                alt={experience.title}
                             className={`w-full h-full object-cover ${isImageZoomed ? 'scale-150' : ''} transition-transform duration-500`}
-                          />
-                        )}
-                      </motion.div>
-                    </AnimatePresence>
+                              />
+                            )}
+                          </motion.div>
+                        </AnimatePresence>
 
                     {/* Gradient Overlay - Matching Card Style */}
                     <motion.div
@@ -241,69 +241,69 @@ export default function ExperienceDetailModal({
                       </motion.div>
                     )}
 
-                    {/* Image Navigation */}
-                    {images.length > 1 && (
-                      <>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setImageIndex((prev) => (prev - 1 + images.length) % images.length);
-                          }}
+                        {/* Image Navigation */}
+                        {images.length > 1 && (
+                          <>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setImageIndex((prev) => (prev - 1 + images.length) % images.length);
+                              }}
                           className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-all group z-30"
-                        >
-                          <svg className="w-5 h-5 text-gray-700 group-hover:text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setImageIndex((prev) => (prev + 1) % images.length);
-                          }}
+                            >
+                              <svg className="w-5 h-5 text-gray-700 group-hover:text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setImageIndex((prev) => (prev + 1) % images.length);
+                              }}
                           className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-all group z-30"
-                        >
-                          <svg className="w-5 h-5 text-gray-700 group-hover:text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </button>
-                      </>
-                    )}
+                            >
+                              <svg className="w-5 h-5 text-gray-700 group-hover:text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </button>
+                          </>
+                        )}
 
-                    {/* Image Indicators */}
-                    {images.length > 1 && (
+                        {/* Image Indicators */}
+                        {images.length > 1 && (
                       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-30">
-                        {images.map((_, idx) => (
-                          <button
-                            key={idx}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setImageIndex(idx);
-                            }}
-                            className={`w-2 h-2 rounded-full transition-all ${
-                              idx === imageIndex ? 'bg-white w-6' : 'bg-white/50'
-                            }`}
-                          />
-                        ))}
+                            {images.map((_, idx) => (
+                              <button
+                                key={idx}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setImageIndex(idx);
+                                }}
+                                className={`w-2 h-2 rounded-full transition-all ${
+                                  idx === imageIndex ? 'bg-white w-6' : 'bg-white/50'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Zoom Indicator */}
+                        {isImageZoomed && (
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                        className="absolute top-20 right-4 px-4 py-2 bg-black/70 backdrop-blur-md text-white text-sm font-medium rounded-xl border border-white/20 z-30"
+                          >
+                            Click to zoom out
+                          </motion.div>
+                        )}
+                      </motion.div>
+                    ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center">
+                        <span className="text-8xl">🎬</span>
                       </div>
                     )}
-
-                    {/* Zoom Indicator */}
-                    {isImageZoomed && (
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="absolute top-20 right-4 px-4 py-2 bg-black/70 backdrop-blur-md text-white text-sm font-medium rounded-xl border border-white/20 z-30"
-                      >
-                        Click to zoom out
-                      </motion.div>
-                    )}
-                  </motion.div>
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center">
-                    <span className="text-8xl">🎬</span>
                   </div>
-                )}
-              </div>
 
               {/* Content Section */}
               <div className="flex-1 overflow-y-auto bg-white">
@@ -311,8 +311,8 @@ export default function ExperienceDetailModal({
                   {/* Title and Price Section - Matching Card Style */}
                   <div className="mb-6 pb-6 border-b border-gray-100">
                     <h2 className="font-bold text-2xl lg:text-3xl text-gray-900 mb-4 leading-tight group-hover:text-indigo-600 transition-colors duration-300">
-                      {experience.title}
-                    </h2>
+                        {experience.title}
+                      </h2>
                     
                     {/* Provider Information - Matching Card Style */}
                     {experience.provider && (
@@ -329,8 +329,8 @@ export default function ExperienceDetailModal({
                           {experience.provider.rating > 0 && (
                             <div className="flex items-center gap-1 mt-0.5">
                               <svg className="w-3 h-3 text-amber-400 fill-amber-400" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                              </svg>
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                  </svg>
                               <span className="text-xs text-gray-600 font-medium">
                                 {experience.provider.rating.toFixed(1)}
                               </span>
@@ -355,9 +355,9 @@ export default function ExperienceDetailModal({
                         <div className="flex items-center gap-1.5 text-gray-600">
                           <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
+                            </svg>
                           <span className="text-sm font-medium">{experience.duration} hours</span>
-                        </div>
+                          </div>
                       )}
                       {experience.maxParticipants && (
                         <div className="flex items-center gap-1.5 text-gray-600">
@@ -375,7 +375,7 @@ export default function ExperienceDetailModal({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-baseline gap-1.5">
                             <span className="text-2xl lg:text-3xl font-bold text-gray-900">
-                              {formatPrice(experience.price, 'USD')}
+                            {formatPrice(experience.price, 'USD')}
                             </span>
                           </div>
                           <p className="text-xs lg:text-sm text-gray-500 font-medium mt-0.5">per person</p>
@@ -388,39 +388,39 @@ export default function ExperienceDetailModal({
                           </span>
                         </div>
                       )}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Tabs */}
-                  <div className="mb-6 border-b border-gray-200">
-                    <div className="flex gap-1">
-                      {(['overview', 'reviews', 'location'] as const).map((tab) => (
-                        <button
-                          key={tab}
-                          onClick={() => setActiveTab(tab)}
-                          className={`
-                            px-4 py-2 text-sm font-semibold relative
-                            transition-colors duration-200
-                            ${activeTab === tab
+                    {/* Tabs */}
+                    <div className="mb-6 border-b border-gray-200">
+                      <div className="flex gap-1">
+                        {(['overview', 'reviews', 'location'] as const).map((tab) => (
+                          <button
+                            key={tab}
+                            onClick={() => setActiveTab(tab)}
+                            className={`
+                              px-4 py-2 text-sm font-semibold relative
+                              transition-colors duration-200
+                              ${activeTab === tab
                               ? 'text-indigo-600'
-                              : 'text-gray-600 hover:text-gray-900'
-                            }
-                          `}
-                        >
-                          {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                          {activeTab === tab && (
-                            <motion.div
-                              layoutId="activeTab"
+                                : 'text-gray-600 hover:text-gray-900'
+                              }
+                            `}
+                          >
+                            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                            {activeTab === tab && (
+                              <motion.div
+                                layoutId="activeTab"
                               className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-t-full"
-                              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                            />
-                          )}
-                        </button>
-                      ))}
+                                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                              />
+                            )}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Tab Content */}
+                    {/* Tab Content */}
                   <div className="space-y-6">
                       <AnimatePresence mode="wait">
                         {activeTab === 'overview' && (
@@ -620,25 +620,25 @@ export default function ExperienceDetailModal({
                       </AnimatePresence>
                     </div>
 
-                  {/* Action Buttons */}
+                    {/* Action Buttons */}
                   <div className="mt-6 pt-6 border-t border-gray-200">
-                    {onAddToBucketlist && (
+                      {onAddToBucketlist && (
                       <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        onClick={() => {
-                          onAddToBucketlist(experience._id);
-                          onClose();
-                        }}
+                          onClick={() => {
+                            onAddToBucketlist(experience._id);
+                            onClose();
+                          }}
                         className={`w-full py-4 rounded-xl font-bold text-lg transition-all shadow-lg hover:shadow-xl ${
-                          isInBucketlist
+                            isInBucketlist
                             ? 'bg-red-500 text-white hover:bg-red-600'
                             : 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700'
-                        }`}
-                      >
-                        {isInBucketlist ? 'Remove from Bucketlist' : 'Add to Bucketlist'}
+                          }`}
+                        >
+                          {isInBucketlist ? 'Remove from Bucketlist' : 'Add to Bucketlist'}
                       </motion.button>
-                    )}
+                      )}
                   </div>
                 </div>
               </div>

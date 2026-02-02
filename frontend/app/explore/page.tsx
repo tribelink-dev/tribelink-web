@@ -30,6 +30,19 @@ export default function ExplorePage() {
   const [experiencesPage, setExperiencesPage] = useState(1);
   const [experiencesPagination, setExperiencesPagination] = useState({ total: 0, pages: 1 });
   
+  // Search filters
+  const [searchFilters, setSearchFilters] = useState<{
+    location: string;
+    checkIn: Date | undefined;
+    checkOut: Date | undefined;
+    guests: number;
+  }>({
+    location: '',
+    checkIn: undefined,
+    checkOut: undefined,
+    guests: 1,
+  });
+  
   // Experience Modal state
   const [selectedExperience, setSelectedExperience] = useState<any | null>(null);
   const [isExperienceModalOpen, setIsExperienceModalOpen] = useState(false);
@@ -60,17 +73,17 @@ export default function ExplorePage() {
     ['0 2px 8px rgba(0,0,0,0.08)', '0 8px 24px rgba(0,0,0,0.12)']
   );
 
-  // Fetch all abodes when abodes section is toggled
+  // Fetch all abodes when abodes section is toggled (only if no search filters are active)
   useEffect(() => {
-    if (activeSection === 'abodes' && allAbodes.length === 0 && !loadingAbodes) {
+    if (activeSection === 'abodes' && allAbodes.length === 0 && !loadingAbodes && !searchFilters.location) {
       fetchAllAbodes();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSection]);
 
-  // Fetch all experiences when experiences section is toggled
+  // Fetch all experiences when experiences section is toggled (only if no search filters are active)
   useEffect(() => {
-    if (activeSection === 'experiences' && allExperiences.length === 0 && !loadingExperiences) {
+    if (activeSection === 'experiences' && allExperiences.length === 0 && !loadingExperiences && !searchFilters.location) {
       fetchAllExperiences();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -162,16 +175,57 @@ export default function ExplorePage() {
     }
   };
 
-  const fetchAllAbodes = async (page = 1) => {
+  // Helper function to parse location string (e.g., "Kerala, India" -> { state: "Kerala", country: "India" })
+  const parseLocation = (locationString: string) => {
+    if (!locationString) return { state: undefined, district: undefined, country: undefined };
+    
+    const parts = locationString.split(',').map(part => part.trim());
+    if (parts.length >= 2) {
+      // Format: "District, State, Country" or "State, Country"
+      const country = parts[parts.length - 1];
+      const state = parts[parts.length - 2];
+      const district = parts.length > 2 ? parts[0] : undefined;
+      return { state, district, country };
+    } else if (parts.length === 1) {
+      // Single part - could be state or district, try state first
+      // Don't set country by default - let API handle it with just state
+      return { state: parts[0], district: undefined, country: undefined };
+    }
+    return { state: undefined, district: undefined, country: undefined };
+  };
+
+  const fetchAllAbodes = async (page = 1, filters = searchFilters) => {
     try {
       setLoadingAbodes(true);
-      const abodesRes = await api.get('/abodes', { 
-        params: { 
-          limit: 50,
-          sort: 'rating',
-          page 
-        } 
-      });
+      
+      // Build query params from filters
+      const params: any = { 
+        limit: 50,
+        sort: 'rating',
+        page 
+      };
+
+      // Parse location
+      if (filters.location) {
+        const { state, district, country } = parseLocation(filters.location);
+        // Only add parameters if they have values
+        if (country) params.country = country;
+        if (state) params.state = state;
+        if (district) params.district = district;
+      }
+
+      // Add date filters
+      if (filters.checkIn && filters.checkOut) {
+        params.availableFrom = filters.checkIn.toISOString();
+        params.availableTo = filters.checkOut.toISOString();
+      }
+
+      // Add guest capacity filter
+      if (filters.guests > 1) {
+        params.capacity = filters.guests;
+      }
+
+      const abodesRes = await api.get('/abodes', { params });
       
       const abodesData = abodesRes.data || { localHosts: [], pagination: {} };
       
@@ -196,16 +250,55 @@ export default function ExplorePage() {
     }
   };
 
-  const fetchAllExperiences = async (page = 1) => {
+  // Handle search from SearchBar
+  const handleSearch = (searchParams: {
+    location: string;
+    checkIn: Date | undefined;
+    checkOut: Date | undefined;
+    guests: number;
+  }) => {
+    setSearchFilters(searchParams);
+    // Clear previous results and refetch with new filters
+    setAllAbodes([]);
+    setAllExperiences([]);
+    setAbodesPage(1);
+    setExperiencesPage(1);
+    
+    if (activeSection === 'abodes') {
+      fetchAllAbodes(1, searchParams);
+    } else if (activeSection === 'experiences') {
+      fetchAllExperiences(1, searchParams);
+    }
+    
+    // Scroll to results section
+    setTimeout(() => {
+      const resultsSection = document.getElementById('results-section');
+      if (resultsSection) {
+        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  };
+
+  const fetchAllExperiences = async (page = 1, filters = searchFilters) => {
     try {
       setLoadingExperiences(true);
-      const experiencesRes = await api.get('/experiences', { 
-        params: { 
-          limit: 50,
-          sort: 'rating',
-          page 
-        } 
-      });
+      
+      // Build query params from filters
+      const params: any = { 
+        limit: 50,
+        sort: 'rating',
+        page 
+      };
+
+      // Parse location
+      if (filters.location) {
+        const { state, district } = parseLocation(filters.location);
+        // Only add parameters if they have values
+        if (state) params.state = state;
+        if (district) params.district = district;
+      }
+      
+      const experiencesRes = await api.get('/experiences', { params });
       
       const experiencesData = experiencesRes.data || { experiences: [], pagination: {} };
       
@@ -370,7 +463,7 @@ export default function ExplorePage() {
             }}
           >
             <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 p-2 relative z-20">
-              <SearchBar variant="homepage" />
+              <SearchBar variant="homepage" onSearch={handleSearch} />
             </div>
           </motion.div>
 
@@ -408,13 +501,13 @@ export default function ExplorePage() {
               boxShadow: stickySearchBarShadow,
             }}
           >
-            <SearchBar variant="navbar" />
+            <SearchBar variant="navbar" onSearch={handleSearch} />
           </motion.div>
         </div>
       </motion.div>
 
       {/* Content Sections */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div id="results-section" className="max-w-7xl mx-auto px-6 py-8">
         <AnimatePresence mode="wait">
           {activeSection === 'abodes' && (
             <motion.div
@@ -568,7 +661,7 @@ export default function ExplorePage() {
                       className="flex justify-center mt-16"
                     >
                       <motion.button
-                        onClick={() => fetchAllAbodes(abodesPage + 1)}
+                        onClick={() => fetchAllAbodes(abodesPage + 1, searchFilters)}
                         disabled={loadingAbodes}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
@@ -777,7 +870,7 @@ export default function ExplorePage() {
                       className="flex justify-center mt-16"
                     >
                       <motion.button
-                        onClick={() => fetchAllExperiences(experiencesPage + 1)}
+                        onClick={() => fetchAllExperiences(experiencesPage + 1, searchFilters)}
                         disabled={loadingExperiences}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}

@@ -7,13 +7,20 @@ import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import { format } from 'date-fns';
 import { MapPin, Calendar, Users, Search, ChevronDown, X } from 'lucide-react';
+import { POPULAR_DESTINATIONS, CITY_TO_LOCATION, INDIAN_STATES, DISTRICTS_BY_STATE, searchCity } from '@/lib/indianStates';
 
 interface SearchBarProps {
   className?: string;
   variant?: 'homepage' | 'navbar';
+  onSearch?: (searchParams: {
+    location: string;
+    checkIn: Date | undefined;
+    checkOut: Date | undefined;
+    guests: number;
+  }) => void;
 }
 
-export default function SearchBar({ className = '', variant = 'homepage' }: SearchBarProps) {
+export default function SearchBar({ className = '', variant = 'homepage', onSearch }: SearchBarProps) {
   const router = useRouter();
   const [location, setLocation] = useState('');
   const [checkIn, setCheckIn] = useState<Date | undefined>();
@@ -29,7 +36,18 @@ export default function SearchBar({ className = '', variant = 'homepage' }: Sear
   const guestsMenuRef = useRef<HTMLDivElement>(null);
 
   const handleSearch = () => {
-    // Navigate to abodes page with search params
+    // If onSearch callback is provided, use it instead of redirecting
+    if (onSearch) {
+      onSearch({
+        location,
+        checkIn,
+        checkOut,
+        guests,
+      });
+      return;
+    }
+
+    // Default behavior: Navigate to abodes page with search params
     const params = new URLSearchParams();
     if (location) params.set('location', location);
     if (checkIn) params.set('checkIn', checkIn.toISOString());
@@ -41,20 +59,122 @@ export default function SearchBar({ className = '', variant = 'homepage' }: Sear
 
   const isHomepage = variant === 'homepage';
 
-  // Popular destinations
-  const popularDestinations = [
-    { name: 'Kerala, India', description: 'God\'s Own Country', icon: '🌴' },
-    { name: 'Tamil Nadu, India', description: 'Land of Temples', icon: '🕌' },
-    { name: 'Rajasthan, India', description: 'Land of Kings', icon: '🏰' },
-    { name: 'Goa, India', description: 'Beach Paradise', icon: '🏖️' },
-    { name: 'Himachal Pradesh, India', description: 'Mountain Retreat', icon: '⛰️' },
-  ];
+  // Generate comprehensive destinations list from indianStates data
+  const getAllDestinations = () => {
+    const destinations: Array<{ name: string; description: string; icon: string }> = [];
+    
+    // Add popular destinations from indianStates
+    POPULAR_DESTINATIONS.forEach(dest => {
+      const displayName = dest.district 
+        ? `${dest.city}, ${dest.state}, India`
+        : `${dest.state}, India`;
+      destinations.push({
+        name: displayName,
+        description: dest.description,
+        icon: dest.icon
+      });
+    });
 
-  // Filter destinations based on search
-  const filteredDestinations = popularDestinations.filter(dest =>
-    dest.name.toLowerCase().includes(locationSearch.toLowerCase()) ||
-    dest.description.toLowerCase().includes(locationSearch.toLowerCase())
-  );
+    // Add all states
+    INDIAN_STATES.forEach(state => {
+      if (!destinations.some(d => d.name.includes(state))) {
+        destinations.push({
+          name: `${state}, India`,
+          description: `Explore ${state}`,
+          icon: '📍'
+        });
+      }
+    });
+
+    // Add major cities from CITY_TO_LOCATION
+    Object.entries(CITY_TO_LOCATION).forEach(([city, location]) => {
+      const displayName = `${city}, ${location.state}, India`;
+      if (!destinations.some(d => d.name === displayName)) {
+        // Determine icon based on state
+        let icon = '🏙️';
+        if (location.state === 'Kerala') icon = '🌴';
+        else if (location.state === 'Goa') icon = '🏖️';
+        else if (location.state === 'Himachal Pradesh' || location.state === 'Uttarakhand') icon = '⛰️';
+        else if (location.state === 'Rajasthan') icon = '🏰';
+        else if (location.state === 'Tamil Nadu') icon = '🕌';
+        else if (location.state === 'Uttar Pradesh' && (city === 'Varanasi' || city === 'Agra')) icon = '🕉️';
+        
+        destinations.push({
+          name: displayName,
+          description: `Discover ${city}`,
+          icon
+        });
+      }
+    });
+
+    // Add districts from DISTRICTS_BY_STATE
+    Object.entries(DISTRICTS_BY_STATE).forEach(([state, districts]) => {
+      districts.forEach(district => {
+        const displayName = `${district}, ${state}, India`;
+        if (!destinations.some(d => d.name === displayName)) {
+          destinations.push({
+            name: displayName,
+            description: `${district} district`,
+            icon: '📍'
+          });
+        }
+      });
+    });
+
+    return destinations;
+  };
+
+  const allDestinations = getAllDestinations();
+
+  // Filter destinations based on search using searchCity function for better matching
+  const filteredDestinations = (() => {
+    if (!locationSearch.trim()) {
+      // Show popular destinations when search is empty
+      return POPULAR_DESTINATIONS.map(dest => ({
+        name: dest.district ? `${dest.city}, ${dest.state}, India` : `${dest.state}, India`,
+        description: dest.description,
+        icon: dest.icon
+      }));
+    }
+
+    // Use a Map to ensure unique destinations by name
+    const uniqueDestinations = new Map<string, { name: string; description: string; icon: string }>();
+
+    // Use searchCity function for intelligent search
+    const searchResults = searchCity(locationSearch);
+    searchResults.forEach(result => {
+      const displayName = result.district 
+        ? `${result.city}, ${result.state}, India`
+        : `${result.state}, India`;
+      
+      // Skip if already added
+      if (uniqueDestinations.has(displayName)) return;
+      
+      // Find matching popular destination for icon and description
+      const popularDest = POPULAR_DESTINATIONS.find(d => 
+        (d.city === result.city || d.city === result.district) && d.state === result.state
+      );
+      
+      uniqueDestinations.set(displayName, {
+        name: displayName,
+        description: popularDest?.description || `Explore ${result.city || result.state}`,
+        icon: popularDest?.icon || '📍'
+      });
+    });
+
+    // Also filter allDestinations for additional matches
+    allDestinations.forEach(dest => {
+      const matches = dest.name.toLowerCase().includes(locationSearch.toLowerCase()) ||
+        dest.description.toLowerCase().includes(locationSearch.toLowerCase());
+      
+      if (matches && !uniqueDestinations.has(dest.name)) {
+        uniqueDestinations.set(dest.name, dest);
+      }
+    });
+
+    // Convert Map to Array and limit to 20 results
+    return Array.from(uniqueDestinations.values()).slice(0, 20);
+  })();
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -305,9 +425,12 @@ export default function SearchBar({ className = '', variant = 'homepage' }: Sear
               <div className="max-h-96 overflow-y-auto p-2">
                 {filteredDestinations.length > 0 ? (
                   <div className="space-y-1">
-                    {filteredDestinations.map((dest, idx) => (
+                    {filteredDestinations.map((dest, idx) => {
+                      // Create a unique key combining name and index to prevent duplicates
+                      const uniqueKey = `${dest.name.replace(/\s+/g, '-')}-${idx}`;
+                      return (
                       <motion.button
-                        key={dest.name}
+                        key={uniqueKey}
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: idx * 0.05 }}
@@ -331,7 +454,8 @@ export default function SearchBar({ className = '', variant = 'homepage' }: Sear
                           <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-heritage-gold rotate-[-90deg] transition-all" />
                         </div>
                       </motion.button>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-center py-12">
@@ -473,23 +597,6 @@ export default function SearchBar({ className = '', variant = 'homepage' }: Sear
         )}
       </AnimatePresence>
 
-      {/* Backdrop */}
-      <AnimatePresence>
-        {(showLocationMenu || showDateMenu || showGuestsMenu) && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[90] bg-black/30 backdrop-blur-sm"
-            onClick={() => {
-              setShowLocationMenu(false);
-              setShowDateMenu(false);
-              setShowGuestsMenu(false);
-              setActiveField(null);
-            }}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 }
