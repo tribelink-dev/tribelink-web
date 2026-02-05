@@ -396,7 +396,6 @@ export const CITY_TO_LOCATION: Record<string, { state: string; district: string 
   // More Uttar Pradesh destinations
   'Mathura': { state: 'Uttar Pradesh', district: 'Mathura' },
   'Ayodhya': { state: 'Uttar Pradesh', district: 'Ayodhya' },
-  'Prayagraj': { state: 'Uttar Pradesh', district: 'Allahabad' },
   'Sarnath': { state: 'Uttar Pradesh', district: 'Varanasi' },
   'Fatehpur Sikri': { state: 'Uttar Pradesh', district: 'Agra' },
   'Noida': { state: 'Uttar Pradesh', district: 'Gautam Buddha Nagar' },
@@ -408,13 +407,6 @@ export const CITY_TO_LOCATION: Record<string, { state: string; district: string 
   'Kutch': { state: 'Gujarat', district: 'Kutch' },
   'Gir': { state: 'Gujarat', district: 'Gir Somnath' },
   'Saputara': { state: 'Gujarat', district: 'Dang' },
-  
-  // More Odisha destinations
-  'Konark': { state: 'Odisha', district: 'Puri' },
-  'Chilika': { state: 'Odisha', district: 'Puri' },
-  
-  // More Andhra Pradesh destinations
-  'Tirupati': { state: 'Andhra Pradesh', district: 'Chittoor' },
   
   // Northeast destinations
   'Shillong': { state: 'Meghalaya', district: 'East Khasi Hills' },
