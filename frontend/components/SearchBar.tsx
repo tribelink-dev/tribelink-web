@@ -11,9 +11,15 @@ import { MapPin, Calendar, Users, Search, ChevronDown, X } from 'lucide-react';
 interface SearchBarProps {
   className?: string;
   variant?: 'homepage' | 'navbar';
+  onSearch?: (searchParams: {
+    location: string;
+    checkIn: Date | undefined;
+    checkOut: Date | undefined;
+    guests: number;
+  }) => void;
 }
 
-export default function SearchBar({ className = '', variant = 'homepage' }: SearchBarProps) {
+export default function SearchBar({ className = '', variant = 'homepage', onSearch }: SearchBarProps) {
   const router = useRouter();
   const [location, setLocation] = useState('');
   const [checkIn, setCheckIn] = useState<Date | undefined>();
@@ -29,14 +35,24 @@ export default function SearchBar({ className = '', variant = 'homepage' }: Sear
   const guestsMenuRef = useRef<HTMLDivElement>(null);
 
   const handleSearch = () => {
-    // Navigate to abodes page with search params
-    const params = new URLSearchParams();
-    if (location) params.set('location', location);
-    if (checkIn) params.set('checkIn', checkIn.toISOString());
-    if (checkOut) params.set('checkOut', checkOut.toISOString());
-    if (guests > 1) params.set('guests', guests.toString());
-    
-    router.push(`/abodes?${params.toString()}`);
+    if (onSearch) {
+      // Use custom onSearch callback if provided
+      onSearch({
+        location,
+        checkIn,
+        checkOut,
+        guests,
+      });
+    } else {
+      // Default behavior: Navigate to abodes page with search params
+      const params = new URLSearchParams();
+      if (location) params.set('location', location);
+      if (checkIn) params.set('checkIn', checkIn.toISOString());
+      if (checkOut) params.set('checkOut', checkOut.toISOString());
+      if (guests > 1) params.set('guests', guests.toString());
+      
+      router.push(`/abodes?${params.toString()}`);
+    }
   };
 
   const isHomepage = variant === 'homepage';
