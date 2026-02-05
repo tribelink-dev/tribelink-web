@@ -7,20 +7,13 @@ import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import { format } from 'date-fns';
 import { MapPin, Calendar, Users, Search, ChevronDown, X } from 'lucide-react';
-import { POPULAR_DESTINATIONS, CITY_TO_LOCATION, INDIAN_STATES, DISTRICTS_BY_STATE, searchCity } from '@/lib/indianStates';
 
 interface SearchBarProps {
   className?: string;
   variant?: 'homepage' | 'navbar';
-  onSearch?: (searchParams: {
-    location: string;
-    checkIn: Date | undefined;
-    checkOut: Date | undefined;
-    guests: number;
-  }) => void;
 }
 
-export default function SearchBar({ className = '', variant = 'homepage', onSearch }: SearchBarProps) {
+export default function SearchBar({ className = '', variant = 'homepage' }: SearchBarProps) {
   const router = useRouter();
   const [location, setLocation] = useState('');
   const [checkIn, setCheckIn] = useState<Date | undefined>();
@@ -36,18 +29,7 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
   const guestsMenuRef = useRef<HTMLDivElement>(null);
 
   const handleSearch = () => {
-    // If onSearch callback is provided, use it instead of redirecting
-    if (onSearch) {
-      onSearch({
-        location,
-        checkIn,
-        checkOut,
-        guests,
-      });
-      return;
-    }
-
-    // Default behavior: Navigate to abodes page with search params
+    // Navigate to abodes page with search params
     const params = new URLSearchParams();
     if (location) params.set('location', location);
     if (checkIn) params.set('checkIn', checkIn.toISOString());
@@ -59,122 +41,20 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
 
   const isHomepage = variant === 'homepage';
 
-  // Generate comprehensive destinations list from indianStates data
-  const getAllDestinations = () => {
-    const destinations: Array<{ name: string; description: string; icon: string }> = [];
-    
-    // Add popular destinations from indianStates
-    POPULAR_DESTINATIONS.forEach(dest => {
-      const displayName = dest.district 
-        ? `${dest.city}, ${dest.state}, India`
-        : `${dest.state}, India`;
-      destinations.push({
-        name: displayName,
-        description: dest.description,
-        icon: dest.icon
-      });
-    });
+  // Popular destinations
+  const popularDestinations = [
+    { name: 'Kerala, India', description: 'God\'s Own Country', icon: '🌴' },
+    { name: 'Tamil Nadu, India', description: 'Land of Temples', icon: '🕌' },
+    { name: 'Rajasthan, India', description: 'Land of Kings', icon: '🏰' },
+    { name: 'Goa, India', description: 'Beach Paradise', icon: '🏖️' },
+    { name: 'Himachal Pradesh, India', description: 'Mountain Retreat', icon: '⛰️' },
+  ];
 
-    // Add all states
-    INDIAN_STATES.forEach(state => {
-      if (!destinations.some(d => d.name.includes(state))) {
-        destinations.push({
-          name: `${state}, India`,
-          description: `Explore ${state}`,
-          icon: '📍'
-        });
-      }
-    });
-
-    // Add major cities from CITY_TO_LOCATION
-    Object.entries(CITY_TO_LOCATION).forEach(([city, location]) => {
-      const displayName = `${city}, ${location.state}, India`;
-      if (!destinations.some(d => d.name === displayName)) {
-        // Determine icon based on state
-        let icon = '🏙️';
-        if (location.state === 'Kerala') icon = '🌴';
-        else if (location.state === 'Goa') icon = '🏖️';
-        else if (location.state === 'Himachal Pradesh' || location.state === 'Uttarakhand') icon = '⛰️';
-        else if (location.state === 'Rajasthan') icon = '🏰';
-        else if (location.state === 'Tamil Nadu') icon = '🕌';
-        else if (location.state === 'Uttar Pradesh' && (city === 'Varanasi' || city === 'Agra')) icon = '🕉️';
-        
-        destinations.push({
-          name: displayName,
-          description: `Discover ${city}`,
-          icon
-        });
-      }
-    });
-
-    // Add districts from DISTRICTS_BY_STATE
-    Object.entries(DISTRICTS_BY_STATE).forEach(([state, districts]) => {
-      districts.forEach(district => {
-        const displayName = `${district}, ${state}, India`;
-        if (!destinations.some(d => d.name === displayName)) {
-          destinations.push({
-            name: displayName,
-            description: `${district} district`,
-            icon: '📍'
-          });
-        }
-      });
-    });
-
-    return destinations;
-  };
-
-  const allDestinations = getAllDestinations();
-
-  // Filter destinations based on search using searchCity function for better matching
-  const filteredDestinations = (() => {
-    if (!locationSearch.trim()) {
-      // Show popular destinations when search is empty
-      return POPULAR_DESTINATIONS.map(dest => ({
-        name: dest.district ? `${dest.city}, ${dest.state}, India` : `${dest.state}, India`,
-        description: dest.description,
-        icon: dest.icon
-      }));
-    }
-
-    // Use a Map to ensure unique destinations by name
-    const uniqueDestinations = new Map<string, { name: string; description: string; icon: string }>();
-
-    // Use searchCity function for intelligent search
-    const searchResults = searchCity(locationSearch);
-    searchResults.forEach(result => {
-      const displayName = result.district 
-        ? `${result.city}, ${result.state}, India`
-        : `${result.state}, India`;
-      
-      // Skip if already added
-      if (uniqueDestinations.has(displayName)) return;
-      
-      // Find matching popular destination for icon and description
-      const popularDest = POPULAR_DESTINATIONS.find(d => 
-        (d.city === result.city || d.city === result.district) && d.state === result.state
-      );
-      
-      uniqueDestinations.set(displayName, {
-        name: displayName,
-        description: popularDest?.description || `Explore ${result.city || result.state}`,
-        icon: popularDest?.icon || '📍'
-      });
-    });
-
-    // Also filter allDestinations for additional matches
-    allDestinations.forEach(dest => {
-      const matches = dest.name.toLowerCase().includes(locationSearch.toLowerCase()) ||
-        dest.description.toLowerCase().includes(locationSearch.toLowerCase());
-      
-      if (matches && !uniqueDestinations.has(dest.name)) {
-        uniqueDestinations.set(dest.name, dest);
-      }
-    });
-
-    // Convert Map to Array and limit to 20 results
-    return Array.from(uniqueDestinations.values()).slice(0, 20);
-  })();
+  // Filter destinations based on search
+  const filteredDestinations = popularDestinations.filter(dest =>
+    dest.name.toLowerCase().includes(locationSearch.toLowerCase()) ||
+    dest.description.toLowerCase().includes(locationSearch.toLowerCase())
+  );
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -196,22 +76,24 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
   }, []);
 
   return (
-    <div className={`relative z-20 ${className}`}>
+    <div className={`relative ${className}`}>
       <motion.div
         initial={isHomepage ? { scale: 0.95, opacity: 0, y: 10 } : {}}
         animate={isHomepage ? { scale: 1, opacity: 1, y: 0 } : {}}
         transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
         className={`
           ${isHomepage 
-            ? 'flex items-center gap-2 h-20' 
-            : 'bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200/50 p-1.5 flex items-center gap-1 h-16'
+            ? 'bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-100/50 p-2' 
+            : 'bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-100/50 p-1.5'
           }
+          flex items-center gap-1
+          ${isHomepage ? 'h-20' : 'h-16'}
         `}
       >
         {/* Location */}
         <motion.button
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.99 }}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
           onClick={() => {
             setActiveField('location');
             setShowLocationMenu(true);
@@ -219,29 +101,27 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
             setShowGuestsMenu(false);
           }}
           className={`
-            flex-1 px-6 py-4 text-left rounded-2xl transition-all duration-300 relative
+            flex-1 px-6 py-4 text-left rounded-2xl transition-all duration-300 relative group
             ${activeField === 'location' 
-              ? 'bg-gradient-to-r from-heritage-gold/10 via-heritage-gold-dark/10 to-heritage-gold/10' 
-              : 'hover:bg-gray-50/50'
+              ? 'bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-300 shadow-lg' 
+              : 'hover:bg-gray-50 border-2 border-transparent'
             }
             ${isHomepage ? 'min-w-[220px]' : 'min-w-[180px]'}
           `}
         >
           <div className="flex items-center gap-2 mb-1">
-            <MapPin className={`w-4 h-4 ${activeField === 'location' ? 'text-heritage-gold' : 'text-gray-500'} transition-colors`} />
-            <div className={`text-xs font-bold uppercase tracking-wide transition-colors ${
-              activeField === 'location' ? 'text-heritage-gold' : 'text-gray-600'
-            }`}>Where</div>
+            <MapPin className={`w-4 h-4 ${activeField === 'location' ? 'text-indigo-600' : 'text-gray-400'} transition-colors`} />
+            <div className="text-xs font-bold text-gray-700 uppercase tracking-wide">Where</div>
           </div>
           <div className={`text-sm font-semibold truncate transition-colors ${
-            location ? 'text-gray-900' : 'text-gray-500'
+            location ? 'text-gray-900' : 'text-gray-400'
           }`}>
             {location || 'Search destinations'}
           </div>
           {activeField === 'location' && (
             <motion.div
               layoutId="activeFieldIndicator"
-              className="absolute inset-0 rounded-2xl bg-gradient-to-r from-heritage-gold/5 via-heritage-gold-dark/5 to-heritage-gold/5 pointer-events-none"
+              className="absolute inset-0 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 pointer-events-none"
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             />
           )}
@@ -249,8 +129,8 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
 
         {/* Check-in */}
         <motion.button
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.99 }}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
           onClick={() => {
             setActiveField('checkIn');
             setShowDateMenu(true);
@@ -258,29 +138,27 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
             setShowGuestsMenu(false);
           }}
           className={`
-            flex-1 px-6 py-4 text-left rounded-2xl transition-all duration-300 relative
+            flex-1 px-6 py-4 text-left rounded-2xl transition-all duration-300 relative group
             ${activeField === 'checkIn' || activeField === 'checkOut'
-              ? 'bg-gradient-to-r from-heritage-gold/10 via-heritage-gold-dark/10 to-heritage-gold/10' 
-              : 'hover:bg-gray-50/50'
+              ? 'bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-300 shadow-lg' 
+              : 'hover:bg-gray-50 border-2 border-transparent'
             }
             ${isHomepage ? 'min-w-[160px]' : 'min-w-[140px]'}
           `}
         >
           <div className="flex items-center gap-2 mb-1">
-            <Calendar className={`w-4 h-4 ${activeField === 'checkIn' || activeField === 'checkOut' ? 'text-heritage-gold' : 'text-gray-500'} transition-colors`} />
-            <div className={`text-xs font-bold uppercase tracking-wide transition-colors ${
-              activeField === 'checkIn' || activeField === 'checkOut' ? 'text-heritage-gold' : 'text-gray-600'
-            }`}>Check in</div>
+            <Calendar className={`w-4 h-4 ${activeField === 'checkIn' || activeField === 'checkOut' ? 'text-indigo-600' : 'text-gray-400'} transition-colors`} />
+            <div className="text-xs font-bold text-gray-700 uppercase tracking-wide">Check in</div>
           </div>
           <div className={`text-sm font-semibold transition-colors ${
-            checkIn ? 'text-gray-900' : 'text-gray-500'
+            checkIn ? 'text-gray-900' : 'text-gray-400'
           }`}>
             {checkIn ? format(checkIn, 'MMM dd') : 'Add date'}
           </div>
           {(activeField === 'checkIn' || activeField === 'checkOut') && (
             <motion.div
               layoutId="activeFieldIndicator"
-              className="absolute inset-0 rounded-2xl bg-gradient-to-r from-heritage-gold/5 via-heritage-gold-dark/5 to-heritage-gold/5 pointer-events-none"
+              className="absolute inset-0 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 pointer-events-none"
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             />
           )}
@@ -288,8 +166,8 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
 
         {/* Check-out */}
         <motion.button
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.99 }}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
           onClick={() => {
             setActiveField('checkOut');
             setShowDateMenu(true);
@@ -297,29 +175,27 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
             setShowGuestsMenu(false);
           }}
           className={`
-            flex-1 px-6 py-4 text-left rounded-2xl transition-all duration-300 relative
+            flex-1 px-6 py-4 text-left rounded-2xl transition-all duration-300 relative group
             ${activeField === 'checkIn' || activeField === 'checkOut'
-              ? 'bg-gradient-to-r from-heritage-gold/10 via-heritage-gold-dark/10 to-heritage-gold/10' 
-              : 'hover:bg-gray-50/50'
+              ? 'bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-300 shadow-lg' 
+              : 'hover:bg-gray-50 border-2 border-transparent'
             }
             ${isHomepage ? 'min-w-[160px]' : 'min-w-[140px]'}
           `}
         >
           <div className="flex items-center gap-2 mb-1">
-            <Calendar className={`w-4 h-4 ${activeField === 'checkIn' || activeField === 'checkOut' ? 'text-heritage-gold' : 'text-gray-500'} transition-colors`} />
-            <div className={`text-xs font-bold uppercase tracking-wide transition-colors ${
-              activeField === 'checkIn' || activeField === 'checkOut' ? 'text-heritage-gold' : 'text-gray-600'
-            }`}>Check out</div>
+            <Calendar className={`w-4 h-4 ${activeField === 'checkIn' || activeField === 'checkOut' ? 'text-indigo-600' : 'text-gray-400'} transition-colors`} />
+            <div className="text-xs font-bold text-gray-700 uppercase tracking-wide">Check out</div>
           </div>
           <div className={`text-sm font-semibold transition-colors ${
-            checkOut ? 'text-gray-900' : 'text-gray-500'
+            checkOut ? 'text-gray-900' : 'text-gray-400'
           }`}>
             {checkOut ? format(checkOut, 'MMM dd') : 'Add date'}
           </div>
           {(activeField === 'checkIn' || activeField === 'checkOut') && (
             <motion.div
               layoutId="activeFieldIndicator"
-              className="absolute inset-0 rounded-2xl bg-gradient-to-r from-heritage-gold/5 via-heritage-gold-dark/5 to-heritage-gold/5 pointer-events-none"
+              className="absolute inset-0 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 pointer-events-none"
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             />
           )}
@@ -327,8 +203,8 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
 
         {/* Guests */}
         <motion.button
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.99 }}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
           onClick={() => {
             setActiveField('guests');
             setShowGuestsMenu(true);
@@ -336,29 +212,27 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
             setShowDateMenu(false);
           }}
           className={`
-            flex-1 px-6 py-4 text-left rounded-2xl transition-all duration-300 relative
+            flex-1 px-6 py-4 text-left rounded-2xl transition-all duration-300 relative group
             ${activeField === 'guests' 
-              ? 'bg-gradient-to-r from-heritage-gold/10 via-heritage-gold-dark/10 to-heritage-gold/10' 
-              : 'hover:bg-gray-50/50'
+              ? 'bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-300 shadow-lg' 
+              : 'hover:bg-gray-50 border-2 border-transparent'
             }
             ${isHomepage ? 'min-w-[160px]' : 'min-w-[140px]'}
           `}
         >
           <div className="flex items-center gap-2 mb-1">
-            <Users className={`w-4 h-4 ${activeField === 'guests' ? 'text-heritage-gold' : 'text-gray-500'} transition-colors`} />
-            <div className={`text-xs font-bold uppercase tracking-wide transition-colors ${
-              activeField === 'guests' ? 'text-heritage-gold' : 'text-gray-600'
-            }`}>Who</div>
+            <Users className={`w-4 h-4 ${activeField === 'guests' ? 'text-indigo-600' : 'text-gray-400'} transition-colors`} />
+            <div className="text-xs font-bold text-gray-700 uppercase tracking-wide">Who</div>
           </div>
           <div className={`text-sm font-semibold transition-colors ${
-            guests > 0 ? 'text-gray-900' : 'text-gray-500'
+            guests > 0 ? 'text-gray-900' : 'text-gray-400'
           }`}>
             {guests} {guests === 1 ? 'guest' : 'guests'}
           </div>
           {activeField === 'guests' && (
             <motion.div
               layoutId="activeFieldIndicator"
-              className="absolute inset-0 rounded-2xl bg-gradient-to-r from-heritage-gold/5 via-heritage-gold-dark/5 to-heritage-gold/5 pointer-events-none"
+              className="absolute inset-0 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 pointer-events-none"
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             />
           )}
@@ -370,12 +244,12 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
           whileTap={{ scale: 0.95 }}
           onClick={handleSearch}
           className={`
-            ml-2 rounded-2xl bg-gradient-to-r from-heritage-gold via-heritage-gold-dark to-heritage-gold
-            hover:from-heritage-gold-dark hover:via-heritage-gold hover:to-heritage-gold-dark
+            ml-2 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600
+            hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700
             text-white transition-all duration-300
             ${isHomepage ? 'w-16 h-16' : 'w-14 h-14'}
             flex items-center justify-center
-            shadow-xl hover:shadow-2xl
+            shadow-lg hover:shadow-xl
             relative overflow-hidden group
           `}
         >
@@ -390,33 +264,33 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
       <AnimatePresence>
         {showLocationMenu && (
           <>
-            <motion.div
+          <motion.div
               ref={locationMenuRef}
               initial={{ opacity: 0, y: 10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
               transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-              className="absolute top-full left-0 mt-3 w-96 bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden z-[100]"
+              className="absolute top-full left-0 mt-3 w-96 bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden z-50"
             >
               {/* Search Input */}
-              <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-heritage-gold/5 via-heritage-gold-dark/5 to-heritage-gold/5">
+              <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-indigo-50/50 to-purple-50/50">
                 <div className="relative">
-                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-heritage-gold" />
-                  <input
-                    type="text"
+                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600" />
+            <input
+              type="text"
                     value={locationSearch}
                     onChange={(e) => setLocationSearch(e.target.value)}
-                    placeholder="Search destinations..."
-                    className="w-full pl-12 pr-10 py-3.5 bg-white border-2 border-heritage-gold/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold text-sm font-medium transition-all"
-                    autoFocus
-                  />
+              placeholder="Search destinations..."
+                    className="w-full pl-12 pr-10 py-3.5 bg-white border-2 border-indigo-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-medium transition-all"
+              autoFocus
+            />
                   {locationSearch && (
-                    <button
+              <button
                       onClick={() => setLocationSearch('')}
                       className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
                     >
                       <X className="w-3.5 h-3.5 text-gray-600" />
-                    </button>
+              </button>
                   )}
                 </div>
               </div>
@@ -425,37 +299,33 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
               <div className="max-h-96 overflow-y-auto p-2">
                 {filteredDestinations.length > 0 ? (
                   <div className="space-y-1">
-                    {filteredDestinations.map((dest, idx) => {
-                      // Create a unique key combining name and index to prevent duplicates
-                      const uniqueKey = `${dest.name.replace(/\s+/g, '-')}-${idx}`;
-                      return (
+                    {filteredDestinations.map((dest, idx) => (
                       <motion.button
-                        key={uniqueKey}
+                        key={dest.name}
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: idx * 0.05 }}
                         whileHover={{ scale: 1.02, x: 4 }}
-                        onClick={() => {
+                onClick={() => {
                           setLocation(dest.name);
                           setLocationSearch('');
-                          setShowLocationMenu(false);
-                          setActiveField(null);
-                        }}
-                        className="w-full text-left px-4 py-3.5 hover:bg-gradient-to-r hover:from-heritage-gold/10 hover:via-heritage-gold-dark/10 hover:to-heritage-gold/10 rounded-xl transition-all group"
-                      >
+                  setShowLocationMenu(false);
+                  setActiveField(null);
+                }}
+                        className="w-full text-left px-4 py-3.5 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 rounded-xl transition-all group"
+              >
                         <div className="flex items-center gap-3">
                           <span className="text-2xl">{dest.icon}</span>
                           <div className="flex-1">
-                            <div className="font-bold text-gray-900 group-hover:text-heritage-gold transition-colors">
+                            <div className="font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">
                               {dest.name}
                             </div>
                             <div className="text-sm text-gray-500 mt-0.5">{dest.description}</div>
                           </div>
-                          <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-heritage-gold rotate-[-90deg] transition-all" />
+                          <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-indigo-600 rotate-[-90deg] transition-all" />
                         </div>
                       </motion.button>
-                      );
-                    })}
+                    ))}
                   </div>
                 ) : (
                   <div className="text-center py-12">
@@ -464,8 +334,8 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
                     <p className="text-sm text-gray-400 mt-1">Try a different search term</p>
                   </div>
                 )}
-              </div>
-            </motion.div>
+            </div>
+          </motion.div>
           </>
         )}
       </AnimatePresence>
@@ -479,28 +349,28 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className="absolute top-full left-0 mt-3 bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 z-[100]"
+            className="absolute top-full left-0 mt-3 bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 z-50"
           >
             <div className="mb-4">
               <h3 className="text-lg font-bold text-gray-900 mb-1">Select dates</h3>
               <p className="text-sm text-gray-500">Choose your check-in and check-out dates</p>
             </div>
-            <div className="[&_.rdp]:m-0 [&_.rdp-month]:m-0 [&_.rdp-table]:w-full [&_.rdp-day_selected]:!bg-gradient-to-r [&_.rdp-day_selected]:!from-heritage-gold [&_.rdp-day_selected]:!via-heritage-gold-dark [&_.rdp-day_selected]:!to-heritage-gold [&_.rdp-day_selected]:!text-white [&_.rdp-day_selected]:!font-bold [&_.rdp-day_range_start]:!bg-gradient-to-r [&_.rdp-day_range_start]:!from-heritage-gold [&_.rdp-day_range_start]:!via-heritage-gold-dark [&_.rdp-day_range_start]:!to-heritage-gold [&_.rdp-day_range_end]:!bg-gradient-to-r [&_.rdp-day_range_end]:!from-heritage-gold [&_.rdp-day_range_end]:!via-heritage-gold-dark [&_.rdp-day_range_end]:!to-heritage-gold [&_.rdp-day]:rounded-xl [&_.rdp-day]:mx-0.5 [&_.rdp-day]:h-10 [&_.rdp-day]:w-10 [&_.rdp-day]:hover:!bg-heritage-gold/20 [&_.rdp-day]:transition-all">
-              <DayPicker
-                mode="range"
-                selected={{ from: checkIn, to: checkOut }}
-                onSelect={(range) => {
-                  if (range?.from) setCheckIn(range.from);
-                  if (range?.to) setCheckOut(range.to);
-                  if (range?.from && range?.to) {
-                    setShowDateMenu(false);
-                    setActiveField(null);
-                  }
-                }}
-                disabled={(date) => date < new Date()}
-                numberOfMonths={2}
+            <div className="[&_.rdp]:m-0 [&_.rdp-month]:m-0 [&_.rdp-table]:w-full [&_.rdp-day_selected]:!bg-gradient-to-r [&_.rdp-day_selected]:!from-indigo-600 [&_.rdp-day_selected]:!to-purple-600 [&_.rdp-day_selected]:!text-white [&_.rdp-day_selected]:!font-bold [&_.rdp-day_range_start]:!bg-gradient-to-r [&_.rdp-day_range_start]:!from-indigo-600 [&_.rdp-day_range_start]:!to-purple-600 [&_.rdp-day_range_end]:!bg-gradient-to-r [&_.rdp-day_range_end]:!from-indigo-600 [&_.rdp-day_range_end]:!to-purple-600 [&_.rdp-day]:rounded-xl [&_.rdp-day]:mx-0.5 [&_.rdp-day]:h-10 [&_.rdp-day]:w-10 [&_.rdp-day]:hover:!bg-indigo-100 [&_.rdp-day]:transition-all">
+            <DayPicker
+              mode="range"
+              selected={{ from: checkIn, to: checkOut }}
+              onSelect={(range) => {
+                if (range?.from) setCheckIn(range.from);
+                if (range?.to) setCheckOut(range.to);
+                if (range?.from && range?.to) {
+                  setShowDateMenu(false);
+                  setActiveField(null);
+                }
+              }}
+              disabled={(date) => date < new Date()}
+              numberOfMonths={2}
                 className="custom-day-picker"
-              />
+            />
             </div>
             {(checkIn || checkOut) && (
               <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
@@ -544,14 +414,14 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className="absolute top-full right-0 mt-3 w-80 bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 z-[100]"
+            className="absolute top-full right-0 mt-3 w-80 bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 z-50"
           >
             <div className="mb-4">
               <h3 className="text-lg font-bold text-gray-900 mb-1">Guests</h3>
               <p className="text-sm text-gray-500">How many guests are staying?</p>
             </div>
             <div className="space-y-6">
-              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-heritage-gold/10 via-heritage-gold-dark/10 to-heritage-gold/10 rounded-2xl border-2 border-heritage-gold/30">
+              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-50/50 to-purple-50/50 rounded-2xl border-2 border-indigo-100">
                 <div>
                   <div className="font-bold text-gray-900 mb-1">Adults</div>
                   <div className="text-sm text-gray-500">Ages 13 or above</div>
@@ -562,7 +432,7 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
                     whileTap={{ scale: 0.9 }}
                     onClick={() => setGuests(Math.max(1, guests - 1))}
                     disabled={guests <= 1}
-                    className="w-10 h-10 rounded-xl border-2 border-gray-300 disabled:border-gray-200 disabled:opacity-50 flex items-center justify-center hover:border-heritage-gold hover:bg-heritage-gold/10 transition-all disabled:cursor-not-allowed"
+                    className="w-10 h-10 rounded-xl border-2 border-gray-300 disabled:border-gray-200 disabled:opacity-50 flex items-center justify-center hover:border-indigo-500 hover:bg-indigo-50 transition-all disabled:cursor-not-allowed"
                   >
                     <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M20 12H4" />
@@ -573,7 +443,7 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={() => setGuests(guests + 1)}
-                    className="w-10 h-10 rounded-xl border-2 border-gray-300 flex items-center justify-center hover:border-heritage-gold hover:bg-heritage-gold/10 transition-all"
+                    className="w-10 h-10 rounded-xl border-2 border-gray-300 flex items-center justify-center hover:border-indigo-500 hover:bg-indigo-50 transition-all"
                   >
                     <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
@@ -588,7 +458,7 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
                   setShowGuestsMenu(false);
                   setActiveField(null);
                 }}
-                className="w-full py-4 bg-gradient-to-r from-heritage-gold via-heritage-gold-dark to-heritage-gold hover:from-heritage-gold-dark hover:via-heritage-gold hover:to-heritage-gold-dark text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl"
+                className="w-full py-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl"
               >
                 Done
               </motion.button>
@@ -597,6 +467,23 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
         )}
       </AnimatePresence>
 
+      {/* Backdrop */}
+      <AnimatePresence>
+      {(showLocationMenu || showDateMenu || showGuestsMenu) && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+          onClick={() => {
+            setShowLocationMenu(false);
+            setShowDateMenu(false);
+            setShowGuestsMenu(false);
+            setActiveField(null);
+          }}
+        />
+      )}
+      </AnimatePresence>
     </div>
   );
 }

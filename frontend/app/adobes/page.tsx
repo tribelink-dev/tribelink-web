@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/auth';
 import { getImageUrl } from '@/lib/imageUtils';
 import { DISTRICTS_BY_STATE, INDIAN_STATES } from '@/lib/indianStates';
 import { motion } from 'framer-motion';
-import AirbnbListingCard from '@/components/AirbnbListingCard';
+import ListingCard from '@/components/ListingCard';
 
 interface LocalHost {
   _id: string;
@@ -331,7 +331,7 @@ export default function AbodesPage() {
                 const imageUrl = mainImage ? getImageUrl(mainImage.url) : null;
 
                 return (
-                  <AirbnbListingCard
+                  <ListingCard
                     key={abode._id}
                     id={abode._id}
                     imageUrl={imageUrl}

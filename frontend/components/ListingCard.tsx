@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { getImageUrl } from '@/lib/imageUtils';
 import { useCurrency } from '@/lib/CurrencyContext';
 
-interface AirbnbListingCardProps {
+interface ListingCardProps {
   id: string;
   imageUrl: string | null;
   location: string;
@@ -20,7 +20,7 @@ interface AirbnbListingCardProps {
   index?: number;
 }
 
-export default function AirbnbListingCard({
+export default function ListingCard({
   id,
   imageUrl,
   location,
@@ -32,7 +32,7 @@ export default function AirbnbListingCard({
   priceLabel = 'night',
   onClick,
   index = 0
-}: AirbnbListingCardProps) {
+}: ListingCardProps) {
   const router = useRouter();
   const [isFavorite, setIsFavorite] = useState(false);
   const { formatPrice } = useCurrency();
