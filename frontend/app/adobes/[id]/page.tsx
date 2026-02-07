@@ -95,12 +95,33 @@ export default function AbodeDetailPage() {
   const [guests, setGuests] = useState(1);
   const [booking, setBooking] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState<'checkin' | 'checkout' | null>(null);
+  const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
     if (params.id) {
       fetchAbode();
     }
   }, [params.id]);
+
+  useEffect(() => {
+    // Check if current user is the owner of this abode
+    if (abode && typeof window !== 'undefined') {
+      const hostData = localStorage.getItem('host');
+      if (hostData) {
+        try {
+          const host = JSON.parse(hostData);
+          // Check if host ID matches the abode's providerId
+          if (host._id === abode.providerId._id) {
+            setIsOwner(true);
+            return;
+          }
+        } catch (err) {
+          console.error('Error parsing host data:', err);
+        }
+      }
+      setIsOwner(false);
+    }
+  }, [abode]);
 
   const fetchAbode = async () => {
     try {
@@ -238,9 +259,9 @@ export default function AbodeDetailPage() {
           <span className="font-medium">Back</span>
         </motion.button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className={`grid grid-cols-1 gap-8 ${!isOwner ? 'lg:grid-cols-3' : 'lg:grid-cols-1 max-w-5xl mx-auto'}`}>
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
+          <div className={!isOwner ? 'lg:col-span-2 space-y-8' : 'space-y-8'}>
             {/* Image Gallery */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -525,14 +546,15 @@ export default function AbodeDetailPage() {
             )}
           </div>
 
-          {/* Booking Sidebar */}
-          <div className="lg:col-span-1">
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-              className="sticky top-24 bg-white rounded-3xl shadow-xl p-8 border border-gray-200"
-            >
+          {/* Booking Sidebar - Only show if user is not the owner */}
+          {!isOwner && (
+            <div className="lg:col-span-1">
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 }}
+                className="sticky top-24 bg-white rounded-3xl shadow-xl p-8 border border-gray-200"
+              >
               {/* Price */}
               <div className="mb-8 pb-8 border-b border-gray-200">
                 <div className="flex items-baseline gap-2 mb-2">
@@ -696,6 +718,7 @@ export default function AbodeDetailPage() {
               )}
             </motion.div>
           </div>
+          )}
         </div>
       </div>
     </div>
