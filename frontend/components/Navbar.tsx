@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { LOGO_PATH, LOGO_ALT_TEXT } from '@/lib/constants';
 import SearchBar from './SearchBar';
 import CurrencySelectorButton from './CurrencySelectorButton';
+import api from '@/lib/api';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -18,6 +19,7 @@ export default function Navbar() {
   const [hostName, setHostName] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [isViewingOwnAbode, setIsViewingOwnAbode] = useState(false);
 
   useEffect(() => {
     // Check if user is a host
@@ -44,6 +46,47 @@ export default function Navbar() {
       return () => window.removeEventListener('scroll', handleScroll);
     }
   }, []);
+
+  // Check if host is viewing their own abode
+  useEffect(() => {
+    const checkOwnAbode = async () => {
+      // Check if we're on an abode detail page
+      const abodeDetailMatch = pathname?.match(/^\/adobes\/([^\/]+)$/);
+      if (abodeDetailMatch && typeof window !== 'undefined') {
+        const abodeId = abodeDetailMatch[1];
+        const hostData = localStorage.getItem('host');
+        
+        if (hostData) {
+          try {
+            const host = JSON.parse(hostData);
+            // Only check for LOCAL_HOST type
+            if (host.providerType === 'LOCAL_HOST') {
+              // Fetch host's abodes to check if they own this abode
+              try {
+                const response = await api.get('/abodes/owner/my-abodes');
+                const myAbodes = response.data.abodes || [];
+                const ownsAbode = myAbodes.some((abode: any) => abode._id === abodeId);
+                setIsViewingOwnAbode(ownsAbode);
+              } catch (err) {
+                // If API call fails, assume not viewing own abode
+                setIsViewingOwnAbode(false);
+              }
+            } else {
+              setIsViewingOwnAbode(false);
+            }
+          } catch (e) {
+            setIsViewingOwnAbode(false);
+          }
+        } else {
+          setIsViewingOwnAbode(false);
+        }
+      } else {
+        setIsViewingOwnAbode(false);
+      }
+    };
+
+    checkOwnAbode();
+  }, [pathname]);
 
   // Don't show navbar on auth pages
   if (pathname === '/login' || pathname === '/signup' || pathname === '/host/login' || pathname === '/host/signup') {
@@ -99,8 +142,8 @@ export default function Navbar() {
               </span>
           </a>
 
-          {/* Search Bar (only on non-homepage, non-explore page, and non-host pages) */}
-          {!isHomepage && !isExplorePage && !isHostDashboard && (
+          {/* Search Bar (only on non-homepage, non-explore page, non-host pages, and not when viewing own abode) */}
+          {!isHomepage && !isExplorePage && !isHostDashboard && !isViewingOwnAbode && (
             <div className="flex-1 max-w-xl mx-8 hidden lg:block">
               <SearchBar variant="navbar" />
                 </div>
