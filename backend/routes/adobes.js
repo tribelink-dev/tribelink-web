@@ -365,15 +365,66 @@ router.put('/:id', authenticate, requireHost, upload.array('images', 10), async 
     if (familyInfo) localHost.familyInfo = { ...localHost.familyInfo, ...familyInfo };
     if (location) localHost.location = { ...localHost.location, ...location };
 
-    // Handle new image uploads
-    if (req.files && req.files.length > 0) {
-      const newImages = req.files.map((file, index) => ({
-        url: file.path || file.url,
-        isMain: localHost.images.length === 0 && index === 0,
-        caption: file.originalname
-      }));
-      localHost.images.push(...newImages);
+    // Handle images: keep existing ones that weren't removed, and add new ones
+    let existingImagesToKeep = [];
+    if (req.body.existingImages) {
+      try {
+        const existingImagesData = typeof req.body.existingImages === 'string'
+          ? JSON.parse(req.body.existingImages)
+          : req.body.existingImages;
+        
+        // Map to preserve existing image structure with IDs
+        // Find matching images from the database to preserve their MongoDB structure
+        const existingImageIds = existingImagesData.map(img => img._id?.toString()).filter(Boolean);
+        existingImagesToKeep = localHost.images.filter(img => 
+          existingImageIds.includes(img._id.toString())
+        );
+        
+        // Preserve order from the request
+        const orderedImages = [];
+        existingImagesData.forEach(requestedImg => {
+          const found = existingImagesToKeep.find(img => img._id.toString() === requestedImg._id?.toString());
+          if (found) {
+            // Update properties if changed
+            if (requestedImg.isMain !== undefined) found.isMain = requestedImg.isMain;
+            if (requestedImg.caption !== undefined) found.caption = requestedImg.caption;
+            orderedImages.push(found);
+          }
+        });
+        existingImagesToKeep = orderedImages;
+      } catch (parseError) {
+        console.error('Error parsing existingImages:', parseError);
+        // If parsing fails, keep all existing images
+        existingImagesToKeep = localHost.images;
+      }
+    } else {
+      // If no existingImages sent, keep all current images
+      existingImagesToKeep = localHost.images;
     }
+
+    // Prepare new images from uploads
+    const newImages = [];
+    if (req.files && req.files.length > 0) {
+      req.files.forEach((file, index) => {
+        newImages.push({
+          url: file.path || file.url,
+          isMain: existingImagesToKeep.length === 0 && index === 0,
+          caption: file.originalname || file.filename
+        });
+      });
+    }
+
+    // Combine: existing images (that weren't removed) + new images
+    // Set first image as main if there are images
+    const allImages = [...existingImagesToKeep, ...newImages];
+    if (allImages.length > 0) {
+      // Ensure only first image is main
+      allImages.forEach((img, idx) => {
+        img.isMain = idx === 0;
+      });
+    }
+
+    localHost.images = allImages;
 
     await localHost.save();
 

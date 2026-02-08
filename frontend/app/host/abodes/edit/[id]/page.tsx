@@ -568,6 +568,17 @@ export default function EditAbodePage() {
       }));
       formDataToSend.append('location', JSON.stringify(formData.location));
 
+      // Send existing images that should be kept (with their IDs)
+      if (existingImages.length > 0) {
+        formDataToSend.append('existingImages', JSON.stringify(existingImages.map(img => ({
+          _id: img._id,
+          url: img.url,
+          isMain: img.isMain,
+          caption: img.caption
+        }))));
+      }
+
+      // Send new image files
       imageFiles.forEach((file) => {
         formDataToSend.append('images', file);
       });
