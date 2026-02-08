@@ -101,6 +101,14 @@ export default function AbodeDashboard() {
       let bookings = [];
       let totalRevenue = 0;
       let pendingCount = 0;
+      let completedCount = 0;
+      let cancelledCount = 0;
+      let upcomingCount = 0;
+      let monthlyRevenue = 0;
+      let totalGuests = 0;
+      let totalNights = 0;
+      let averageBookingValue = 0;
+      let averageStayDuration = 0;
       
       if (myAbodes.length > 0 && myAbodes[0]._id) {
         try {
@@ -111,12 +119,6 @@ export default function AbodeDashboard() {
           bookings = bookingsRes.data.bookings || [];
           
           // Calculate comprehensive statistics
-          let completedCount = 0;
-          let cancelledCount = 0;
-          let upcomingCount = 0;
-          let monthlyRevenue = 0;
-          let totalGuests = 0;
-          let totalNights = 0;
           const now = new Date();
           const currentMonth = now.getMonth();
           const currentYear = now.getFullYear();
@@ -163,10 +165,10 @@ export default function AbodeDashboard() {
           const confirmedOrCompleted = bookings.filter((b: any) => 
             b.status === 'CONFIRMED' || b.status === 'COMPLETED'
           );
-          const averageBookingValue = confirmedOrCompleted.length > 0
+          averageBookingValue = confirmedOrCompleted.length > 0
             ? totalRevenue / confirmedOrCompleted.length
             : 0;
-          const averageStayDuration = completedCount > 0
+          averageStayDuration = completedCount > 0
             ? totalNights / completedCount
             : 0;
           
