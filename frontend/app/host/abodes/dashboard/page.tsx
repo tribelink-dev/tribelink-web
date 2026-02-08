@@ -6,7 +6,38 @@ import api from '@/lib/api';
 import AbodeSidebar from '@/components/AbodeSidebar';
 import ToastContainer, { useToast } from '@/components/Toast';
 import { SkeletonStats } from '@/components/SkeletonLoader';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Home, 
+  Calendar, 
+  DollarSign, 
+  Clock, 
+  TrendingUp, 
+  Star, 
+  MapPin,
+  Users,
+  ArrowRight,
+  Sparkles,
+  Award,
+  CheckCircle2,
+  AlertCircle,
+  XCircle
+} from 'lucide-react';
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from 'recharts';
 
 export default function AbodeDashboard() {
   const router = useRouter();
@@ -20,10 +51,19 @@ export default function AbodeDashboard() {
     pendingBookings: 0,
     totalRevenue: 0,
     averageRating: 0,
-    totalReviews: 0
+    totalReviews: 0,
+    completedBookings: 0,
+    cancelledBookings: 0,
+    upcomingBookings: 0,
+    averageBookingValue: 0,
+    monthlyRevenue: 0,
+    totalGuests: 0,
+    averageStayDuration: 0
   });
   const [statsLoading, setStatsLoading] = useState(true);
   const [recentBookings, setRecentBookings] = useState<any[]>([]);
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [monthlyRevenueData, setMonthlyRevenueData] = useState<any[]>([]);
   const toast = useToast();
 
   useEffect(() => {
@@ -64,22 +104,121 @@ export default function AbodeDashboard() {
       
       if (myAbodes.length > 0 && myAbodes[0]._id) {
         try {
+          // Fetch all bookings for comprehensive statistics
           const bookingsRes = await api.get(`/abodes/${myAbodes[0]._id}/bookings`, {
-            params: { limit: 10 }
+            params: { limit: 100 } // Get more bookings for stats
           });
           bookings = bookingsRes.data.bookings || [];
           
-          // Calculate revenue and pending bookings
+          // Calculate comprehensive statistics
+          let completedCount = 0;
+          let cancelledCount = 0;
+          let upcomingCount = 0;
+          let monthlyRevenue = 0;
+          let totalGuests = 0;
+          let totalNights = 0;
+          const now = new Date();
+          const currentMonth = now.getMonth();
+          const currentYear = now.getFullYear();
+          
           bookings.forEach((booking: any) => {
+            const bookingDate = new Date(booking.createdAt);
+            const checkInDate = booking.abodeStay?.checkIn ? new Date(booking.abodeStay.checkIn) : null;
+            const checkOutDate = booking.abodeStay?.checkOut ? new Date(booking.abodeStay.checkOut) : null;
+            const bookingAmount = booking.totalAmount || booking.totalPrice || 0;
+            const guests = booking.abodeStay?.guests || booking.abodeStay?.numberOfGuests || 0;
+            
+            // Revenue calculations
             if (booking.status === 'CONFIRMED' || booking.status === 'COMPLETED') {
-              totalRevenue += booking.totalAmount || 0;
+              totalRevenue += bookingAmount;
+              
+              // Monthly revenue (current month)
+              if (bookingDate.getMonth() === currentMonth && bookingDate.getFullYear() === currentYear) {
+                monthlyRevenue += bookingAmount;
+              }
             }
+            
+            // Status counts
             if (booking.status === 'PENDING') {
               pendingCount++;
+            } else if (booking.status === 'COMPLETED') {
+              completedCount++;
+            } else if (booking.status === 'CANCELLED') {
+              cancelledCount++;
+            } else if (booking.status === 'CONFIRMED' && checkInDate && checkInDate > now) {
+              upcomingCount++;
+            }
+            
+            // Guest and stay duration calculations
+            if (booking.status === 'COMPLETED' || booking.status === 'CONFIRMED') {
+              totalGuests += guests;
+              if (checkInDate && checkOutDate) {
+                const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
+                totalNights += nights;
+              }
             }
           });
           
+          // Calculate averages
+          const confirmedOrCompleted = bookings.filter((b: any) => 
+            b.status === 'CONFIRMED' || b.status === 'COMPLETED'
+          );
+          const averageBookingValue = confirmedOrCompleted.length > 0
+            ? totalRevenue / confirmedOrCompleted.length
+            : 0;
+          const averageStayDuration = completedCount > 0
+            ? totalNights / completedCount
+            : 0;
+          
+          // Prepare chart data - Revenue over last 6 months
+          const monthlyData: { [key: string]: { revenue: number; bookings: number } } = {};
+          for (let i = 5; i >= 0; i--) {
+            const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const monthKey = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            monthlyData[monthKey] = { revenue: 0, bookings: 0 };
+          }
+          
+          bookings.forEach((booking: any) => {
+            const bookingDate = new Date(booking.createdAt);
+            const monthKey = bookingDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            if (monthlyData[monthKey]) {
+              if (booking.status === 'CONFIRMED' || booking.status === 'COMPLETED') {
+                monthlyData[monthKey].revenue += booking.totalAmount || booking.totalPrice || 0;
+              }
+              monthlyData[monthKey].bookings += 1;
+            }
+          });
+          
+          const monthlyChartData = Object.entries(monthlyData).map(([month, data]) => ({
+            month,
+            revenue: data.revenue,
+            bookings: data.bookings
+          }));
+          
+          setMonthlyRevenueData(monthlyChartData);
+          
+          // Prepare booking status distribution data
+          const statusData = [
+            { name: 'Completed', value: completedCount, color: '#10b981' },
+            { name: 'Confirmed', value: bookings.filter((b: any) => b.status === 'CONFIRMED').length, color: '#3b82f6' },
+            { name: 'Pending', value: pendingCount, color: '#f59e0b' },
+            { name: 'Cancelled', value: cancelledCount, color: '#ef4444' }
+          ].filter(item => item.value > 0);
+          
+          setChartData(statusData);
           setRecentBookings(bookings.slice(0, 5));
+          
+          // Update stats with new calculations
+          setStats(prev => ({
+            ...prev,
+            completedBookings: completedCount,
+            cancelledBookings: cancelledCount,
+            upcomingBookings: upcomingCount,
+            averageBookingValue: averageBookingValue,
+            monthlyRevenue: monthlyRevenue,
+            totalGuests: totalGuests,
+            averageStayDuration: averageStayDuration
+          }));
         } catch (err) {
           console.error('Error fetching bookings:', err);
         }
@@ -96,7 +235,14 @@ export default function AbodeDashboard() {
         pendingBookings: pendingCount,
         totalRevenue: totalRevenue,
         averageRating: rating,
-        totalReviews: ratingCount
+        totalReviews: ratingCount,
+        completedBookings: completedCount,
+        cancelledBookings: cancelledCount,
+        upcomingBookings: upcomingCount,
+        averageBookingValue: averageBookingValue,
+        monthlyRevenue: monthlyRevenue,
+        totalGuests: totalGuests,
+        averageStayDuration: averageStayDuration
       });
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -106,346 +252,463 @@ export default function AbodeDashboard() {
     }
   };
 
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'CONFIRMED':
+        return <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
+      case 'PENDING':
+        return <Clock className="w-4 h-4 text-amber-500" />;
+      case 'CANCELLED':
+        return <XCircle className="w-4 h-4 text-red-500" />;
+      default:
+        return <AlertCircle className="w-4 h-4 text-gray-500" />;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'CONFIRMED':
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'PENDING':
+        return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'CANCELLED':
+        return 'bg-red-50 text-red-700 border-red-200';
+      default:
+        return 'bg-gray-50 text-gray-700 border-gray-200';
+    }
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-slate-600 border-t-transparent mb-4"></div>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-indigo-600 border-t-transparent mb-4"></div>
           <div className="text-xl font-medium text-slate-900">Loading your abode dashboard...</div>
         </div>
       </div>
     );
   }
 
-  const quickActions = [
-    {
-      title: 'Register Abode',
-      description: 'Create your first abode listing',
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-        </svg>
-      ),
-      href: '/adobes/register',
-      color: 'from-slate-600 to-slate-700',
-      bgColor: 'bg-slate-50',
-      textColor: 'text-slate-600',
-      show: !abode
-    },
-    {
-      title: 'My Abode',
-      description: 'Manage your abode listing',
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-        </svg>
-      ),
-      href: '/host/abodes/manage',
-      color: 'from-indigo-600 to-indigo-700',
-      bgColor: 'bg-indigo-50',
-      textColor: 'text-indigo-600',
-      show: !!abode
-    },
-    {
-      title: 'View Bookings',
-      description: 'Manage all your abode bookings',
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-        </svg>
-      ),
-      href: abode ? `/adobes/my-bookings` : '#',
-      color: 'from-slate-600 to-slate-700',
-      bgColor: 'bg-slate-50',
-      textColor: 'text-slate-600',
-      show: !!abode
-    },
-    {
-      title: 'Edit Abode',
-      description: 'Update your abode details',
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-        </svg>
-      ),
-      href: abode ? `/host/abodes/edit/${abode._id}` : '#',
-      color: 'from-slate-600 to-slate-700',
-      bgColor: 'bg-slate-50',
-      textColor: 'text-slate-600',
-      show: !!abode
-    },
-  ].filter(action => action.show !== false);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30">
       <AbodeSidebar />
       <div className="lg:ml-72">
         <div className="p-6 md:p-8 lg:p-10">
-          {/* Modern Header with Gradient - Professional Theme */}
-          <div className="mb-10 animate-fade-in">
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-800 via-indigo-700 to-slate-800 p-8 md:p-12 shadow-2xl">
-              {/* Decorative Elements */}
-              <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl -mr-48 -mt-48"></div>
-              <div className="absolute bottom-0 left-0 w-72 h-72 bg-slate-500/10 rounded-full blur-2xl -ml-36 -mb-36"></div>
+          {/* Enhanced Header */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="mb-8"
+          >
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-900 to-purple-900 p-8 md:p-12 shadow-2xl">
+              {/* Animated Background Elements */}
+              <div className="absolute inset-0 overflow-hidden">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl -mr-48 -mt-48 animate-pulse"></div>
+                <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl -ml-48 -mb-48 animate-pulse" style={{ animationDelay: '1s' }}></div>
+                <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-violet-500/10 rounded-full blur-2xl -translate-x-1/2 -translate-y-1/2"></div>
+              </div>
               
               <div className="relative z-10">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                  <div>
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/30">
-                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                        </svg>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="relative">
+                        <div className="w-16 h-16 bg-gradient-to-br from-white/20 to-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/30 shadow-xl">
+                          <Home className="w-8 h-8 text-white" />
+                        </div>
+                        <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center border-2 border-white shadow-lg">
+                          <Sparkles className="w-3 h-3 text-white" />
+                        </div>
                       </div>
                       <div>
-                        <p className="text-white/80 text-sm font-medium">Welcome back, Local Host</p>
-                        <h1 className="text-3xl md:text-4xl font-bold text-white">
+                        <p className="text-white/70 text-sm font-medium mb-1">Welcome back,</p>
+                        <h1 className="text-4xl md:text-5xl font-bold text-white mb-2 bg-gradient-to-r from-white to-white/80 bg-clip-text">
                           {host?.name || 'Host'}
                         </h1>
+                        <div className="flex items-center gap-2 text-white/80">
+                          <MapPin className="w-4 h-4" />
+                          <span className="text-sm">
+                            {abode 
+                              ? `${abode.location?.district || ''}, ${abode.location?.state || 'India'}`
+                              : 'Ready to host travelers'}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                    <p className="text-white/90 text-lg mt-2">
-                      {abode 
-                        ? `Manage your abode in ${abode.location?.state || 'your location'}`
-                        : 'Share your home and culture with travelers'}
-                    </p>
                   </div>
                   
+                  {/* Rating Badge */}
                   <div className="flex items-center gap-4">
-                    <div className="bg-white/20 backdrop-blur-md rounded-2xl px-6 py-4 border border-white/30 shadow-lg">
+                    <motion.div
+                      whileHover={{ scale: 1.05 }}
+                      className="relative bg-white/10 backdrop-blur-xl rounded-2xl px-6 py-4 border border-white/20 shadow-xl"
+                    >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-indigo-400/20 rounded-xl flex items-center justify-center">
-                          <svg className="w-6 h-6 text-indigo-300" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                          </svg>
+                        <div className="w-12 h-12 bg-gradient-to-br from-yellow-400/20 to-orange-500/20 rounded-xl flex items-center justify-center border border-yellow-400/30">
+                          <Star className="w-6 h-6 text-yellow-300 fill-yellow-300" />
                         </div>
                         <div>
-                          <p className="text-white/70 text-xs font-medium">Rating</p>
-                          <p className="text-white text-xl font-bold">{stats.averageRating.toFixed(1) || '5.0'}</p>
+                          <p className="text-white/60 text-xs font-medium">Average Rating</p>
+                          <div className="flex items-baseline gap-2">
+                            <p className="text-2xl font-bold text-white">{stats.averageRating.toFixed(1) || '5.0'}</p>
+                            {stats.totalReviews > 0 && (
+                              <span className="text-white/50 text-sm">({stats.totalReviews})</span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    </motion.div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          {/* Stats Grid - Abode Theme */}
+          {/* Statistics Charts - Real Graphs */}
           {statsLoading ? (
             <SkeletonStats />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10 animate-fade-in">
-              {/* Abodes Card */}
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-600 to-slate-700 p-6 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
-              >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16"></div>
-                <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/30">
-                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                      </svg>
-                    </div>
-                    <div className="text-white/60 text-sm font-medium">Total</div>
-                  </div>
-                  <div className="text-4xl font-bold mb-2">{stats.abodes}</div>
-                  <div className="text-slate-100 text-sm font-medium">Active Abodes</div>
-                </div>
-              </motion.div>
-
-              {/* Bookings Card */}
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-700 p-6 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
-              >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16"></div>
-                <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/30">
-                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                      </svg>
-                    </div>
-                    <div className="text-white/60 text-sm font-medium">Total</div>
-                  </div>
-                  <div className="text-4xl font-bold mb-2">{stats.bookings}</div>
-                  <div className="text-indigo-100 text-sm font-medium">Total Bookings</div>
-                </div>
-              </motion.div>
-
-              {/* Revenue Card */}
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 p-6 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
-              >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16"></div>
-                <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/30">
-                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                    <div className="text-white/60 text-sm font-medium">Total</div>
-                  </div>
-                  <div className="text-4xl font-bold mb-2">₹{stats.totalRevenue.toLocaleString()}</div>
-                  <div className="text-blue-100 text-sm font-medium">Total Revenue</div>
-                </div>
-              </motion.div>
-
-              {/* Pending Bookings Card */}
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-600 to-teal-700 p-6 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
-              >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16"></div>
-                <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/30">
-                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                    <div className="text-white/60 text-sm font-medium">Pending</div>
-                  </div>
-                  <div className="text-4xl font-bold mb-2">{stats.pendingBookings}</div>
-                  <div className="text-teal-100 text-sm font-medium">Pending Bookings</div>
-                </div>
-              </motion.div>
-            </div>
-          )}
-
-          {/* Quick Actions - Abode Theme */}
-          <div className="mb-10">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-1">Quick Actions</h2>
-                <p className="text-slate-700">Manage your abode and bookings</p>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {quickActions.map((action, index) => (
-                <motion.button
-                  key={index}
+            <div className="space-y-6 mb-8">
+              {/* Revenue & Bookings Trend - Line Chart */}
+              {monthlyRevenueData.length > 0 && (
+                <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 * index }}
-                  onClick={() => action.href !== '#' && router.push(action.href)}
-                  disabled={action.href === '#'}
-                  className="group relative overflow-hidden bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-slate-100 text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                  transition={{ delay: 0.2, duration: 0.5 }}
+                  className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
                 >
-                  {/* Hover gradient overlay */}
-                  <div className={`absolute inset-0 bg-gradient-to-br ${action.color} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
-                  
-                  <div className="relative z-10">
-                    <div className={`w-14 h-14 ${action.bgColor} rounded-2xl flex items-center justify-center mb-4 group-hover:bg-white/20 group-hover:backdrop-blur-sm transition-all duration-300 ${action.textColor} group-hover:text-white`}>
-                      {action.icon}
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-white transition-colors duration-300">
-                      {action.title}
-                    </h3>
-                    <p className="text-sm text-slate-700 group-hover:text-white/90 transition-colors duration-300">
-                      {action.description}
-                    </p>
-                    <div className="mt-4 flex items-center text-slate-600 group-hover:text-white transition-colors duration-300">
-                      <span className="text-sm font-semibold">Go to {action.title}</span>
-                      <svg className="w-4 h-4 ml-2 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
+                  <div className="mb-6">
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">Revenue & Bookings Trend</h3>
+                    <p className="text-xs text-gray-500">Last 6 months performance</p>
                   </div>
-                  
-                  {/* Decorative corner */}
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-indigo-100/10 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                </motion.button>
-              ))}
-            </div>
-          </div>
-
-          {/* Recent Bookings Section */}
-          {abode && (
-            <div className="bg-white rounded-3xl p-8 shadow-xl border border-amber-100">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold text-amber-900 mb-1">Recent Bookings</h2>
-                  <p className="text-amber-700">Your latest abode bookings</p>
-                </div>
-                <button 
-                  onClick={() => router.push('/adobes/my-bookings')}
-                  className="text-amber-700 hover:text-amber-900 font-semibold text-sm flex items-center gap-2"
-                >
-                  View All
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
-              
-              {recentBookings.length > 0 ? (
-                <div className="space-y-4">
-                  {recentBookings.map((booking, index) => (
-                    <div key={index} className="flex items-start gap-4 p-4 rounded-xl hover:bg-amber-50 transition-colors border border-amber-100">
-                      <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                        </svg>
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-amber-900 font-medium">
-                          {booking.user?.name || 'Guest'} - {booking.status}
-                        </p>
-                        <p className="text-amber-600 text-sm">
-                          {new Date(booking.checkIn).toLocaleDateString()} - {new Date(booking.checkOut).toLocaleDateString()}
-                        </p>
-                        <p className="text-amber-700 text-sm mt-1">₹{booking.totalAmount || 0}</p>
-                      </div>
-                      <span className="text-amber-400 text-xs">{new Date(booking.createdAt).toLocaleDateString()}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-amber-600">No bookings yet</p>
-                  <p className="text-amber-500 text-sm mt-2">Your bookings will appear here</p>
-                </div>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <LineChart data={monthlyRevenueData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis 
+                        dataKey="month" 
+                        stroke="#6b7280"
+                        style={{ fontSize: '12px' }}
+                        tick={{ fill: '#6b7280' }}
+                      />
+                      <YAxis 
+                        yAxisId="left"
+                        stroke="#6b7280"
+                        style={{ fontSize: '12px' }}
+                        tick={{ fill: '#6b7280' }}
+                      />
+                      <YAxis 
+                        yAxisId="right" 
+                        orientation="right"
+                        stroke="#6b7280"
+                        style={{ fontSize: '12px' }}
+                        tick={{ fill: '#6b7280' }}
+                      />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: '#fff',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                          fontSize: '12px'
+                        }}
+                        formatter={(value: any) => {
+                          if (typeof value === 'number') {
+                            return value < 1000 ? value : `₹${value.toLocaleString()}`;
+                          }
+                          return value;
+                        }}
+                      />
+                      <Legend 
+                        wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }}
+                        iconType="line"
+                      />
+                      <Line 
+                        yAxisId="left"
+                        type="monotone" 
+                        dataKey="revenue" 
+                        stroke="#6366f1" 
+                        strokeWidth={2.5}
+                        dot={{ fill: '#6366f1', r: 4 }}
+                        activeDot={{ r: 6 }}
+                        name="Revenue (₹)"
+                      />
+                      <Line 
+                        yAxisId="right"
+                        type="monotone" 
+                        dataKey="bookings" 
+                        stroke="#3b82f6" 
+                        strokeWidth={2.5}
+                        dot={{ fill: '#3b82f6', r: 4 }}
+                        activeDot={{ r: 6 }}
+                        name="Bookings"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </motion.div>
               )}
+
+              {/* Charts Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Booking Status Distribution - Pie Chart */}
+                {chartData.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3, duration: 0.5 }}
+                    className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
+                  >
+                    <div className="mb-6">
+                      <h3 className="text-lg font-bold text-gray-900 mb-1">Booking Status</h3>
+                      <p className="text-xs text-gray-500">Distribution overview</p>
+                    </div>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <PieChart>
+                        <Pie
+                          data={chartData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                          outerRadius={90}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {chartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: '#fff',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '8px',
+                            fontSize: '12px'
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="mt-4 flex flex-wrap gap-4 justify-center">
+                      {chartData.map((item, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
+                          <span className="text-xs text-gray-600 font-medium">{item.name}: {item.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Monthly Bookings - Bar Chart */}
+                {monthlyRevenueData.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4, duration: 0.5 }}
+                    className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
+                  >
+                    <div className="mb-6">
+                      <h3 className="text-lg font-bold text-gray-900 mb-1">Monthly Bookings</h3>
+                      <p className="text-xs text-gray-500">Booking volume trend</p>
+                    </div>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <BarChart data={monthlyRevenueData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis 
+                          dataKey="month" 
+                          stroke="#6b7280"
+                          style={{ fontSize: '12px' }}
+                          tick={{ fill: '#6b7280' }}
+                        />
+                        <YAxis 
+                          stroke="#6b7280"
+                          style={{ fontSize: '12px' }}
+                          tick={{ fill: '#6b7280' }}
+                        />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: '#fff',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '8px',
+                            fontSize: '12px'
+                          }}
+                        />
+                        <Bar 
+                          dataKey="bookings" 
+                          fill="#10b981"
+                          radius={[8, 8, 0, 0]}
+                          name="Bookings"
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Key Metrics - Modern Card Grid */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5, duration: 0.5 }}
+                className="grid grid-cols-2 md:grid-cols-4 gap-3"
+              >
+                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                  <p className="text-xs text-gray-500 mb-1 font-medium">Total Revenue</p>
+                  <p className="text-xl font-bold text-gray-900">₹{stats.totalRevenue.toLocaleString()}</p>
+                </div>
+                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                  <p className="text-xs text-gray-500 mb-1 font-medium">Avg Booking</p>
+                  <p className="text-xl font-bold text-gray-900">₹{Math.round(stats.averageBookingValue).toLocaleString()}</p>
+                </div>
+                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                  <p className="text-xs text-gray-500 mb-1 font-medium">Total Guests</p>
+                  <p className="text-xl font-bold text-gray-900">{stats.totalGuests}</p>
+                </div>
+                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                  <p className="text-xs text-gray-500 mb-1 font-medium">Avg Stay</p>
+                  <p className="text-xl font-bold text-gray-900">{stats.averageStayDuration.toFixed(1)} nights</p>
+                </div>
+              </motion.div>
             </div>
           )}
 
-          {/* Abode Status Card */}
-          {!abode && (
-            <div className="bg-gradient-to-r from-amber-100 to-orange-100 rounded-3xl p-8 shadow-xl border border-amber-200">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-amber-500 rounded-2xl flex items-center justify-center">
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
+          {/* Recent Bookings Section - Enhanced */}
+          {abode && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.5 }}
+              className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-xl border border-white/50 mb-8"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                      <Calendar className="w-5 h-5 text-white" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-slate-900">Recent Bookings</h2>
+                  </div>
+                  <p className="text-slate-600 text-sm ml-13">Latest reservations for your abode</p>
                 </div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-amber-900 mb-2">Get Started</h3>
-                  <p className="text-amber-700 mb-4">
-                    Register your abode to start sharing your home and culture with travelers
-                  </p>
-                  <button
-                    onClick={() => router.push('/adobes/register')}
-                    className="px-6 py-3 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-700 transition-all shadow-lg"
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => router.push('/adobes/my-bookings')}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
+                >
+                  View All
+                  <ArrowRight className="w-4 h-4" />
+                </motion.button>
+              </div>
+              
+              <AnimatePresence>
+                {recentBookings.length > 0 ? (
+                  <div className="space-y-3">
+                    {recentBookings.map((booking, index) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        whileHover={{ x: 4 }}
+                        className="group relative overflow-hidden bg-gradient-to-r from-slate-50 to-white rounded-xl p-5 border border-slate-200 hover:border-indigo-300 hover:shadow-lg transition-all duration-300"
+                      >
+                        <div className="flex items-start gap-4">
+                          {/* Avatar */}
+                          <div className="w-12 h-12 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md group-hover:scale-110 transition-transform">
+                            <Users className="w-6 h-6 text-white" />
+                          </div>
+                          
+                          {/* Booking Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-4 mb-2">
+                              <div>
+                                <h3 className="font-semibold text-slate-900 mb-1">
+                                  {booking.user?.name || 'Guest'}
+                                </h3>
+                                <div className="flex items-center gap-4 text-sm text-slate-600">
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="w-4 h-4" />
+                                    <span>
+                                      {new Date(booking.checkIn).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(booking.checkOut).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold ${getStatusColor(booking.status)}`}>
+                                {getStatusIcon(booking.status)}
+                                {booking.status}
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-200">
+                              <div className="flex items-center gap-2 text-slate-600">
+                                <DollarSign className="w-4 h-4" />
+                                <span className="font-semibold text-slate-900">₹{booking.totalAmount?.toLocaleString() || 0}</span>
+                              </div>
+                              <span className="text-xs text-slate-500">
+                                {new Date(booking.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Hover Effect Gradient */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-purple-500/0 to-pink-500/0 group-hover:from-indigo-500/5 group-hover:via-purple-500/5 group-hover:to-pink-500/5 transition-all duration-300 pointer-events-none"></div>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-center py-12"
                   >
+                    <div className="w-20 h-20 bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <Calendar className="w-10 h-10 text-slate-400" />
+                    </div>
+                    <p className="text-slate-600 font-medium mb-1">No bookings yet</p>
+                    <p className="text-slate-500 text-sm">Your bookings will appear here once guests make reservations</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )}
+
+          {/* Enhanced Empty State */}
+          {!abode && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.3, duration: 0.5 }}
+              className="relative overflow-hidden bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 rounded-3xl p-10 shadow-xl border border-amber-200/50"
+            >
+              {/* Decorative Elements */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-amber-200/30 to-orange-200/30 rounded-full blur-3xl -mr-32 -mt-32"></div>
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-br from-yellow-200/30 to-amber-200/30 rounded-full blur-2xl -ml-24 -mb-24"></div>
+              
+              <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
+                <div className="w-24 h-24 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-2xl">
+                  <Sparkles className="w-12 h-12 text-white" />
+                </div>
+                <div className="flex-1 text-center md:text-left">
+                  <h3 className="text-2xl font-bold text-amber-900 mb-2">Start Your Hosting Journey</h3>
+                  <p className="text-amber-700 mb-6 max-w-md">
+                    Register your abode and begin sharing your home and culture with travelers from around the world
+                  </p>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => router.push('/adobes/register')}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all shadow-lg hover:shadow-xl"
+                  >
+                    <Award className="w-5 h-5" />
                     Register Your Abode
-                  </button>
+                  </motion.button>
                 </div>
               </div>
-            </div>
+            </motion.div>
           )}
         </div>
       </div>
@@ -453,4 +716,3 @@ export default function AbodeDashboard() {
     </div>
   );
 }
-
