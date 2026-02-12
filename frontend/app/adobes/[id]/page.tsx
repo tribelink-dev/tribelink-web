@@ -14,6 +14,7 @@ import 'react-day-picker/dist/style.css';
 interface LocalHost {
   _id: string;
   abodeDetails: {
+    title?: string;
     description: string;
     capacity: number;
     bedrooms: number;
@@ -361,9 +362,14 @@ export default function AbodeDetailPage() {
                       </div>
                     )}
                   </div>
-                  <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-                    {abode.providerId.name}'s {abode.abodeDetails.propertyType}
+                  <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-2">
+                    {abode.abodeDetails.title || `${abode.providerId.name}'s ${abode.abodeDetails.propertyType}`}
                   </h1>
+                  {abode.abodeDetails.title && (
+                    <p className="text-xl text-gray-600 mb-4 font-medium">
+                      {abode.providerId.name}'s {abode.abodeDetails.propertyType}
+                    </p>
+                  )}
                   <div className="flex items-center gap-2 text-gray-600 mb-6">
                     <MapPin className="w-5 h-5" />
                     <span className="text-lg">{abode.location.district}, {abode.location.state}, {abode.location.country}</span>

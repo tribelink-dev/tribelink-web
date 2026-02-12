@@ -11,7 +11,18 @@ const connectDB = async () => {
       serverSelectionTimeoutMS: 5000, // Timeout after 5 seconds
     });
     
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+    // Extract connection details
+    const connection = conn.connection;
+    const host = connection.host || 'localhost';
+    const port = connection.port || 27017;
+    const dbName = connection.name || 'aitourism';
+    
+    console.log(`✅ MongoDB Connected:`);
+    console.log(`   Host: ${host}`);
+    console.log(`   Port: ${port}`);
+    console.log(`   Database: ${dbName}`);
+    console.log(`   Full Connection: ${host}:${port}/${dbName}`);
+    
     return true;
   } catch (error) {
     console.error('❌ Database connection error:', error.message);

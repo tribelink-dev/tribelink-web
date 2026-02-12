@@ -110,7 +110,26 @@ export default function Navbar() {
 
   const isHomepage = pathname === '/';
   const isExplorePage = pathname === '/explore';
-  const isHostDashboard = pathname?.startsWith('/host/') || pathname?.startsWith('/adobes/register') || pathname?.startsWith('/adobes/my-bookings') || pathname?.startsWith('/provider/');
+  const isHostDashboard = pathname?.startsWith('/host/') || 
+    pathname?.startsWith('/adobes/register') || 
+    pathname?.startsWith('/adobes/my-bookings') || 
+    pathname?.startsWith('/provider/');
+  
+  // Pages where search bar should NOT appear
+  const isDashboardPage = pathname?.startsWith('/dashboard');
+  const isBookingPage = pathname?.startsWith('/bookings');
+  const isTripPage = pathname?.startsWith('/trips');
+  const isEditPage = pathname?.includes('/edit/') || pathname?.includes('/add');
+  const isKYTPage = pathname === '/kyt';
+  const isCurrencyPage = pathname?.startsWith('/currency-converter');
+  
+  // Only show search bar on listing/browsing pages where search is relevant
+  const isAbodesListingPage = pathname === '/abodes' || pathname === '/adobes';
+  const isAbodeDetailPage = pathname?.match(/^\/adobes\/[^\/]+$/);
+  
+  const shouldShowSearchBar = isAbodesListingPage && 
+    !isAbodeDetailPage &&
+    !isViewingOwnAbode;
 
   return (
     <nav 
@@ -142,12 +161,12 @@ export default function Navbar() {
               </span>
           </a>
 
-          {/* Search Bar (only on non-homepage, non-explore page, non-host pages, and not when viewing own abode) */}
-          {!isHomepage && !isExplorePage && !isHostDashboard && !isViewingOwnAbode && (
+          {/* Search Bar (only on pages where it makes sense) */}
+          {shouldShowSearchBar && (
             <div className="flex-1 max-w-xl mx-8 hidden lg:block">
               <SearchBar variant="navbar" />
-                </div>
-              )}
+            </div>
+          )}
 
           {/* Right Side */}
           <div className="flex items-center gap-3">

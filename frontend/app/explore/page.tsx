@@ -462,9 +462,7 @@ export default function ExplorePage() {
               scale: searchBarHeroScale,
             }}
           >
-            <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 p-2 relative z-20">
-              <SearchBar variant="homepage" onSearch={handleSearch} />
-            </div>
+            <SearchBar variant="homepage" onSearch={handleSearch} />
           </motion.div>
 
           {/* Scroll Indicator */}
@@ -495,14 +493,9 @@ export default function ExplorePage() {
         }}
       >
         <div className="max-w-5xl mx-auto px-6 pt-3 pb-2">
-          <motion.div
-            className="bg-white/95 backdrop-blur-xl rounded-2xl border border-gray-200/60 p-1.5 pointer-events-auto transition-all duration-300"
-            style={{
-              boxShadow: stickySearchBarShadow,
-            }}
-          >
+          <div className="pointer-events-auto">
             <SearchBar variant="navbar" onSearch={handleSearch} />
-          </motion.div>
+          </div>
         </div>
       </motion.div>
 
@@ -551,7 +544,8 @@ export default function ExplorePage() {
                         </div>
                       </div>
                     </div>
-                    <Link 
+                    {/* Advanced Search - Disabled */}
+                    {/* <Link 
                       href="/adobes" 
                       className="group flex items-center gap-3 px-8 py-4 bg-white hover:bg-gray-50 text-heritage-gold font-bold rounded-2xl transition-all shadow-xl hover:shadow-2xl border-2 border-heritage-gold/30 hover:border-heritage-gold"
                     >
@@ -566,7 +560,7 @@ export default function ExplorePage() {
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                       </motion.svg>
-                    </Link>
+                    </Link> */}
                   </div>
                   <p className="text-lg md:text-xl text-gray-700 leading-relaxed max-w-4xl">
                     Experience authentic local life by staying with local families. Understand their traditions, 
@@ -756,7 +750,8 @@ export default function ExplorePage() {
                         </div>
                       </div>
                     </div>
-                    <Link 
+                    {/* Advanced Search - Disabled */}
+                    {/* <Link 
                       href="/trips/experiences" 
                       className="group flex items-center gap-3 px-8 py-4 bg-white hover:bg-gray-50 text-indigo-600 font-bold rounded-2xl transition-all shadow-xl hover:shadow-2xl border-2 border-indigo-200 hover:border-indigo-400"
                     >
@@ -771,7 +766,7 @@ export default function ExplorePage() {
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                       </motion.svg>
-                    </Link>
+                    </Link> */}
                   </div>
                   <p className="text-lg md:text-xl text-gray-700 leading-relaxed max-w-4xl">
                     Discover short experiences, live performances, and cultural events organized by local experience providers. 

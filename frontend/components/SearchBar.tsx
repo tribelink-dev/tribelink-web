@@ -260,8 +260,8 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
           whileTap={{ scale: 0.95 }}
           onClick={handleSearch}
           className={`
-            ml-2 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600
-            hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700
+            ml-2 rounded-2xl bg-gradient-to-r from-heritage-gold to-heritage-gold-dark
+            hover:from-heritage-gold-dark hover:to-heritage-gold
             text-white transition-all duration-300
             ${isHomepage ? 'w-16 h-16' : 'w-14 h-14'}
             flex items-center justify-center
@@ -474,7 +474,7 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
                   setShowGuestsMenu(false);
                   setActiveField(null);
                 }}
-                className="w-full py-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl"
+                className="w-full py-4 bg-gradient-to-r from-heritage-gold to-heritage-gold-dark hover:from-heritage-gold-dark hover:to-heritage-gold text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl"
               >
                 Done
               </motion.button>

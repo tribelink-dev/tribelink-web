@@ -19,6 +19,7 @@ interface Abode {
     rating?: number;
   };
   abodeDetails?: {
+    title?: string;
     description: string;
     propertyType: string;
     capacity: number;
@@ -290,9 +291,14 @@ export default function AbodeDetailModal({
                 <div className="p-8">
                   {/* Header Section */}
                   <div className="mb-6">
-                    <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-3">
-                      {hostName}'s {propertyType}
+                    <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-2">
+                      {fullAbode.abodeDetails?.title || `${hostName}'s ${propertyType}`}
                     </h1>
+                    {fullAbode.abodeDetails?.title && (
+                      <p className="text-xl text-gray-600 mb-3 font-medium">
+                        {hostName}'s {propertyType}
+                      </p>
+                    )}
                     <div className="flex items-center gap-3 text-gray-600 mb-4">
                       <MapPin className="w-5 h-5 flex-shrink-0" />
                       <span className="text-lg">{location}</span>
