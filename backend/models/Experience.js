@@ -155,6 +155,12 @@ const experienceSchema = new mongoose.Schema({
     type: String,
     enum: ['ARTISAN_WORKSHOP', 'PERFORMANCE', 'CULTURAL_EXPERIENCE', 'GUIDE_TOUR'],
     default: 'CULTURAL_EXPERIENCE'
+  },
+  
+  // Archive status - archived experiences won't show to travelers
+  isArchived: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

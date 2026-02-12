@@ -404,6 +404,33 @@ router.get('/experience/:experienceId', authenticate, requireHost, async (req, r
   }
 });
 
+// Toggle archive status for an experience
+router.patch('/experience/:experienceId/archive', authenticate, requireHost, async (req, res) => {
+  try {
+    const experience = await Experience.findOne({
+      _id: req.params.experienceId,
+      provider: req.user._id
+    });
+
+    if (!experience) {
+      return res.status(404).json({ message: 'Experience not found' });
+    }
+
+    // Toggle archive status
+    experience.isArchived = !experience.isArchived;
+    await experience.save();
+
+    res.json({
+      success: true,
+      message: experience.isArchived ? 'Experience archived successfully' : 'Experience unarchived successfully',
+      experience
+    });
+  } catch (error) {
+    console.error('Error toggling archive status:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Delete experience
 router.delete('/experience/:experienceId', authenticate, requireHost, async (req, res) => {
   try {

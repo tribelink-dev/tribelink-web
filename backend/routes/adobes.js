@@ -35,6 +35,9 @@ router.get('/', async (req, res) => {
     // Build query
     const query = {};
     
+    // Filter out archived abodes from public listings
+    query.isArchived = { $ne: true };
+    
     if (country) query['location.country'] = country;
     if (state) query['location.state'] = { $regex: new RegExp(state, 'i') };
     if (district) query['location.district'] = { $regex: new RegExp(district, 'i') };
@@ -519,6 +522,35 @@ router.get('/:id/bookings', authenticate, requireHost, async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching bookings:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Toggle archive status for an abode
+router.patch('/:id/archive', authenticate, requireHost, async (req, res) => {
+  try {
+    const localHost = await LocalHost.findById(req.params.id);
+
+    if (!localHost) {
+      return res.status(404).json({ message: 'Local host not found' });
+    }
+
+    // Verify ownership
+    if (localHost.providerId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Toggle archive status
+    localHost.isArchived = !localHost.isArchived;
+    await localHost.save();
+
+    res.json({
+      success: true,
+      message: localHost.isArchived ? 'Abode archived successfully' : 'Abode unarchived successfully',
+      localHost
+    });
+  } catch (error) {
+    console.error('Error toggling archive status:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

@@ -38,6 +38,7 @@ interface Abode {
   rating: number;
   ratingCount: number;
   isVerified: boolean;
+  isArchived?: boolean;
 }
 
 export default function ManageAbodePage() {
@@ -81,6 +82,17 @@ export default function ManageAbodePage() {
       toast.error('Failed to load abodes');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleArchive = async (id: string, currentStatus: boolean) => {
+    try {
+      await api.patch(`/abodes/${id}/archive`);
+      toast.success(currentStatus ? 'Abode unarchived successfully' : 'Abode archived successfully');
+      fetchAbodes();
+    } catch (err: any) {
+      console.error('Error archiving abode:', err);
+      toast.error(err.response?.data?.message || 'Failed to update archive status');
     }
   };
 
@@ -225,14 +237,24 @@ export default function ManageAbodePage() {
                           </svg>
                         </div>
                       )}
-                      {abode.isVerified && (
-                        <div className="absolute top-4 right-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-2 shadow-lg">
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                          </svg>
-                          Verified
-                        </div>
-                      )}
+                      <div className="absolute top-4 right-4 flex flex-col gap-2">
+                        {abode.isVerified && (
+                          <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-2 shadow-lg">
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                            Verified
+                          </div>
+                        )}
+                        {abode.isArchived && (
+                          <div className="bg-gradient-to-r from-slate-500 to-slate-600 text-white px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-2 shadow-lg">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                            </svg>
+                            Archived
+                          </div>
+                        )}
+                      </div>
                       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
                         <div className="text-white text-2xl font-bold">
                           ₹{abode.pricing.pricePerNight}
@@ -314,7 +336,7 @@ export default function ManageAbodePage() {
                             {abode.rating.toFixed(1)} ({abode.ratingCount} reviews)
                           </span>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                           <button
                             onClick={() => router.push(`/adobes/${abode._id}`)}
                             className="px-3 py-1.5 bg-gradient-to-r from-indigo-50 to-blue-50 text-indigo-700 rounded-lg hover:from-indigo-100 hover:to-blue-100 transition-all text-xs font-semibold flex items-center gap-1.5 border border-indigo-200 hover:border-indigo-300 shadow-sm hover:shadow-md group"
@@ -334,6 +356,31 @@ export default function ManageAbodePage() {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
                             Edit
+                          </button>
+                          <button
+                            onClick={() => handleArchive(abode._id, abode.isArchived || false)}
+                            className={`px-4 py-2 rounded-xl transition-all text-sm font-medium flex items-center gap-2 ${
+                              abode.isArchived
+                                ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                            }`}
+                            title={abode.isArchived ? 'Unarchive to show to travelers' : 'Archive to hide from travelers'}
+                          >
+                            {abode.isArchived ? (
+                              <>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                Unarchive
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                                </svg>
+                                Archive
+                              </>
+                            )}
                           </button>
                           <button
                             onClick={() => handleDelete(abode._id)}

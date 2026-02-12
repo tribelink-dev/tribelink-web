@@ -248,6 +248,12 @@ const localHostSchema = new mongoose.Schema({
     type: String,
     enum: ['Flexible', 'Moderate', 'Strict'],
     default: 'Moderate'
+  },
+  
+  // Archive status - archived abodes won't show to travelers
+  isArchived: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

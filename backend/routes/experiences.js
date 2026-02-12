@@ -24,6 +24,9 @@ router.get('/', async (req, res) => {
     // Build query
     const query = {};
     
+    // Filter out archived experiences from public listings
+    query.isArchived = { $ne: true };
+    
     if (category) {
       query.category = category;
     }

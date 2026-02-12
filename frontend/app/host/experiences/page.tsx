@@ -29,6 +29,7 @@ interface Experience {
   };
   availableDates: string[];
   createdAt: string;
+  isArchived?: boolean;
 }
 
 export default function HostExperiencesPage() {
@@ -135,6 +136,19 @@ export default function HostExperiencesPage() {
     const states = new Set(experiences.map(exp => exp.location.state));
     return Array.from(states).sort();
   }, [experiences]);
+
+  const handleArchive = async (id: string, currentStatus: boolean) => {
+    try {
+      await api.patch(`/hosts/experience/${id}/archive`);
+      setExperiences(experiences.map(exp => 
+        exp._id === id ? { ...exp, isArchived: !currentStatus } : exp
+      ));
+      toast.success(currentStatus ? 'Experience unarchived successfully' : 'Experience archived successfully');
+    } catch (err: any) {
+      console.error('Error archiving experience:', err);
+      toast.error(err.response?.data?.message || 'Failed to update archive status');
+    }
+  };
 
   const handleDelete = async () => {
     if (!deleteModal.experience) return;
@@ -313,7 +327,15 @@ export default function HostExperiencesPage() {
                               }
                             }}
                           />
-                          <div className="absolute top-3 right-3">
+                          <div className="absolute top-3 right-3 flex flex-col gap-2">
+                            {experience.isArchived && (
+                              <div className="bg-slate-600/90 backdrop-blur-sm px-3 py-1 rounded-lg text-xs font-semibold text-white flex items-center gap-1">
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                                </svg>
+                                Archived
+                              </div>
+                            )}
                             {experience.averageRating > 0 && (
                               <div className="bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg text-sm font-semibold text-gray-900">
                                 ⭐ {experience.averageRating.toFixed(1)}
@@ -371,12 +393,37 @@ export default function HostExperiencesPage() {
                           )}
                         </div>
 
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                           <button
                             onClick={() => router.push(`/host/experiences/edit/${experience._id}`)}
                             className="btn-secondary flex-1 text-sm py-2"
                           >
                             Edit
+                          </button>
+                          <button
+                            onClick={() => handleArchive(experience._id, experience.isArchived || false)}
+                            className={`flex-1 text-sm py-2 font-semibold rounded-xl transition-all duration-200 ${
+                              experience.isArchived
+                                ? 'bg-green-500 hover:bg-green-600 text-white'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                            }`}
+                            title={experience.isArchived ? 'Unarchive to show to travelers' : 'Archive to hide from travelers'}
+                          >
+                            {experience.isArchived ? (
+                              <span className="flex items-center justify-center gap-1">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                Unarchive
+                              </span>
+                            ) : (
+                              <span className="flex items-center justify-center gap-1">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                                </svg>
+                                Archive
+                              </span>
+                            )}
                           </button>
                           <button
                             onClick={() => setDeleteModal({ isOpen: true, experience })}
