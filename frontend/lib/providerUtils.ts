@@ -32,10 +32,12 @@ export function getProviderWelcomeMessage(providerType: string): string {
 // Host logout function
 export function hostLogout() {
   if (typeof window !== 'undefined') {
+    // Clear all auth-related data
     localStorage.removeItem('token');
     localStorage.removeItem('host');
     localStorage.removeItem('userType');
-    window.location.href = '/host/login';
+    localStorage.removeItem('user');
+    window.location.href = '/explore';
   }
 }
 

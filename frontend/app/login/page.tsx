@@ -50,9 +50,9 @@ export default function LoginPage() {
       
       await login(loginValue, password, loginMethod === 'email');
       
-      // Check for redirect parameter, default to /explore
-      const redirect = searchParams.get('redirect') || '/explore';
-      router.push(redirect);
+      // Check for returnTo parameter (or redirect for backward compatibility), default to /explore
+      const returnTo = searchParams.get('returnTo') || searchParams.get('redirect') || '/explore';
+      router.push(returnTo);
     } catch (err: any) {
       console.error('Login error:', err);
       const errorMessage = err.message || 'Login failed. Please check your credentials.';

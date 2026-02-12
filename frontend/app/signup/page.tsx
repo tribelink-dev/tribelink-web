@@ -191,9 +191,9 @@ export default function SignupPage(): JSX.Element {
       // PhoneInput component already formats with country code
       await signup(email.trim(), phoneNumber, password, name);
       
-      // Check for redirect parameter, default to /explore
-      const redirect = searchParams.get('redirect') || '/explore';
-      router.push(redirect);
+      // Check for returnTo parameter (or redirect for backward compatibility), default to /explore
+      const returnTo = searchParams.get('returnTo') || searchParams.get('redirect') || '/explore';
+      router.push(returnTo);
     } catch (err: any) {
       setError(err.message || 'Signup failed');
     } finally {

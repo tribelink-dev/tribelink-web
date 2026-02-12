@@ -94,9 +94,8 @@ export default function Navbar() {
   }
 
   const handleLogout = () => {
-    logout();
-    router.push('/login');
     setShowUserMenu(false);
+    logout(); // logout() already handles redirect with full page reload
   };
 
   const handleLogoClick = (e: React.MouseEvent) => {
@@ -174,7 +173,23 @@ export default function Navbar() {
             <CurrencySelectorButton />
             
 
-            {(user || isHost) && (
+            {!(user || isHost) ? (
+              /* Sign In / Sign Up Buttons for logged-out users */
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => router.push('/login?returnTo=/explore')}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={() => router.push('/signup?returnTo=/explore')}
+                  className="px-5 py-2 text-sm font-semibold text-white bg-gradient-to-r from-heritage-gold via-heritage-gold-dark to-heritage-gold hover:from-heritage-gold-dark hover:to-heritage-gold-dark rounded-full transition-all shadow-md hover:shadow-lg transform hover:scale-105"
+                >
+                  Sign Up
+                </button>
+              </div>
+            ) : (
               <>
                 {!isExplorePage && (
                   <button

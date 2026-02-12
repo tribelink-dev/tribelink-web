@@ -229,10 +229,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(null);
     setUser(null);
     if (typeof window !== 'undefined') {
+      // Clear all auth-related data
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      localStorage.removeItem('userType');
+      localStorage.removeItem('host');
+      // Force a full page reload to ensure all state is cleared
+      window.location.href = '/explore';
+    } else {
+      router.push('/explore');
     }
-    router.push('/login');
   };
 
   return (

@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { useCurrency } from '@/lib/CurrencyContext';
 import { Sparkles, Home, Heart, Filter, ArrowDown, TrendingUp, Star, MapPin } from 'lucide-react';
+import AuthPromptModal from '@/components/AuthPromptModal';
 
 export default function ExplorePage() {
   const router = useRouter();
@@ -52,6 +53,11 @@ export default function ExplorePage() {
   // Abode Modal state
   const [selectedAbode, setSelectedAbode] = useState<any | null>(null);
   const [isAbodeModalOpen, setIsAbodeModalOpen] = useState(false);
+
+  // Auth Prompt Modal state
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalAction, setAuthModalAction] = useState<'save' | 'book' | 'view'>('save');
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
   // Scroll animations
   const { scrollY } = useScroll();
@@ -133,6 +139,17 @@ export default function ExplorePage() {
   };
 
   const handleAbodeBook = () => {
+    if (!user) {
+      setAuthModalAction('book');
+      setPendingAction(() => () => {
+        if (selectedAbode) {
+          router.push(`/adobes/${selectedAbode._id}`);
+        }
+      });
+      setAuthModalOpen(true);
+      return;
+    }
+    
     if (selectedAbode) {
       router.push(`/adobes/${selectedAbode._id}`);
     }
@@ -140,10 +157,19 @@ export default function ExplorePage() {
 
   const handleAddToBucketlist = async (experienceId: string) => {
     if (!user) {
-      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+      setAuthModalAction('save');
+      setPendingAction(() => () => {
+        // Retry the action after auth - use the stored experienceId
+        performAddToBucketlist(experienceId);
+      });
+      setAuthModalOpen(true);
       return;
     }
 
+    await performAddToBucketlist(experienceId);
+  };
+
+  const performAddToBucketlist = async (experienceId: string) => {
     try {
       const isInBucketlist = bucketlistIds.has(experienceId);
       
@@ -174,6 +200,31 @@ export default function ExplorePage() {
       alert(error.response?.data?.message || 'Failed to update bucketlist');
     }
   };
+
+  const handleAuthModalClose = () => {
+    setAuthModalOpen(false);
+    setPendingAction(null);
+  };
+
+  const handleAuthModalSignIn = () => {
+    handleAuthModalClose();
+  };
+
+  const handleAuthModalSignUp = () => {
+    handleAuthModalClose();
+  };
+
+  // Check if user just logged in and execute pending action
+  useEffect(() => {
+    if (user && pendingAction) {
+      // Small delay to ensure auth state is fully updated
+      const timer = setTimeout(() => {
+        pendingAction();
+        setPendingAction(null);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [user, pendingAction]);
 
   // Helper function to parse location string (e.g., "Kerala, India" -> { state: "Kerala", country: "India" })
   const parseLocation = (locationString: string) => {
@@ -919,6 +970,22 @@ export default function ExplorePage() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Auth Prompt Modal */}
+      <AuthPromptModal
+        isOpen={authModalOpen}
+        onClose={handleAuthModalClose}
+        onSignIn={handleAuthModalSignIn}
+        onSignUp={handleAuthModalSignUp}
+        message={
+          authModalAction === 'save'
+            ? 'Sign in to save favorites'
+            : authModalAction === 'book'
+            ? 'Sign in to book this experience'
+            : 'Sign in to continue'
+        }
+        actionType={authModalAction}
+      />
 
       {/* Become a Host Section - Enhanced */}
       <motion.div
