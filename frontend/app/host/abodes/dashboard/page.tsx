@@ -137,7 +137,7 @@ export default function AbodeDashboard() {
               // Monthly revenue (current month)
               if (bookingDate.getMonth() === currentMonth && bookingDate.getFullYear() === currentYear) {
                 monthlyRevenue += bookingAmount;
-              }
+            }
             }
             
             // Status counts
@@ -375,9 +375,9 @@ export default function AbodeDashboard() {
             <div className="space-y-6 mb-8">
               {/* Revenue & Bookings Trend - Line Chart */}
               {monthlyRevenueData.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2, duration: 0.5 }}
                   className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
                 >
@@ -448,19 +448,19 @@ export default function AbodeDashboard() {
                       />
                     </LineChart>
                   </ResponsiveContainer>
-                </motion.div>
+              </motion.div>
               )}
 
               {/* Charts Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Booking Status Distribution - Pie Chart */}
                 {chartData.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3, duration: 0.5 }}
                     className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
-                  >
+              >
                     <div className="mb-6">
                       <h3 className="text-lg font-bold text-gray-900 mb-1">Booking Status</h3>
                       <p className="text-xs text-gray-500">Distribution overview</p>
@@ -496,20 +496,20 @@ export default function AbodeDashboard() {
                         <div key={index} className="flex items-center gap-2">
                           <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
                           <span className="text-xs text-gray-600 font-medium">{item.name}: {item.value}</span>
-                        </div>
+                  </div>
                       ))}
-                    </div>
-                  </motion.div>
+                </div>
+              </motion.div>
                 )}
 
                 {/* Monthly Bookings - Bar Chart */}
                 {monthlyRevenueData.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4, duration: 0.5 }}
                     className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
-                  >
+              >
                     <div className="mb-6">
                       <h3 className="text-lg font-bold text-gray-900 mb-1">Monthly Bookings</h3>
                       <p className="text-xs text-gray-500">Booking volume trend</p>
@@ -546,10 +546,10 @@ export default function AbodeDashboard() {
                     </ResponsiveContainer>
                   </motion.div>
                 )}
-              </div>
+                </div>
 
               {/* Key Metrics - Modern Card Grid */}
-              <motion.div
+              <motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5, duration: 0.5 }}
@@ -562,11 +562,11 @@ export default function AbodeDashboard() {
                 <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                   <p className="text-xs text-gray-500 mb-1 font-medium">Avg Booking</p>
                   <p className="text-xl font-bold text-gray-900">₹{Math.round(stats.averageBookingValue).toLocaleString()}</p>
-                </div>
+                    </div>
                 <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                   <p className="text-xs text-gray-500 mb-1 font-medium">Total Guests</p>
                   <p className="text-xl font-bold text-gray-900">{stats.totalGuests}</p>
-                </div>
+                  </div>
                 <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                   <p className="text-xs text-gray-500 mb-1 font-medium">Avg Stay</p>
                   <p className="text-xl font-bold text-gray-900">{stats.averageStayDuration.toFixed(1)} nights</p>
@@ -605,9 +605,9 @@ export default function AbodeDashboard() {
               </div>
               
               <AnimatePresence>
-                {recentBookings.length > 0 ? (
+              {recentBookings.length > 0 ? (
                   <div className="space-y-3">
-                    {recentBookings.map((booking, index) => (
+                  {recentBookings.map((booking, index) => (
                       <motion.div
                         key={index}
                         initial={{ opacity: 0, x: -20 }}
@@ -652,16 +652,16 @@ export default function AbodeDashboard() {
                               <span className="text-xs text-slate-500">
                                 {new Date(booking.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                               </span>
-                            </div>
-                          </div>
-                        </div>
+                      </div>
+                      </div>
+                    </div>
                         
                         {/* Hover Effect Gradient */}
                         <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-purple-500/0 to-pink-500/0 group-hover:from-indigo-500/5 group-hover:via-purple-500/5 group-hover:to-pink-500/5 transition-all duration-300 pointer-events-none"></div>
                       </motion.div>
-                    ))}
-                  </div>
-                ) : (
+                  ))}
+                </div>
+              ) : (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -669,11 +669,11 @@ export default function AbodeDashboard() {
                   >
                     <div className="w-20 h-20 bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
                       <Calendar className="w-10 h-10 text-slate-400" />
-                    </div>
+                </div>
                     <p className="text-slate-600 font-medium mb-1">No bookings yet</p>
                     <p className="text-slate-500 text-sm">Your bookings will appear here once guests make reservations</p>
                   </motion.div>
-                )}
+              )}
               </AnimatePresence>
             </motion.div>
           )}

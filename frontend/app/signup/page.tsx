@@ -5,9 +5,11 @@ import { useAuth } from '@/lib/auth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
 import api from '@/lib/api';
 import PhoneInput from '@/components/PhoneInput';
 import { LOGO_PATH, LOGO_ALT_TEXT } from '@/lib/constants';
+import { Sparkles, Lock, Mail, Phone, User, CheckCircle } from 'lucide-react';
 
 type SignupStep = 'phone' | 'phone-otp' | 'email' | 'email-otp' | 'password';
 
@@ -240,7 +242,7 @@ export default function SignupPage(): JSX.Element {
         return (
           <form onSubmit={handlePhoneSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Phone Number
               </label>
               <PhoneInput
@@ -252,17 +254,20 @@ export default function SignupPage(): JSX.Element {
               />
             </div>
 
-            <button
+            <motion.button
               type="submit"
               disabled={otpLoading}
-              className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-base rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-100 flex items-center justify-center gap-2"
+              whileHover={{ scale: otpLoading ? 1 : 1.02 }}
+              whileTap={{ scale: otpLoading ? 1 : 0.98 }}
+              className="w-full py-4 bg-gradient-to-r from-heritage-gold via-heritage-gold-dark to-heritage-gold hover:from-heritage-gold-dark hover:to-heritage-gold-dark text-white font-bold text-base rounded-xl shadow-xl hover:shadow-2xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {otpLoading ? (
                 <>
-                  <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                  />
                   <span>Sending OTP...</span>
                 </>
               ) : (
@@ -273,7 +278,7 @@ export default function SignupPage(): JSX.Element {
                   </svg>
                 </>
               )}
-            </button>
+            </motion.button>
           </form>
         );
 
@@ -281,7 +286,7 @@ export default function SignupPage(): JSX.Element {
         return (
           <form onSubmit={handlePhoneOTPVerify} className="space-y-5">
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Enter OTP sent to {phoneNumber}
               </label>
               <input
@@ -290,13 +295,13 @@ export default function SignupPage(): JSX.Element {
                 onChange={(e) => setPhoneOTP(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 required
                 placeholder="000000"
-                className="w-full px-4 py-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-slate-900 font-bold text-2xl tracking-widest text-center"
+                className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:border-heritage-gold focus:ring-4 focus:ring-heritage-gold/20 outline-none transition-all text-gray-900 font-bold text-2xl tracking-widest text-center"
                 maxLength={6}
                 disabled={loading}
               />
               {devOTP && (
-                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-xs text-blue-800 text-center">
+                <div className="mt-3 p-3 bg-heritage-gold/10 border border-heritage-gold/30 rounded-lg">
+                  <p className="text-xs text-gray-800 text-center">
                     <span className="font-semibold">Development OTP:</span> <span className="font-mono font-bold">{devOTP}</span>
                   </p>
                 </div>
@@ -311,7 +316,7 @@ export default function SignupPage(): JSX.Element {
                   setPhoneOTP('');
                   setError('');
                 }}
-                className="flex-1 py-3.5 border-2 border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-all"
+                className="flex-1 py-3.5 border-2 border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-all"
                 disabled={loading}
               >
                 Back
@@ -319,7 +324,7 @@ export default function SignupPage(): JSX.Element {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 py-3.5 bg-gradient-to-r from-heritage-gold via-heritage-gold-dark to-heritage-gold hover:from-heritage-gold-dark hover:to-heritage-gold-dark text-white font-bold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -341,14 +346,12 @@ export default function SignupPage(): JSX.Element {
         return (
           <form onSubmit={handleEmailSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Email Address
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
+                  <Mail className="w-5 h-5 text-gray-400" />
                 </div>
                 <input
                   type="email"
@@ -356,7 +359,7 @@ export default function SignupPage(): JSX.Element {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   placeholder="you@example.com"
-                  className="w-full pl-12 pr-4 py-3.5 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-slate-900 font-medium"
+                  className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 rounded-xl focus:border-heritage-gold focus:ring-4 focus:ring-heritage-gold/20 outline-none transition-all text-gray-900 font-medium"
                   disabled={otpLoading}
                 />
               </div>
@@ -370,7 +373,7 @@ export default function SignupPage(): JSX.Element {
                   setEmail('');
                   setError('');
                 }}
-                className="flex-1 py-3.5 border-2 border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-all"
+                className="flex-1 py-3.5 border-2 border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-all"
                 disabled={otpLoading}
               >
                 Back
@@ -378,7 +381,7 @@ export default function SignupPage(): JSX.Element {
               <button
                 type="submit"
                 disabled={otpLoading}
-                className="flex-1 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 py-3.5 bg-gradient-to-r from-heritage-gold via-heritage-gold-dark to-heritage-gold hover:from-heritage-gold-dark hover:to-heritage-gold-dark text-white font-bold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {otpLoading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -400,7 +403,7 @@ export default function SignupPage(): JSX.Element {
         return (
           <form onSubmit={handleEmailOTPVerify} className="space-y-5">
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Enter OTP sent to {email}
               </label>
               <input
@@ -409,13 +412,13 @@ export default function SignupPage(): JSX.Element {
                 onChange={(e) => setEmailOTP(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 required
                 placeholder="000000"
-                className="w-full px-4 py-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-slate-900 font-bold text-2xl tracking-widest text-center"
+                className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:border-heritage-gold focus:ring-4 focus:ring-heritage-gold/20 outline-none transition-all text-gray-900 font-bold text-2xl tracking-widest text-center"
                 maxLength={6}
                 disabled={loading}
               />
               {devOTP && (
-                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-xs text-blue-800 text-center">
+                <div className="mt-3 p-3 bg-heritage-gold/10 border border-heritage-gold/30 rounded-lg">
+                  <p className="text-xs text-gray-800 text-center">
                     <span className="font-semibold">Development OTP:</span> <span className="font-mono font-bold">{devOTP}</span>
                   </p>
                 </div>
@@ -430,7 +433,7 @@ export default function SignupPage(): JSX.Element {
                   setEmailOTP('');
                   setError('');
                 }}
-                className="flex-1 py-3.5 border-2 border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-all"
+                className="flex-1 py-3.5 border-2 border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-all"
                 disabled={loading}
               >
                 Back
@@ -438,7 +441,7 @@ export default function SignupPage(): JSX.Element {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 py-3.5 bg-gradient-to-r from-heritage-gold via-heritage-gold-dark to-heritage-gold hover:from-heritage-gold-dark hover:to-heritage-gold-dark text-white font-bold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -460,14 +463,12 @@ export default function SignupPage(): JSX.Element {
         return (
           <form onSubmit={handleFinalSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Full Name
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
+                  <User className="w-5 h-5 text-gray-400" />
                 </div>
                 <input
                   type="text"
@@ -475,21 +476,19 @@ export default function SignupPage(): JSX.Element {
                   onChange={(e) => setName(e.target.value)}
                   required
                   placeholder="John Doe"
-                  className="w-full pl-12 pr-4 py-3.5 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-slate-900 font-medium"
+                  className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 rounded-xl focus:border-heritage-gold focus:ring-4 focus:ring-heritage-gold/20 outline-none transition-all text-gray-900 font-medium"
                   disabled={loading}
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Password
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
+                  <Lock className="w-5 h-5 text-gray-400" />
                 </div>
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -498,13 +497,13 @@ export default function SignupPage(): JSX.Element {
                   required
                   minLength={6}
                   placeholder="At least 6 characters"
-                  className="w-full pl-12 pr-12 py-3.5 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-slate-900 font-medium"
+                  className="w-full pl-12 pr-12 py-3.5 border-2 border-gray-200 rounded-xl focus:border-heritage-gold focus:ring-4 focus:ring-heritage-gold/20 outline-none transition-all text-gray-900 font-medium"
                   disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600"
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600"
                 >
                   {showPassword ? (
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -521,14 +520,12 @@ export default function SignupPage(): JSX.Element {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Confirm Password
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+                  <CheckCircle className="w-5 h-5 text-gray-400" />
                 </div>
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
@@ -537,13 +534,13 @@ export default function SignupPage(): JSX.Element {
                   required
                   minLength={6}
                   placeholder="Confirm your password"
-                  className="w-full pl-12 pr-12 py-3.5 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-slate-900 font-medium"
+                  className="w-full pl-12 pr-12 py-3.5 border-2 border-gray-200 rounded-xl focus:border-heritage-gold focus:ring-4 focus:ring-heritage-gold/20 outline-none transition-all text-gray-900 font-medium"
                   disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600"
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600"
                 >
                   {showConfirmPassword ? (
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -569,7 +566,7 @@ export default function SignupPage(): JSX.Element {
                   setName('');
                   setError('');
                 }}
-                className="flex-1 py-3.5 border-2 border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-all"
+                className="flex-1 py-3.5 border-2 border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-all"
                 disabled={loading}
               >
                 Back
@@ -577,7 +574,7 @@ export default function SignupPage(): JSX.Element {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 py-3.5 bg-gradient-to-r from-heritage-gold via-heritage-gold-dark to-heritage-gold hover:from-heritage-gold-dark hover:to-heritage-gold-dark text-white font-bold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -600,38 +597,78 @@ export default function SignupPage(): JSX.Element {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 sm:p-6 lg:p-8 relative overflow-hidden">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute inset-0" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        }}></div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-50 p-4 sm:p-6 lg:p-8 relative overflow-hidden">
+      {/* Animated Background Elements - Matching Explore Page */}
+      <div className="absolute inset-0 overflow-hidden">
+        <motion.div
+          animate={{
+            x: [0, 100, 0],
+            y: [0, 50, 0],
+          }}
+          transition={{
+            duration: 20,
+            repeat: Infinity,
+            ease: "linear"
+          }}
+          className="absolute top-20 right-10 w-96 h-96 bg-heritage-gold/10 rounded-full blur-3xl"
+        />
+        <motion.div
+          animate={{
+            x: [0, -100, 0],
+            y: [0, -50, 0],
+          }}
+          transition={{
+            duration: 25,
+            repeat: Infinity,
+            ease: "linear"
+          }}
+          className="absolute bottom-20 left-10 w-96 h-96 bg-cream-500/10 rounded-full blur-3xl"
+        />
       </div>
 
       <div className="w-full max-w-md relative z-10">
         {/* Main Card */}
-        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
-          {/* Header Section with Gradient */}
-          <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-8 py-10 text-center">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl mb-6 shadow-lg">
-              <Image 
-                src={LOGO_PATH} 
-                alt={LOGO_ALT_TEXT} 
-                width={48} 
-                height={48}
-                className="w-12 h-12"
-              />
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+          className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-200/50"
+        >
+          {/* Header Section with Heritage Gold Gradient */}
+          <div className="relative bg-gradient-to-br from-heritage-gold/10 via-cream-50/80 to-heritage-gold-light/5 px-8 py-10 text-center overflow-hidden border-b border-heritage-gold/20">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(212,175,55,0.1),transparent_50%)]"></div>
+            <div className="relative z-10">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                className="inline-block mb-6"
+              >
+                <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-heritage-gold to-heritage-gold-dark flex items-center justify-center shadow-2xl">
+                  <Sparkles className="w-10 h-10 text-white" />
+                </div>
+              </motion.div>
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="text-4xl md:text-5xl font-bold text-gray-900 mb-3"
+              >
+                {getStepTitle()}
+              </motion.h1>
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="text-lg text-gray-600"
+              >
+                {getStepDescription()}
+              </motion.p>
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">
-              {getStepTitle()}
-            </h1>
-            <p className="text-blue-100 text-base">
-              {getStepDescription()}
-            </p>
           </div>
 
           {/* Progress Steps */}
-          <div className="px-8 pt-6 pb-4 bg-slate-50 border-b border-slate-200">
+          <div className="px-8 pt-6 pb-4 bg-gray-50 border-b border-gray-200">
             <div className="flex items-center justify-between">
               {[1, 2, 3, 4, 5].map((stepNum) => {
                 const currentStepNum = getStepNumber();
@@ -641,24 +678,27 @@ export default function SignupPage(): JSX.Element {
                 return (
                   <div key={stepNum} className="flex items-center flex-1">
                     <div className="flex flex-col items-center flex-1">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ${
-                        isCompleted
-                          ? 'bg-green-500 text-white'
-                          : isCurrent
-                          ? 'bg-blue-600 text-white ring-4 ring-blue-100'
-                          : 'bg-slate-200 text-slate-500'
-                      }`}>
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: stepNum * 0.1 }}
+                        className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ${
+                          isCompleted
+                            ? 'bg-green-500 text-white'
+                            : isCurrent
+                            ? 'bg-heritage-gold text-white ring-4 ring-heritage-gold/20'
+                            : 'bg-gray-200 text-gray-500'
+                        }`}
+                      >
                         {isCompleted ? (
-                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
+                          <CheckCircle className="w-6 h-6" />
                         ) : (
                           stepNum
                         )}
-                      </div>
+                      </motion.div>
                       {stepNum < 5 && (
                         <div className={`h-1 w-full mt-2 rounded-full transition-all duration-300 ${
-                          isCompleted ? 'bg-green-500' : 'bg-slate-200'
+                          isCompleted ? 'bg-green-500' : 'bg-gray-200'
                         }`}></div>
                       )}
                     </div>
@@ -669,37 +709,41 @@ export default function SignupPage(): JSX.Element {
           </div>
 
           {/* Form Section */}
-          <div className="px-8 py-8">
+          <div className="px-8 py-8 bg-white">
             {error && (
-              <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg"
+              >
                 <div className="flex items-start gap-3">
                   <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <p className="text-red-800 text-sm font-medium flex-1">{error}</p>
                 </div>
-              </div>
+              </motion.div>
             )}
 
             {renderStep()}
 
             {/* Footer Links */}
-            <div className="mt-8 space-y-3 text-center pt-6 border-t border-slate-200">
-              <p className="text-sm text-slate-600">
+            <div className="mt-8 space-y-3 text-center pt-6 border-t border-gray-200">
+              <p className="text-sm text-gray-600">
                 Already have an account?{' '}
-                <Link href="/login" className="font-bold text-blue-600 hover:text-blue-700 transition-colors">
+                <Link href="/login" className="font-bold text-heritage-gold hover:text-heritage-gold-dark transition-colors">
                   Sign in here
                 </Link>
               </p>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-gray-500">
                 Want to become a host?{' '}
-                <Link href="/host/signup" className="font-semibold text-blue-600 hover:text-blue-700 transition-colors">
+                <Link href="/host/signup" className="font-semibold text-heritage-gold hover:text-heritage-gold-dark transition-colors">
                   Sign up as host
                 </Link>
               </p>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

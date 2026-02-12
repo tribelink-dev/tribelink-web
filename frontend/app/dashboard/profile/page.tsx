@@ -80,6 +80,8 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [formData, setFormData] = useState({
     name: '',
+    email: '',
+    phoneNumber: '',
     preferredCurrency: 'USD',
     preferences: {
       travelStyle: '',
@@ -104,12 +106,14 @@ export default function ProfilePage() {
     // Check if form has changes
     if (profile) {
       const nameChanged = formData.name !== profile.name;
+      const emailChanged = formData.email !== profile.email;
+      const phoneChanged = formData.phoneNumber !== profile.phoneNumber;
       const currencyChanged = formData.preferredCurrency !== profile.preferredCurrency;
       const travelStyleChanged = formData.preferences.travelStyle !== (profile.preferences?.travelStyle || '');
       const paceChanged = formData.preferences.pace !== (profile.preferences?.pace || '');
       const transportChanged = formData.preferences.transport !== (profile.preferences?.transport || '');
       
-      setHasChanges(nameChanged || currencyChanged || travelStyleChanged || paceChanged || transportChanged || !!profilePicturePreview);
+      setHasChanges(nameChanged || emailChanged || phoneChanged || currencyChanged || travelStyleChanged || paceChanged || transportChanged || !!profilePicturePreview);
     }
   }, [formData, profile, profilePicturePreview]);
 
@@ -122,6 +126,8 @@ export default function ProfilePage() {
       setProfile(userData);
       setFormData({
         name: userData.name || '',
+        email: userData.email || '',
+        phoneNumber: userData.phoneNumber || '',
         preferredCurrency: userData.preferredCurrency || 'USD',
         preferences: {
           travelStyle: userData.preferences?.travelStyle || '',
@@ -197,6 +203,8 @@ export default function ProfilePage() {
       
       const updateData: any = {
         name: formData.name,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
         preferredCurrency: formData.preferredCurrency,
         preferences: formData.preferences
       };
@@ -214,6 +222,8 @@ export default function ProfilePage() {
           if (storedUser) {
             const user = JSON.parse(storedUser);
             user.name = response.data.user.name;
+            user.email = response.data.user.email;
+            user.phoneNumber = response.data.user.phoneNumber;
             localStorage.setItem('user', JSON.stringify(user));
           }
         }
@@ -230,6 +240,8 @@ export default function ProfilePage() {
     if (profile) {
       setFormData({
         name: profile.name || '',
+        email: profile.email || '',
+        phoneNumber: profile.phoneNumber || '',
         preferredCurrency: profile.preferredCurrency || 'USD',
         preferences: {
           travelStyle: profile.preferences?.travelStyle || '',
@@ -428,41 +440,39 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
-                  {/* Email (Read-only) */}
+                  {/* Email */}
                   <div className="mb-6">
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Email Address
+                      Email Address <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
                         type="email"
-                        value={profile.email}
-                        disabled
-                        className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 text-gray-500 cursor-not-allowed"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                        placeholder="you@example.com"
+                        required
                       />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                        Verified
-                      </span>
                     </div>
                   </div>
 
-                  {/* Phone (Read-only) */}
+                  {/* Phone */}
                   <div className="mb-6">
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Phone Number
+                      Phone Number <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                       <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
                         type="tel"
-                        value={profile.phoneNumber}
-                        disabled
-                        className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 text-gray-500 cursor-not-allowed"
+                        value={formData.phoneNumber}
+                        onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                        className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                        placeholder="+1234567890"
+                        required
                       />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                        Verified
-                      </span>
                     </div>
                   </div>
                 </motion.div>
@@ -642,7 +652,7 @@ export default function ProfilePage() {
                   </button>
                   <button
                     onClick={handleSave}
-                    disabled={saving}
+                    disabled={saving || !formData.name || !formData.email || !formData.phoneNumber}
                     className="px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all font-medium shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
                     {saving ? (

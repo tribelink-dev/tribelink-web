@@ -62,6 +62,32 @@ const providerSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  // Bio/description for hosts
+  bio: {
+    type: String,
+    default: null,
+    trim: true,
+    maxlength: 1000
+  },
+  // Notification preferences
+  notificationPreferences: {
+    emailNotifications: {
+      type: Boolean,
+      default: true
+    },
+    smsNotifications: {
+      type: Boolean,
+      default: false
+    },
+    bookingAlerts: {
+      type: Boolean,
+      default: true
+    },
+    marketingEmails: {
+      type: Boolean,
+      default: false
+    }
+  },
   // Only for EXPERIENCE_HOST providers
   experiences: [{
     type: mongoose.Schema.Types.ObjectId,

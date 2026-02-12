@@ -41,14 +41,11 @@ export default function HostDashboard() {
   const fetchStats = async () => {
     try {
       setStatsLoading(true);
-      const [experiencesRes, hotelsRes] = await Promise.all([
-        api.get('/hosts/experiences').catch(() => ({ data: { experiences: [] } })),
-        api.get('/api/hotels').catch(() => ({ data: { hotels: [] } }))
-      ]);
+      const experiencesRes = await api.get('/hosts/experiences').catch(() => ({ data: { experiences: [] } }));
 
       setStats({
         experiences: experiencesRes.data.experiences?.length || 0,
-        hotels: hotelsRes.data.hotels?.length || 0,
+        hotels: 0, // Hotels are deprecated, replaced by abode stays
         bookings: 0,
         revenue: 0,
         pendingBookings: 0,

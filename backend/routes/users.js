@@ -42,6 +42,46 @@ router.patch('/me', authenticate, requireUser, async (req, res) => {
       }
     });
 
+    // Update email with uniqueness check
+    if (req.body.email !== undefined && req.body.email !== null) {
+      const trimmedEmail = String(req.body.email).toLowerCase().trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+        return res.status(400).json({ message: 'Invalid email format' });
+      }
+      
+      // Check if email is already taken by another user
+      const existingUser = await User.findOne({ 
+        email: trimmedEmail,
+        _id: { $ne: req.user._id }
+      });
+      
+      if (existingUser) {
+        return res.status(400).json({ message: 'Email is already registered' });
+      }
+      
+      user.email = trimmedEmail;
+    }
+
+    // Update phone number with format validation
+    if (req.body.phoneNumber !== undefined && req.body.phoneNumber !== null) {
+      const trimmedPhone = String(req.body.phoneNumber).trim();
+      if (!/^\+?[1-9]\d{1,14}$/.test(trimmedPhone)) {
+        return res.status(400).json({ message: 'Invalid phone number format' });
+      }
+      
+      // Check if phone is already taken by another user
+      const existingUser = await User.findOne({ 
+        phoneNumber: trimmedPhone,
+        _id: { $ne: req.user._id }
+      });
+      
+      if (existingUser) {
+        return res.status(400).json({ message: 'Phone number is already registered' });
+      }
+      
+      user.phoneNumber = trimmedPhone;
+    }
+
     // Update preferences if provided
     if (req.body.preferences) {
       const { travelStyle, pace, transport } = req.body.preferences;

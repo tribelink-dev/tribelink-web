@@ -45,6 +45,120 @@ router.post('/availability', authenticate, requireHost, async (req, res) => {
   }
 });
 
+// Get host profile
+router.get('/me', authenticate, requireHost, async (req, res) => {
+  try {
+    const host = await Host.findById(req.user._id).select('-password');
+    if (!host) {
+      return res.status(404).json({ message: 'Host not found' });
+    }
+
+    res.json({
+      success: true,
+      host: host.toObject()
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Update host profile
+router.patch('/me', authenticate, requireHost, upload.single('profilePicture'), async (req, res) => {
+  try {
+    const host = await Host.findById(req.user._id);
+    if (!host) {
+      return res.status(404).json({ message: 'Host not found' });
+    }
+
+    const { name, email, phoneNumber, bio, notificationPreferences } = req.body;
+
+    // Update name
+    if (name !== undefined && name !== null) {
+      const trimmedName = String(name).trim();
+      if (trimmedName === '') {
+        return res.status(400).json({ message: 'Name cannot be empty' });
+      }
+      host.name = trimmedName;
+    }
+
+    // Update email with uniqueness check
+    if (email !== undefined && email !== null) {
+      const trimmedEmail = String(email).toLowerCase().trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+        return res.status(400).json({ message: 'Invalid email format' });
+      }
+      
+      // Check if email is already taken by another host
+      const existingHost = await Host.findOne({ 
+        email: trimmedEmail,
+        _id: { $ne: req.user._id }
+      });
+      
+      if (existingHost) {
+        return res.status(400).json({ message: 'Email is already registered' });
+      }
+      
+      host.email = trimmedEmail;
+    }
+
+    // Update phone number with format validation
+    if (phoneNumber !== undefined && phoneNumber !== null) {
+      const trimmedPhone = String(phoneNumber).trim();
+      if (!/^\+?[1-9]\d{1,14}$/.test(trimmedPhone)) {
+        return res.status(400).json({ message: 'Invalid phone number format' });
+      }
+      
+      // Check if phone is already taken by another host
+      const existingHost = await Host.findOne({ 
+        phoneNumber: trimmedPhone,
+        _id: { $ne: req.user._id }
+      });
+      
+      if (existingHost) {
+        return res.status(400).json({ message: 'Phone number is already registered' });
+      }
+      
+      host.phoneNumber = trimmedPhone;
+    }
+
+    // Update bio/description
+    if (bio !== undefined) {
+      host.bio = bio ? String(bio).trim() : null;
+    }
+
+    // Update notification preferences
+    if (notificationPreferences !== undefined) {
+      try {
+        const prefs = typeof notificationPreferences === 'string' 
+          ? JSON.parse(notificationPreferences) 
+          : notificationPreferences;
+        host.notificationPreferences = prefs || {};
+      } catch (parseError) {
+        return res.status(400).json({ message: 'Invalid notification preferences format' });
+      }
+    }
+
+    // Update profile picture if uploaded
+    if (req.file) {
+      host.profilePicture = req.file.path || req.file.url;
+    }
+
+    await host.save();
+
+    // Return updated host without password
+    const updatedHost = await Host.findById(req.user._id).select('-password');
+    
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      host: updatedHost.toObject()
+    });
+  } catch (error) {
+    console.error('Error updating host profile:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Get host's experiences
 router.get('/experiences', authenticate, requireHost, async (req, res) => {
   try {

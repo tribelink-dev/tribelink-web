@@ -393,19 +393,19 @@ export default function HostExperiencesPage() {
                           )}
                         </div>
 
-                        <div className="flex gap-2 flex-wrap">
+                        <div className="flex flex-wrap gap-2 items-center">
                           <button
                             onClick={() => router.push(`/host/experiences/edit/${experience._id}`)}
-                            className="btn-secondary flex-1 text-sm py-2"
+                            className="btn-secondary flex-1 text-sm py-2 whitespace-nowrap min-w-[80px]"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => handleArchive(experience._id, experience.isArchived || false)}
-                            className={`flex-1 text-sm py-2 font-semibold rounded-xl transition-all duration-200 ${
+                            className={`flex-1 text-sm py-2 font-semibold rounded-xl transition-all duration-200 whitespace-nowrap min-w-[100px] border ${
                               experience.isArchived
-                                ? 'bg-green-500 hover:bg-green-600 text-white'
-                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                                ? 'bg-green-500 hover:bg-green-600 text-white border-green-600'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
                             }`}
                             title={experience.isArchived ? 'Unarchive to show to travelers' : 'Archive to hide from travelers'}
                           >
@@ -428,7 +428,7 @@ export default function HostExperiencesPage() {
                           <button
                             onClick={() => setDeleteModal({ isOpen: true, experience })}
                             disabled={deletingId === experience._id}
-                            className="bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap min-w-[80px] border border-red-600"
                           >
                             Delete
                           </button>
