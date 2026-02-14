@@ -410,7 +410,7 @@ router.put('/:id', authenticate, requireHost, upload.array('images', 10), async 
     if (req.files && req.files.length > 0) {
       req.files.forEach((file, index) => {
         newImages.push({
-          url: file.path || file.url,
+        url: file.path || file.url,
           isMain: existingImagesToKeep.length === 0 && index === 0,
           caption: file.originalname || file.filename
         });

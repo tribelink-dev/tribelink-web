@@ -113,38 +113,38 @@ const Stories = () => {
     };
 
     return (
-        <section id="community" className="py-32 bg-gradient-to-b from-off-white via-white to-off-white border-t border-deep-jungle/5 relative overflow-hidden">
+        <section id="community" className="py-16 sm:py-24 md:py-32 bg-gradient-to-b from-off-white via-white to-off-white border-t border-deep-jungle/5 relative overflow-hidden">
             {/* Background Decoration */}
-            <div className="absolute top-0 right-0 w-96 h-96 bg-terracotta/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-            <div className="absolute bottom-0 left-0 w-96 h-96 bg-clay/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+            <div className="absolute top-0 right-0 w-64 h-64 sm:w-96 sm:h-96 bg-terracotta/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+            <div className="absolute bottom-0 left-0 w-64 h-64 sm:w-96 sm:h-96 bg-clay/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
 
-            <div className="container mx-auto px-6 mb-12 relative z-10">
+            <div className="container mx-auto px-4 sm:px-6 mb-8 sm:mb-12 relative z-10">
                 <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.8 }}
-                    className="flex items-end justify-between mb-16"
+                    className="flex flex-col md:flex-row md:items-end md:justify-between mb-12 sm:mb-16 gap-6"
                 >
                     <div className="max-w-2xl">
                         <motion.p
                             initial={{ opacity: 0, scale: 0.9 }}
                             whileInView={{ opacity: 1, scale: 1 }}
                             viewport={{ once: true }}
-                            className="text-terracotta tracking-widest text-sm font-medium uppercase mb-6 inline-block px-4 py-2 bg-terracotta/10 rounded-full"
+                            className="text-terracotta tracking-wide sm:tracking-widest text-xs sm:text-sm font-medium uppercase mb-4 sm:mb-6 inline-block px-3 sm:px-4 py-1.5 sm:py-2 bg-terracotta/10 rounded-full"
                         >
                             Community Stories
                         </motion.p>
-                        <h2 className="text-4xl md:text-6xl font-serif text-deep-jungle mb-6 leading-tight">
+                        <h2 className="text-3xl sm:text-4xl md:text-6xl font-serif text-deep-jungle mb-4 sm:mb-6 leading-tight">
                             Moments That Feel Like
                             <br />
                             <span className="text-terracotta italic">Coming Home</span>
                         </h2>
-                        <p className="text-lg text-deep-jungle/70 leading-relaxed">
+                        <p className="text-base sm:text-lg text-deep-jungle/70 leading-relaxed">
                             Real experiences from real travelers who found their tribe and discovered authentic cultural connections.
                         </p>
                     </div>
-                    <div className="hidden md:flex gap-4">
+                    <div className="hidden md:flex gap-4 flex-shrink-0">
                         <motion.button
                             onClick={() => scroll('left')}
                             disabled={!canScrollLeft}
@@ -228,16 +228,16 @@ const Stories = () => {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.8 }}
-                    className="mt-16 text-center px-6"
+                    className="mt-12 sm:mt-16 text-center px-4 sm:px-6"
                 >
-                    <p className="text-deep-jungle/70 mb-4 text-lg">Inspired by these stories?</p>
+                    <p className="text-deep-jungle/70 mb-3 sm:mb-4 text-base sm:text-lg">Inspired by these stories?</p>
                     <motion.div
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                     >
                         <Link
                             href="/login"
-                            className="inline-flex items-center gap-3 px-8 py-4 bg-terracotta text-white rounded-full font-medium hover:bg-terracotta/90 transition-all group shadow-lg cursor-pointer"
+                            className="inline-flex items-center gap-2 sm:gap-3 px-6 sm:px-8 py-3 sm:py-4 bg-terracotta text-white rounded-full font-medium hover:bg-terracotta/90 transition-all group shadow-lg cursor-pointer text-sm sm:text-base"
                         >
                             <span>Create Your Own Story</span>
                             <motion.span

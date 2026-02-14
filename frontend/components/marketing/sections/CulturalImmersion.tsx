@@ -115,15 +115,15 @@ const CulturalImmersion = () => {
     ];
 
     return (
-        <section ref={sectionRef} id="cultural" className="py-32 px-6 bg-gradient-to-b from-deep-jungle via-deep-jungle/95 to-deep-jungle relative overflow-hidden">
+        <section ref={sectionRef} id="cultural" className="py-16 sm:py-24 md:py-32 px-4 sm:px-6 bg-gradient-to-b from-deep-jungle via-deep-jungle/95 to-deep-jungle relative overflow-hidden">
             {/* Animated Background */}
             <motion.div
                 style={{ y: backgroundY }}
                 className="absolute inset-0 pointer-events-none"
             >
                 <div className="absolute top-0 left-0 w-full h-full bg-[url('/assets/kolam.jpg')] opacity-5 bg-cover bg-center" />
-                <div className="absolute top-1/4 right-0 w-96 h-96 bg-terracotta/10 rounded-full blur-3xl" />
-                <div className="absolute bottom-1/4 left-0 w-96 h-96 bg-clay/10 rounded-full blur-3xl" />
+                <div className="absolute top-1/4 right-0 w-64 h-64 sm:w-96 sm:h-96 bg-terracotta/10 rounded-full blur-3xl" />
+                <div className="absolute bottom-1/4 left-0 w-64 h-64 sm:w-96 sm:h-96 bg-clay/10 rounded-full blur-3xl" />
             </motion.div>
 
             <div className="container mx-auto max-w-7xl relative z-10">
@@ -132,29 +132,29 @@ const CulturalImmersion = () => {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.8 }}
-                    className="text-center mb-20"
+                    className="text-center mb-12 sm:mb-16 md:mb-20"
                 >
                     <motion.p
                         initial={{ opacity: 0, scale: 0.9 }}
                         whileInView={{ opacity: 1, scale: 1 }}
                         viewport={{ once: true }}
-                        className="text-terracotta tracking-widest text-sm font-medium uppercase mb-6 inline-block px-4 py-2 bg-terracotta/20 rounded-full text-white"
+                        className="text-terracotta tracking-wide sm:tracking-widest text-xs sm:text-sm font-medium uppercase mb-4 sm:mb-6 inline-block px-3 sm:px-4 py-1.5 sm:py-2 bg-terracotta/20 rounded-full text-white"
                     >
                         Deep Cultural Immersion
                     </motion.p>
-                    <h2 className="text-4xl md:text-6xl lg:text-7xl font-serif text-white mb-8 leading-tight">
+                    <h2 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-serif text-white mb-4 sm:mb-8 leading-tight px-2">
                         Experience Culture
                         <br />
                         <span className="text-terracotta italic">From the Inside</span>
                     </h2>
-                    <p className="text-lg md:text-xl text-white/80 max-w-3xl mx-auto leading-relaxed font-light">
+                    <p className="text-base sm:text-lg md:text-xl text-white/80 max-w-3xl mx-auto leading-relaxed font-light px-2">
                         Go beyond observation. Participate, learn, and connect with traditions that have shaped communities for generations.
-                        <br />
-                        This is cultural immersion at its deepest—authentic, respectful, and transformative.
+                        <br className="hidden sm:block" />
+                        <span className="block sm:inline">This is cultural immersion at its deepest—authentic, respectful, and transformative.</span>
                     </p>
                 </motion.div>
 
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
                     {activities.map((activity, index) => (
                         <CulturalActivity
                             key={index}
@@ -173,7 +173,7 @@ const CulturalImmersion = () => {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.8, delay: 0.6 }}
-                    className="mt-20 text-center"
+                    className="mt-12 sm:mt-16 md:mt-20 text-center px-4 sm:px-0"
                 >
                     <motion.div
                         whileHover={{ scale: 1.05 }}
@@ -182,7 +182,7 @@ const CulturalImmersion = () => {
                     >
                         <Link
                             href="/login"
-                            className="inline-flex items-center gap-3 px-8 py-4 bg-terracotta text-white rounded-full font-medium hover:bg-terracotta/90 transition-all group shadow-lg hover:shadow-xl"
+                            className="inline-flex items-center gap-2 sm:gap-3 px-6 sm:px-8 py-3 sm:py-4 bg-terracotta text-white rounded-full font-medium hover:bg-terracotta/90 transition-all group shadow-lg hover:shadow-xl text-sm sm:text-base"
                         >
                             <span>Discover Cultural Experiences</span>
                             <motion.div
@@ -193,7 +193,7 @@ const CulturalImmersion = () => {
                             </motion.div>
                         </Link>
                     </motion.div>
-                    <p className="mt-4 text-white/70 text-sm">
+                    <p className="mt-3 sm:mt-4 text-white/70 text-xs sm:text-sm">
                         Browse immersive cultural activities and connect with local artisans
                     </p>
                 </motion.div>

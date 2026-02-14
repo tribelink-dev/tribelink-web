@@ -683,9 +683,9 @@ export default function SignupPage(): JSX.Element {
                         animate={{ scale: 1 }}
                         transition={{ delay: stepNum * 0.1 }}
                         className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ${
-                          isCompleted
-                            ? 'bg-green-500 text-white'
-                            : isCurrent
+                        isCompleted
+                          ? 'bg-green-500 text-white'
+                          : isCurrent
                             ? 'bg-heritage-gold text-white ring-4 ring-heritage-gold/20'
                             : 'bg-gray-200 text-gray-500'
                         }`}

@@ -117,10 +117,10 @@ const Contact = () => {
     };
 
     return (
-        <section id="contact" className="py-32 px-6 bg-gradient-to-b from-off-white via-white to-deep-jungle relative overflow-hidden">
+        <section id="contact" className="py-16 sm:py-24 md:py-32 px-4 sm:px-6 bg-gradient-to-b from-off-white via-white to-deep-jungle relative overflow-hidden">
             {/* Decorative background elements */}
-            <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-terracotta/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-            <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-clay/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+            <div className="absolute top-0 right-0 w-[400px] h-[400px] sm:w-[600px] sm:h-[600px] bg-terracotta/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+            <div className="absolute bottom-0 left-0 w-[400px] h-[400px] sm:w-[600px] sm:h-[600px] bg-clay/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
 
             <div className="container mx-auto max-w-5xl relative z-10">
                 <motion.div
@@ -128,25 +128,25 @@ const Contact = () => {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.8 }}
-                    className="text-center mb-16"
+                    className="text-center mb-12 sm:mb-16"
                 >
                     <motion.p
                         initial={{ opacity: 0, scale: 0.9 }}
                         whileInView={{ opacity: 1, scale: 1 }}
                         viewport={{ once: true }}
-                        className="text-terracotta tracking-widest text-sm font-medium uppercase mb-6 inline-block px-4 py-2 bg-terracotta/10 rounded-full"
+                        className="text-terracotta tracking-wide sm:tracking-widest text-xs sm:text-sm font-medium uppercase mb-4 sm:mb-6 inline-block px-3 sm:px-4 py-1.5 sm:py-2 bg-terracotta/10 rounded-full"
                     >
                         Find Your Tribe
                     </motion.p>
-                    <h2 className="text-4xl md:text-6xl font-serif text-deep-jungle mb-6 leading-tight">
+                    <h2 className="text-3xl sm:text-4xl md:text-6xl font-serif text-deep-jungle mb-4 sm:mb-6 leading-tight px-2">
                         Tell Us What
                         <br />
                         <span className="text-terracotta italic">Moves You</span>
                     </h2>
-                    <p className="text-lg md:text-xl text-deep-jungle/70 max-w-3xl mx-auto leading-relaxed font-light">
+                    <p className="text-base sm:text-lg md:text-xl text-deep-jungle/70 max-w-3xl mx-auto leading-relaxed font-light px-2">
                         Not where you want to go, but why. What are you seeking? What do you hope to understand?
-                        <br />
-                        We'll listen, then we'll connect you with people and places that answer.
+                        <br className="hidden sm:block" />
+                        <span className="block sm:inline">We'll listen, then we'll connect you with people and places that answer.</span>
                     </p>
                 </motion.div>
 
@@ -155,7 +155,7 @@ const Contact = () => {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.8, delay: 0.2 }}
-                    className="bg-white p-8 md:p-16 rounded-3xl shadow-2xl border border-deep-jungle/5 relative overflow-hidden"
+                    className="bg-white p-6 sm:p-8 md:p-16 rounded-2xl sm:rounded-3xl shadow-2xl border border-deep-jungle/5 relative overflow-hidden"
                 >
                     {/* Background Pattern */}
                     <div className="absolute inset-0 opacity-5">
@@ -192,7 +192,7 @@ const Contact = () => {
                                 onSubmit={handleSubmit}
                                 className="relative z-10"
                             >
-                                <div className="grid md:grid-cols-2 gap-8">
+                                <div className="grid md:grid-cols-2 gap-6 sm:gap-8">
                                     <InputField 
                                         id="name" 
                                         label="Your name" 
@@ -208,7 +208,7 @@ const Contact = () => {
                                     />
                                 </div>
 
-                                <div className="grid md:grid-cols-2 gap-8">
+                                <div className="grid md:grid-cols-2 gap-6 sm:gap-8">
                                     <InputField 
                                         id="dates" 
                                         label="When do you want to travel?" 

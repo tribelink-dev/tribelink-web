@@ -60,14 +60,14 @@ const Hero = () => {
                     </video>
                 </motion.div>
 
-                {/* Animated Gradient Orbs */}
+                {/* Animated Gradient Orbs - Smaller on mobile */}
                 <motion.div
                     animate={{
                         x: mousePosition.x,
                         y: mousePosition.y,
                     }}
                     transition={{ type: "spring", stiffness: 50, damping: 20 }}
-                    className="absolute top-1/4 left-1/4 w-96 h-96 bg-terracotta/20 rounded-full blur-3xl"
+                    className="absolute top-1/4 left-1/4 w-48 h-48 sm:w-96 sm:h-96 bg-terracotta/20 rounded-full blur-3xl"
                 />
                 <motion.div
                     animate={{
@@ -75,21 +75,21 @@ const Hero = () => {
                         y: -mousePosition.y * 0.5,
                     }}
                     transition={{ type: "spring", stiffness: 50, damping: 20 }}
-                    className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-clay/20 rounded-full blur-3xl"
+                    className="absolute bottom-1/4 right-1/4 w-48 h-48 sm:w-96 sm:h-96 bg-clay/20 rounded-full blur-3xl"
                 />
 
-                {/* Floating Cultural Elements */}
+                {/* Floating Cultural Elements - Hidden on mobile to prevent overlaps */}
                 <motion.div
                     animate={{ y: [0, -20, 0], rotate: [0, 5, 0] }}
                     transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute top-20 left-10 text-6xl opacity-20"
+                    className="absolute top-20 left-10 text-4xl sm:text-6xl opacity-20 hidden sm:block"
                 >
                     🎭
                 </motion.div>
                 <motion.div
                     animate={{ y: [0, 20, 0], rotate: [0, -5, 0] }}
                     transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                    className="absolute bottom-20 right-10 text-6xl opacity-20"
+                    className="absolute bottom-20 right-10 text-4xl sm:text-6xl opacity-20 hidden sm:block"
                 >
                     🌾
                 </motion.div>
@@ -98,15 +98,15 @@ const Hero = () => {
             {/* Content with Parallax */}
             <motion.div 
                 style={{ y, opacity }}
-                className="relative z-20 text-center px-6 max-w-5xl mx-auto"
+                className="relative z-20 text-center px-4 sm:px-6 max-w-5xl mx-auto pt-20 sm:pt-0"
             >
                 <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 1, delay: 0.2 }}
-                    className="mb-6"
+                    className="mb-4 sm:mb-6"
                 >
-                    <span className="inline-block px-4 py-2 bg-white/10 backdrop-blur-md rounded-full text-white/90 text-sm font-medium tracking-widest uppercase border border-white/20">
+                    <span className="inline-block px-3 py-1.5 sm:px-4 sm:py-2 bg-white/10 backdrop-blur-md rounded-full text-white/90 text-xs sm:text-sm font-medium tracking-wide sm:tracking-widest uppercase border border-white/20 max-w-[90%] sm:max-w-none">
                         Deep Authentic Regional Cultural Travel
                     </span>
                 </motion.div>
@@ -115,7 +115,7 @@ const Hero = () => {
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 1, delay: 0.4 }}
-                    className="font-serif text-5xl md:text-7xl lg:text-8xl text-white mb-6 leading-tight"
+                    className="font-serif text-3xl sm:text-5xl md:text-7xl lg:text-8xl text-white mb-4 sm:mb-6 leading-tight px-2"
                 >
                     <motion.span 
                         className="block"
@@ -139,7 +139,7 @@ const Hero = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 1, delay: 1 }}
-                    className="text-white/95 text-lg md:text-2xl mb-12 max-w-3xl mx-auto font-light leading-relaxed"
+                    className="text-white/95 text-sm sm:text-lg md:text-2xl mb-8 sm:mb-12 max-w-3xl mx-auto font-light leading-relaxed px-2"
                 >
                     We use the intelligence of the future to help you find the wisdom of the past.
                     <br className="hidden md:block" />
@@ -151,28 +151,28 @@ const Hero = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 1, delay: 1.2 }}
-                    className="flex flex-wrap justify-center gap-4 mb-10"
+                    className="flex flex-wrap justify-center gap-2 sm:gap-4 mb-6 sm:mb-10 px-2"
                 >
                     <motion.div
                         whileHover={{ scale: 1.05 }}
-                        className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full text-white/90 text-sm border border-white/20"
+                        className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 backdrop-blur-md rounded-full text-white/90 text-xs sm:text-sm border border-white/20"
                     >
-                        <MapPin size={16} />
-                        <span>Authentic Locations</span>
+                        <MapPin size={14} className="sm:w-4 sm:h-4" />
+                        <span className="whitespace-nowrap">Authentic Locations</span>
                     </motion.div>
                     <motion.div
                         whileHover={{ scale: 1.05 }}
-                        className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full text-white/90 text-sm border border-white/20"
+                        className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 backdrop-blur-md rounded-full text-white/90 text-xs sm:text-sm border border-white/20"
                     >
-                        <Users size={16} />
-                        <span>Local Communities</span>
+                        <Users size={14} className="sm:w-4 sm:h-4" />
+                        <span className="whitespace-nowrap">Local Communities</span>
                     </motion.div>
                     <motion.div
                         whileHover={{ scale: 1.05 }}
-                        className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full text-white/90 text-sm border border-white/20"
+                        className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 backdrop-blur-md rounded-full text-white/90 text-xs sm:text-sm border border-white/20"
                     >
-                        <Heart size={16} />
-                        <span>Cultural Immersion</span>
+                        <Heart size={14} className="sm:w-4 sm:h-4" />
+                        <span className="whitespace-nowrap">Cultural Immersion</span>
                     </motion.div>
                 </motion.div>
 
@@ -180,7 +180,7 @@ const Hero = () => {
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.8, delay: 1.4 }}
-                    className="flex flex-col md:flex-row gap-4 justify-center items-center"
+                    className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center px-2"
                 >
                     <Button 
                         href="/explore" 
@@ -205,7 +205,7 @@ const Hero = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 2, delay: 1.5 }}
-                className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20"
+                className="absolute bottom-6 sm:bottom-10 left-1/2 -translate-x-1/2 z-20 hidden sm:block"
             >
                 <motion.div
                     animate={{ y: [0, 10, 0] }}

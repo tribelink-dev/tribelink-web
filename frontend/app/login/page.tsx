@@ -249,14 +249,14 @@ export default function LoginPage() {
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <Lock className="w-5 h-5 text-gray-400" />
                   </div>
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      placeholder="Enter your password"
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    placeholder="Enter your password"
                       className="w-full pl-12 pr-12 py-3.5 border-2 border-gray-200 rounded-xl focus:border-heritage-gold focus:ring-4 focus:ring-heritage-gold/20 outline-none transition-all text-gray-900 font-medium"
-                    />
+                  />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}

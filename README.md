@@ -1136,20 +1136,72 @@ See `TEST_USERS.md` for complete list.
 
 #### MongoDB Connection Issues
 
-**Problem**: "MongoDB connection error"
+**Problem**: "MongoDB connection error" or "Unit mongod.service not found"
 
 **Solutions**:
-1. **Local MongoDB**: Ensure MongoDB is running
+
+1. **Quick Setup with Docker (Recommended)**:
    ```bash
-   sudo systemctl start mongod  # Linux
-   # OR
-   brew services start mongodb-community  # macOS
+   cd backend
+   ./scripts/setup-mongodb.sh
+   ```
+   This script will:
+   - Check if Docker is available
+   - Create/start a MongoDB container
+   - Set up persistent data storage
+   - Provide connection details
+
+2. **Manual Docker Setup**:
+   ```bash
+   # Create and start MongoDB container
+   docker run -d --name mongodb -p 27017:27017 -v mongodb-data:/data/db mongo:latest
+   
+   # Start existing container
+   docker start mongodb
+   
+   # Check status
+   docker ps | grep mongodb
    ```
 
-2. **MongoDB Atlas**: 
-   - Verify connection string in `.env`
-   - Check IP whitelist in Atlas dashboard
-   - Ensure database name is included in connection string
+3. **System Installation (Linux)**:
+   ```bash
+   # Ubuntu/Debian
+   sudo apt-get update
+   sudo apt-get install -y mongodb
+   
+   # Start service (try different service names)
+   sudo systemctl start mongod    # or mongodb
+   sudo systemctl enable mongod   # Enable on boot
+   
+   # Check status
+   sudo systemctl status mongod
+   ```
+
+4. **MongoDB Atlas (Cloud - Free Tier Available)**:
+   - Sign up at https://www.mongodb.com/cloud/atlas
+   - Create a free cluster
+   - Get connection string
+   - Update `.env` file:
+     ```
+     MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/aitourism
+     ```
+   - Whitelist your IP address in Atlas dashboard
+
+5. **Troubleshooting**:
+   ```bash
+   # Check if MongoDB is running
+   ps aux | grep mongod
+   docker ps | grep mongo
+   
+   # Check if port 27017 is in use
+   lsof -i :27017
+   netstat -tuln | grep 27017
+   
+   # Test connection
+   mongosh mongodb://localhost:27017/aitourism
+   # OR with Docker
+   docker exec -it mongodb mongosh
+   ```
 
 #### Port Already in Use
 
