@@ -32,6 +32,8 @@ const allowedOrigins = [
   'http://172.16.68.100:3000',
   process.env.FRONTEND_URL,
   'https://tribelink-app.vercel.app', // Explicitly allow Vercel frontend
+  'https://triberoutes.com', // Custom domain
+  'https://www.triberoutes.com', // Custom domain with www
   process.env.FRONTEND_RENDER_URL,
   // Add any additional frontend URLs from environment
   process.env.NEXT_PUBLIC_FRONTEND_URL,
@@ -76,6 +78,13 @@ app.use(cors({
     // Check exact match first
     if (allowedOrigins.indexOf(origin) !== -1) {
       console.log('[CORS] Allowed: exact match');
+      callback(null, true);
+      return;
+    }
+    
+    // Allow custom domain triberoutes.com
+    if (origin.includes('triberoutes.com')) {
+      console.log('[CORS] Allowed: triberoutes.com domain');
       callback(null, true);
       return;
     }
