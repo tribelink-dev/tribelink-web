@@ -11,6 +11,7 @@ import {
   Sparkles, 
   DollarSign, 
   Clock,
+  Calendar,
   Star, 
   MapPin,
   Users,
