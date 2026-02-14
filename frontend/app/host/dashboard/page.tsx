@@ -9,10 +9,7 @@ import { SkeletonStats } from '@/components/SkeletonLoader';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Sparkles, 
-  Calendar, 
   DollarSign, 
-  Clock, 
-  TrendingUp, 
   Star, 
   MapPin,
   Users,
@@ -336,6 +333,90 @@ export default function HostDashboard() {
             </div>
           </motion.div>
 
+          {/* Create Experience CTA - Prominent & Beautiful */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+            className="mb-8"
+          >
+            <motion.div
+              whileHover={{ scale: 1.01 }}
+              className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 p-8 md:p-12 shadow-2xl cursor-pointer"
+              onClick={() => router.push('/host/experiences/add')}
+            >
+              {/* Animated Background Elements */}
+              <div className="absolute inset-0 overflow-hidden">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -mr-48 -mt-48 animate-pulse"></div>
+                <div className="absolute bottom-0 left-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -ml-48 -mb-48 animate-pulse" style={{ animationDelay: '1s' }}></div>
+                <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-white/5 rounded-full blur-2xl -translate-x-1/2 -translate-y-1/2"></div>
+              </div>
+
+              <div className="relative z-10">
+                <div className="flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-8">
+                  {/* Icon Section */}
+                  <motion.div
+                    whileHover={{ rotate: 360, scale: 1.1 }}
+                    transition={{ duration: 0.6 }}
+                    className="flex-shrink-0 w-20 h-20 md:w-24 md:h-24 bg-white/20 backdrop-blur-md rounded-3xl flex items-center justify-center border-2 border-white/30 shadow-2xl"
+                  >
+                    <Sparkles className="w-10 h-10 md:w-12 md:h-12 text-white" />
+                  </motion.div>
+
+                  {/* Content Section */}
+                  <div className="flex-1 text-center md:text-left">
+                    <motion.h2
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.3 }}
+                      className="text-3xl md:text-4xl font-bold text-white mb-3"
+                    >
+                      Create Your Next Experience
+                    </motion.h2>
+                    <motion.p
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.4 }}
+                      className="text-lg md:text-xl text-white/90 mb-6 max-w-2xl"
+                    >
+                      Share your unique cultural experiences with travelers from around the world. Start creating unforgettable moments today.
+                    </motion.p>
+                    
+                    {/* CTA Button */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.5 }}
+                      className="inline-flex items-center gap-3 px-8 py-4 bg-white text-indigo-600 font-bold text-lg rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 group"
+                    >
+                      <span>Get Started</span>
+                      <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    </motion.div>
+                  </div>
+
+                  {/* Decorative Arrow */}
+                  <motion.div
+                    animate={{ x: [0, 10, 0] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                    className="hidden lg:flex items-center text-white/50"
+                  >
+                    <ArrowRight className="w-12 h-12" />
+                  </motion.div>
+                </div>
+              </div>
+
+              {/* Shine Effect on Hover */}
+              <motion.div
+                className="absolute inset-0 pointer-events-none"
+                initial={{ x: '-100%' }}
+                whileHover={{ x: '100%' }}
+                transition={{ duration: 0.6 }}
+              >
+                <div className="w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12" />
+              </motion.div>
+            </motion.div>
+          </motion.div>
+
           {/* Statistics Charts - Real Graphs */}
           {statsLoading ? (
             <SkeletonStats />
@@ -649,143 +730,6 @@ export default function HostDashboard() {
               )}
               </AnimatePresence>
             </motion.div>
-
-          {/* Quick Actions - Modern Grid */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6, duration: 0.5 }}
-            className="mb-10"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">Quick Actions</h2>
-                <p className="text-gray-600">Access your most used features</p>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <motion.button
-                whileHover={{ scale: 1.02, y: -4 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => router.push('/host/experiences/add')}
-                className="group relative overflow-hidden bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 text-left"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 to-indigo-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div className="relative z-10">
-                  <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-white/20 group-hover:backdrop-blur-sm transition-all duration-300 text-indigo-600 group-hover:text-white">
-                    <Sparkles className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-white transition-colors duration-300">
-                    Create Experience
-                  </h3>
-                  <p className="text-sm text-gray-600 group-hover:text-white/90 transition-colors duration-300">
-                    Add a new experience listing
-                  </p>
-                </div>
-              </motion.button>
-
-              <motion.button
-                whileHover={{ scale: 1.02, y: -4 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => router.push('/host/experiences')}
-                className="group relative overflow-hidden bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 text-left"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-blue-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div className="relative z-10">
-                  <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-white/20 group-hover:backdrop-blur-sm transition-all duration-300 text-blue-600 group-hover:text-white">
-                    <Activity className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-white transition-colors duration-300">
-                    My Experiences
-                  </h3>
-                  <p className="text-sm text-gray-600 group-hover:text-white/90 transition-colors duration-300">
-                    Manage your experience listings
-                  </p>
-                </div>
-              </motion.button>
-
-              <motion.button
-                whileHover={{ scale: 1.02, y: -4 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => router.push('/provider/experiences/bookings')}
-                className="group relative overflow-hidden bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 text-left"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-teal-600 to-teal-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div className="relative z-10">
-                  <div className="w-14 h-14 bg-teal-50 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-white/20 group-hover:backdrop-blur-sm transition-all duration-300 text-teal-600 group-hover:text-white">
-                    <Calendar className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-white transition-colors duration-300">
-                    View Bookings
-                  </h3>
-                  <p className="text-sm text-gray-600 group-hover:text-white/90 transition-colors duration-300">
-                    Manage all your bookings
-                  </p>
-                </div>
-              </motion.button>
-
-              <motion.button
-                whileHover={{ scale: 1.02, y: -4 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => router.push('/host/verify')}
-                className="group relative overflow-hidden bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 text-left"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-cyan-600 to-cyan-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div className="relative z-10">
-                  <div className="w-14 h-14 bg-cyan-50 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-white/20 group-hover:backdrop-blur-sm transition-all duration-300 text-cyan-600 group-hover:text-white">
-                    <CheckCircle2 className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-white transition-colors duration-300">
-                    Verify Tickets
-                  </h3>
-                  <p className="text-sm text-gray-600 group-hover:text-white/90 transition-colors duration-300">
-                    Verify traveler tickets
-                  </p>
-                </div>
-              </motion.button>
-
-              <motion.button
-                whileHover={{ scale: 1.02, y: -4 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => router.push('/host/analytics')}
-                className="group relative overflow-hidden bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 text-left"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-violet-600 to-violet-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div className="relative z-10">
-                  <div className="w-14 h-14 bg-violet-50 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-white/20 group-hover:backdrop-blur-sm transition-all duration-300 text-violet-600 group-hover:text-white">
-                    <TrendingUp className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-white transition-colors duration-300">
-                    Analytics
-                  </h3>
-                  <p className="text-sm text-gray-600 group-hover:text-white/90 transition-colors duration-300">
-                    View performance metrics
-                  </p>
-                </div>
-              </motion.button>
-
-              <motion.button
-                whileHover={{ scale: 1.02, y: -4 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => router.push('/host/availability')}
-                className="group relative overflow-hidden bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 text-left"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-600 to-purple-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div className="relative z-10">
-                  <div className="w-14 h-14 bg-purple-50 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-white/20 group-hover:backdrop-blur-sm transition-all duration-300 text-purple-600 group-hover:text-white">
-                    <Clock className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-white transition-colors duration-300">
-                    Availability
-                  </h3>
-                  <p className="text-sm text-gray-600 group-hover:text-white/90 transition-colors duration-300">
-                    Manage your schedule
-                  </p>
-                </div>
-              </motion.button>
-            </div>
-          </motion.div>
 
           {/* Enhanced Empty State */}
           {experiences.length === 0 && (

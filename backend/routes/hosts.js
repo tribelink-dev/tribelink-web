@@ -235,6 +235,7 @@ router.post('/experience', authenticate, requireHost, upload.single('image'), as
       location,
       availableDates,
       price,
+      currency,
       contentUrl,
       duration,
       maxParticipants
@@ -299,13 +300,13 @@ router.post('/experience', authenticate, requireHost, upload.single('image'), as
               available: d.available !== false
             };
           }),
-      price,
+      price: parseFloat(price) || 0,
       currency: currency || 'USD',
       contentUrl: contentUrl || null,
       // Cloudinary returns full URL in req.file.path, local storage uses filename
       imageUrl: req.file ? (req.file.path || `/uploads/${req.file.filename}`) : null,
-      duration: duration || 2,
-      maxParticipants: maxParticipants || 10
+      duration: parseInt(duration) || 2,
+      maxParticipants: parseInt(maxParticipants) || 10
     };
 
     // Only add category/subcategory if provided
@@ -334,7 +335,12 @@ router.post('/experience', authenticate, requireHost, upload.single('image'), as
       experience: normalizedExperience
     });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Error creating experience:', error);
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error.message,
+      ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+    });
   }
 });
 

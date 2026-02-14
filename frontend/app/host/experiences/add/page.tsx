@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
+import HostSidebar from '@/components/HostSidebar';
 import { INDIAN_STATES, DISTRICTS_BY_STATE } from '@/lib/indianStates';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
@@ -10,6 +11,7 @@ import { format } from 'date-fns';
 import LocationPicker from '@/components/LocationPicker';
 import CategorySelector from '@/components/CategorySelector';
 import { CURRENCIES, POPULAR_CURRENCIES, getCurrencyByCode } from '@/lib/currency';
+import { motion } from 'framer-motion';
 
 interface DateWithTimeSlots {
   date: string; // ISO date string (YYYY-MM-DD)
@@ -495,163 +497,161 @@ export default function AddExperiencePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-primary-50/30">
-      <div className="page-container py-8 md:py-12">
-        <div className="section-container max-w-5xl">
-          {/* Professional Header */}
-          <div className="mb-8">
-            <button
-              onClick={() => router.push('/host/dashboard')}
-              className="btn-secondary mb-6 flex items-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              Back to Dashboard
-            </button>
-            
-            <div className="bg-gradient-to-r from-primary-600 via-primary-500 to-accent-500 rounded-2xl md:rounded-3xl shadow-large p-8 md:p-12 text-white relative overflow-hidden">
-              {/* Decorative Background Elements */}
-              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32"></div>
-              <div className="absolute bottom-0 left-0 w-48 h-48 bg-accent-400/20 rounded-full blur-2xl -ml-24 -mb-24"></div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <HostSidebar />
+      <div className="lg:ml-72">
+        <div className="p-6 md:p-8 lg:p-10">
+          {/* Modern Header */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-10"
+          >
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-800 via-indigo-700 to-slate-800 p-8 md:p-12 shadow-2xl">
+              <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl -mr-48 -mt-48"></div>
+              <div className="absolute bottom-0 left-0 w-72 h-72 bg-slate-500/10 rounded-full blur-2xl -ml-36 -mb-36"></div>
               
-              <div className="relative z-10 text-center">
-                <div className="inline-flex items-center justify-center w-24 h-24 bg-white/20 backdrop-blur-sm rounded-2xl mb-6 shadow-large border-2 border-white/30 p-3">
-                  <span className="text-5xl">✨</span>
+              <div className="relative z-10">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/30">
+                    <span className="text-4xl">✨</span>
+                  </div>
+                  <div>
+                    <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">
+                      Create New Experience
+                    </h1>
+                    <p className="text-white/90 text-lg">
+                      Share your unique experience with travelers around the world. Set your availability with dates and time slots.
+                    </p>
+                  </div>
                 </div>
-                <h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight">
-                  Create New Experience
-                </h1>
-                <p className="text-lg md:text-xl text-white/90 max-w-2xl mx-auto">
-                  Share your unique experience with travelers around the world. Set your availability with dates and time slots.
-                </p>
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="content-card shadow-large border-0">
+          {/* Error/Success Messages */}
 
-            {error && (
-              <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 mb-6 flex items-start gap-3 shadow-soft">
-                <div className="flex-shrink-0 w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
-                  <span className="text-lg">⚠️</span>
-                </div>
-                <div className="flex-1">
-                  <p className="text-red-800 font-medium">{error}</p>
-                </div>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-4 bg-red-50 border-2 border-red-200 text-red-700 rounded-xl shadow-lg"
+            >
+              <div className="flex items-center gap-3">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+                {error}
               </div>
-            )}
+            </motion.div>
+          )}
 
-            {success && (
-              <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 mb-6 flex items-start gap-3 shadow-soft">
-                <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                  <span className="text-lg">✅</span>
-                </div>
-                <div className="flex-1">
-                  <p className="text-green-800 font-medium">Experience created successfully! Redirecting to dashboard...</p>
-                </div>
+          {success && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-4 bg-green-50 border-2 border-green-200 text-green-700 rounded-xl shadow-lg"
+            >
+              <div className="flex items-center gap-3">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                Experience created successfully! Redirecting...
               </div>
-            )}
+            </motion.div>
+          )}
 
-            <form onSubmit={handleSubmit} className="space-y-8">
-              {/* Basic Information Section */}
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border-2 border-blue-200 shadow-soft">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center shadow-medium">
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-gray-900">Basic Information</h2>
-                    <p className="text-sm text-gray-600">Tell travelers about your experience</p>
-                  </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Basic Information */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8"
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-slate-600 to-indigo-600 rounded-xl flex items-center justify-center text-white text-2xl">
+                  📝
                 </div>
-
-                <div className="space-y-5">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Experience Title <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.title}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      required
-                      placeholder="e.g., Tea Plantation Tour"
-                      className="input-field bg-white border-2 border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Description <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      required
-                      rows={5}
-                      placeholder="Describe your experience in detail..."
-                      className="input-field bg-white border-2 border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-                    />
-                  </div>
-                </div>
+                <h2 className="text-2xl font-bold text-slate-900">Basic Information</h2>
               </div>
 
-              {/* Category Section */}
-              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border-2 border-purple-200 shadow-soft">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center shadow-medium">
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-gray-900">Experience Category (Optional)</h2>
-                    <p className="text-sm text-gray-600">Select the category and subcategory that best describes your experience</p>
-                  </div>
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-900 mb-2">
+                    Experience Title * <span className="text-slate-600 text-xs font-normal">(Max 100 characters)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    maxLength={100}
+                    required
+                    placeholder="e.g., Tea Plantation Tour in Munnar"
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all text-lg"
+                  />
+                  <p className="mt-1 text-sm text-slate-600">
+                    {formData.title.length}/100 characters
+                  </p>
                 </div>
 
-                <CategorySelector
-                  selectedCategory={formData.category}
-                  selectedSubcategory={formData.subcategory}
-                  onCategoryChange={(category, subcategory) => {
-                    setFormData({ ...formData, category, subcategory });
-                  }}
-                />
+                <div>
+                  <label className="block text-sm font-semibold text-slate-900 mb-2">
+                    Description *
+                  </label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    required
+                    rows={6}
+                    placeholder="Describe your experience in detail..."
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all resize-none"
+                  />
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Category Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8"
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-slate-600 to-indigo-600 rounded-xl flex items-center justify-center text-white text-2xl">
+                  🏷️
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900">Experience Category (Optional)</h2>
               </div>
 
-              {/* Location Section */}
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border-2 border-green-200 shadow-soft">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center shadow-medium">
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-gray-900">Location</h2>
-                    <p className="text-sm text-gray-600">Where is your experience located?</p>
-                  </div>
-                </div>
+              <CategorySelector
+                selectedCategory={formData.category}
+                selectedSubcategory={formData.subcategory}
+                onCategoryChange={(category, subcategory) => {
+                  setFormData({ ...formData, category, subcategory });
+                }}
+              />
+            </motion.div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Location with Map */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8"
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-slate-600 to-indigo-600 rounded-xl flex items-center justify-center text-white text-2xl">
+                  📍
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900">Location</h2>
+              </div>
+
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Country <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.location.country}
-                      disabled
-                      className="input-field bg-white/80 border-2 border-green-200 cursor-not-allowed font-semibold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      State/Province <span className="text-red-500">*</span>
+                    <label className="block text-sm font-semibold text-slate-900 mb-2">
+                      State *
                     </label>
                     <select
                       value={formData.location.state}
@@ -660,9 +660,9 @@ export default function AddExperiencePage() {
                         location: { ...formData.location, state: e.target.value, district: '' }
                       })}
                       required
-                      className="input-field bg-white border-2 border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                     >
-                      <option value="">Select a state</option>
+                      <option value="">Select State</option>
                       {INDIAN_STATES.map((state) => (
                         <option key={state} value={state}>
                           {state}
@@ -671,8 +671,8 @@ export default function AddExperiencePage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      District/City <span className="text-red-500">*</span>
+                    <label className="block text-sm font-semibold text-slate-900 mb-2">
+                      District *
                     </label>
                     <select
                       value={formData.location.district}
@@ -682,15 +682,9 @@ export default function AddExperiencePage() {
                       })}
                       required
                       disabled={!formData.location.state || availableDistricts.length === 0}
-                      className="input-field bg-white border-2 border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all disabled:bg-slate-50 disabled:cursor-not-allowed"
                     >
-                      <option value="">
-                        {!formData.location.state 
-                          ? 'Select a state first' 
-                          : availableDistricts.length === 0 
-                          ? 'No districts available'
-                          : 'Select a district/city'}
-                      </option>
+                      <option value="">Select District</option>
                       {availableDistricts.map((district) => (
                         <option key={district} value={district}>
                           {district}
@@ -722,186 +716,188 @@ export default function AddExperiencePage() {
                   </div>
                 )}
               </div>
+            </motion.div>
 
-              {/* Pricing & Details Section */}
-              <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-6 border-2 border-amber-200 shadow-soft">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center shadow-medium">
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-gray-900">Pricing & Details</h2>
-                    <p className="text-sm text-gray-600">Set your pricing and experience details</p>
-                  </div>
+            {/* Pricing & Details */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8"
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-slate-600 to-indigo-600 rounded-xl flex items-center justify-center text-white text-2xl">
+                  💰
                 </div>
+                <h2 className="text-2xl font-bold text-slate-900">Pricing & Details</h2>
+              </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Currency <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={formData.currency}
-                      onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                      required
-                      className="input-field bg-white border-2 border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-                    >
-                      {POPULAR_CURRENCIES.map((curr) => (
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-900 mb-2">
+                    Currency *
+                  </label>
+                  <select
+                    value={formData.currency}
+                    onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                    required
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
+                  >
+                    {POPULAR_CURRENCIES.map((curr) => (
+                      <option key={curr.code} value={curr.code}>
+                        {curr.flag} {curr.code} - {curr.name}
+                      </option>
+                    ))}
+                    <optgroup label="Other Currencies">
+                      {CURRENCIES.filter(c => !POPULAR_CURRENCIES.find(pc => pc.code === c.code)).map((curr) => (
                         <option key={curr.code} value={curr.code}>
                           {curr.flag} {curr.code} - {curr.name}
                         </option>
                       ))}
-                      <optgroup label="Other Currencies">
-                        {CURRENCIES.filter(c => !POPULAR_CURRENCIES.find(pc => pc.code === c.code)).map((curr) => (
-                          <option key={curr.code} value={curr.code}>
-                            {curr.flag} {curr.code} - {curr.name}
-                          </option>
-                        ))}
-                      </optgroup>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Price per Person <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">
-                        {getCurrencyByCode(formData.currency)?.symbol || '$'}
-                      </span>
-                      <input
-                        type="number"
-                        value={formData.price}
-                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                        required
-                        min="0"
-                        step="0.01"
-                        placeholder="50.00"
-                        className="input-field bg-white border-2 border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 pl-8"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Duration (hours)
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        value={formData.duration}
-                        onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                        min="1"
-                        placeholder="2"
-                        className="input-field bg-white border-2 border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-                      />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">hrs</span>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Max Participants
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.maxParticipants}
-                      onChange={(e) => setFormData({ ...formData, maxParticipants: e.target.value })}
-                      min="1"
-                      placeholder="10"
-                      className="input-field bg-white border-2 border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Media Section */}
-              <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-xl p-6 border-2 border-pink-200 shadow-soft">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 bg-pink-500 rounded-lg flex items-center justify-center shadow-medium">
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-gray-900">Media</h2>
-                    <p className="text-sm text-gray-600">Add images and content to showcase your experience</p>
-                  </div>
-                </div>
-
-                <div className="space-y-5">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Experience Image (recommended)
-                    </label>
-                    {imagePreview ? (
-                      <div className="mb-4">
-                        <div className="relative w-full h-64 rounded-xl overflow-hidden border-2 border-gray-200 shadow-soft">
-                          <img 
-                            src={imagePreview} 
-                            alt="Preview" 
-                            className="w-full h-full object-cover"
-                          />
-                          <button
-                            type="button"
-                            onClick={handleRemoveImage}
-                            className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-colors shadow-medium"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-primary-400 transition-colors bg-white">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageChange}
-                          className="hidden"
-                          id="image-upload"
-                        />
-                        <label
-                          htmlFor="image-upload"
-                          className="cursor-pointer flex flex-col items-center gap-2"
-                        >
-                          <span className="text-4xl">📷</span>
-                          <span className="text-gray-600 font-medium">Click to upload image</span>
-                          <span className="text-sm text-gray-500">PNG, JPG, GIF up to 5MB</span>
-                        </label>
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Content URL (optional)
-                    </label>
-                    <input
-                      type="url"
-                      value={formData.contentUrl}
-                      onChange={(e) => setFormData({ ...formData, contentUrl: e.target.value })}
-                      placeholder="https://example.com/video.mp4"
-                      className="input-field bg-white border-2 border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-                    />
-                    <p className="text-xs text-gray-500 mt-1.5">Link to video or content about this experience</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Available Dates & Time Slots Section - Enhanced */}
-            <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-6 md:p-8 border-2 border-purple-200 shadow-soft">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center shadow-medium">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
+                    </optgroup>
+                  </select>
                 </div>
                 <div>
-                  <label className="block text-lg font-bold text-gray-900">
-                    Available Dates & Time Slots <span className="text-red-500">*</span>
+                  <label className="block text-sm font-semibold text-slate-900 mb-2">
+                    Price per Person *
                   </label>
-                  <p className="text-sm text-gray-600">Select dates and set time slots for your experience</p>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-semibold">
+                      {getCurrencyByCode(formData.currency)?.symbol || '$'}
+                    </span>
+                    <input
+                      type="number"
+                      value={formData.price}
+                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                      required
+                      min="0"
+                      step="0.01"
+                      placeholder="50.00"
+                      className="w-full px-4 py-3 pl-8 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-900 mb-2">
+                    Duration (hours)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={formData.duration}
+                      onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                      min="1"
+                      placeholder="2"
+                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">hrs</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-900 mb-2">
+                    Max Participants
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.maxParticipants}
+                    onChange={(e) => setFormData({ ...formData, maxParticipants: e.target.value })}
+                    min="1"
+                    placeholder="10"
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
+                  />
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Media Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8"
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-slate-600 to-indigo-600 rounded-xl flex items-center justify-center text-white text-2xl">
+                  📷
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900">Media</h2>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-900 mb-2">
+                    Experience Image (recommended)
+                  </label>
+                  {imagePreview ? (
+                    <div className="mb-4">
+                      <div className="relative w-full h-64 rounded-xl overflow-hidden border-2 border-slate-200 shadow-lg">
+                        <img 
+                          src={imagePreview} 
+                          alt="Preview" 
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleRemoveImage}
+                          className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-colors shadow-lg"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-slate-400 transition-colors bg-slate-50">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="hidden"
+                        id="image-upload"
+                      />
+                      <label
+                        htmlFor="image-upload"
+                        className="cursor-pointer flex flex-col items-center gap-2"
+                      >
+                        <span className="text-4xl">📷</span>
+                        <span className="text-slate-600 font-medium">Click to upload image</span>
+                        <span className="text-sm text-slate-500">PNG, JPG, GIF up to 5MB</span>
+                      </label>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-900 mb-2">
+                    Content URL (optional)
+                  </label>
+                  <input
+                    type="url"
+                    value={formData.contentUrl}
+                    onChange={(e) => setFormData({ ...formData, contentUrl: e.target.value })}
+                    placeholder="https://example.com/video.mp4"
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
+                  />
+                  <p className="text-xs text-slate-500 mt-1.5">Link to video or content about this experience</p>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Available Dates & Time Slots */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8"
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-slate-600 to-indigo-600 rounded-xl flex items-center justify-center text-white text-2xl">
+                  📅
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-900">Available Dates & Time Slots *</h2>
+                  <p className="text-sm text-slate-600">Select dates and set time slots for your experience</p>
                 </div>
               </div>
 
@@ -1305,45 +1301,49 @@ export default function AddExperiencePage() {
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-8 bg-white/60 backdrop-blur-sm rounded-xl border-2 border-dashed border-purple-300">
+                <div className="text-center py-8 bg-slate-50 rounded-xl border-2 border-dashed border-slate-300">
                   <div className="text-4xl mb-3">📅</div>
-                  <p className="text-gray-600 font-medium mb-1">No dates selected</p>
-                  <p className="text-sm text-gray-500">Click on dates in the calendar above to add availability</p>
+                  <p className="text-slate-600 font-medium mb-1">No dates selected</p>
+                  <p className="text-sm text-slate-500">Click on dates in the calendar above to add availability</p>
                 </div>
               )}
-            </div>
+            </motion.div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-col md:flex-row gap-4 pt-6 border-t-2 border-gray-200">
-                <button
-                  type="button"
-                  onClick={() => router.push('/host/dashboard')}
-                  className="btn-secondary flex-1 py-4 text-lg"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="btn-primary flex-1 py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-large hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-center gap-3"
-                >
-                  {loading ? (
-                    <>
-                      <span className="animate-spin inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full"></span>
-                      <span>Creating Experience...</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
-                      <span>Create Experience</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
+            {/* Action Buttons */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              className="flex flex-col md:flex-row gap-4 pt-6"
+            >
+              <button
+                type="button"
+                onClick={() => router.push('/host/dashboard')}
+                className="flex-1 px-6 py-4 bg-slate-100 hover:bg-slate-200 text-slate-900 font-semibold rounded-xl transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 px-6 py-4 bg-gradient-to-r from-slate-600 to-indigo-600 hover:from-slate-700 hover:to-indigo-700 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+              >
+                {loading ? (
+                  <>
+                    <span className="animate-spin inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full"></span>
+                    <span>Creating Experience...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span>Create Experience</span>
+                  </>
+                )}
+              </button>
+            </motion.div>
+          </form>
         </div>
       </div>
     </div>
