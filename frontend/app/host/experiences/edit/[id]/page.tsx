@@ -456,7 +456,7 @@ export default function EditExperiencePage() {
                   setFormData({ ...formData, category, subcategory });
                 }}
               />
-            </div>
+            </motion.div>
 
             {/* Location */}
             <motion.div
