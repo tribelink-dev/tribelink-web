@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Sparkles, 
   DollarSign, 
+  Clock,
   Star, 
   MapPin,
   Users,
