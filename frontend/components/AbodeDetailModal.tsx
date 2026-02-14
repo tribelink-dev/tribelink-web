@@ -833,7 +833,7 @@ export default function AbodeDetailModal({
                           {(fullAbode.pricing?.weeklyDiscount ?? 0) > 0 && (
                             <div className="flex items-center gap-2 mt-2">
                               <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">
-                                Save {fullAbode.pricing.weeklyDiscount}%
+                                Save {fullAbode.pricing?.weeklyDiscount ?? 0}%
                               </span>
                               <p className="text-sm text-gray-600">
                                 for 7+ nights
