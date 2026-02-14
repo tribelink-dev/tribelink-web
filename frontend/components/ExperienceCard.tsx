@@ -263,7 +263,12 @@ export default function ExperienceCard({
             {experience.duration && (
               <div className="flex items-center gap-1.5 text-gray-600">
                 <Clock className="w-4 h-4 text-gray-500" />
-                <span className="text-sm font-medium">{experience.duration} min</span>
+                <span className="text-sm font-medium">
+                  {experience.duration % 1 === 0 
+                    ? `${experience.duration} hr${experience.duration !== 1 ? 's' : ''}`
+                    : `${experience.duration} hrs`
+                  }
+                </span>
               </div>
             )}
             
