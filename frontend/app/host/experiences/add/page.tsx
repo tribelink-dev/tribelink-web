@@ -468,6 +468,7 @@ export default function AddExperiencePage() {
           coordinates: { lat: 0, lng: 0 }
         },
         price: '',
+        currency: 'USD',
         duration: '2',
         maxParticipants: '10',
         contentUrl: '',
