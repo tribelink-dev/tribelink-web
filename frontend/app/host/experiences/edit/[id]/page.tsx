@@ -219,10 +219,10 @@ export default function EditExperiencePage() {
     setLoading(true);
 
     // Validation
-    if (!formData.title || !formData.description || !formData.category || !formData.subcategory ||
+    if (!formData.title || !formData.description ||
         !formData.location.country || !formData.location.state || !formData.location.district || 
         !formData.price || formData.availableDates.length === 0) {
-      setError('Please fill all required fields including category and subcategory, and add at least one available date');
+      setError('Please fill all required fields and add at least one available date');
       setLoading(false);
       return;
     }
@@ -232,8 +232,12 @@ export default function EditExperiencePage() {
       const formDataToSend = new FormData();
       formDataToSend.append('title', formData.title);
       formDataToSend.append('description', formData.description);
-      formDataToSend.append('category', formData.category || '');
-      formDataToSend.append('subcategory', formData.subcategory || '');
+      if (formData.category) {
+        formDataToSend.append('category', formData.category);
+      }
+      if (formData.subcategory) {
+        formDataToSend.append('subcategory', formData.subcategory);
+      }
       formDataToSend.append('location', JSON.stringify(formData.location));
       
       // Format availableDates with time slots for backend (matching add page format)
@@ -387,7 +391,7 @@ export default function EditExperiencePage() {
                   </svg>
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900">Experience Category</h2>
+                  <h2 className="text-lg font-bold text-gray-900">Experience Category (Optional)</h2>
                   <p className="text-sm text-gray-600">Select the category and subcategory that best describes your experience</p>
                 </div>
               </div>
@@ -398,7 +402,6 @@ export default function EditExperiencePage() {
                 onCategoryChange={(category, subcategory) => {
                   setFormData({ ...formData, category, subcategory });
                 }}
-                error={error && (!formData.category || !formData.subcategory) ? 'Please select a category and subcategory' : undefined}
               />
             </div>
 

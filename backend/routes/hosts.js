@@ -240,8 +240,8 @@ router.post('/experience', authenticate, requireHost, upload.single('image'), as
       maxParticipants
     } = req.body;
 
-    if (!title || !description || !category || !subcategory || !location || !availableDates || !price) {
-      return res.status(400).json({ message: 'Required fields missing including category and subcategory' });
+    if (!title || !description || !location || !availableDates || !price) {
+      return res.status(400).json({ message: 'Required fields missing' });
     }
 
     // Map category ID to category name for enum validation
@@ -256,7 +256,8 @@ router.post('/experience', authenticate, requireHost, upload.single('image'), as
       'regional-exclusives': 'Regional Exclusives'
     };
 
-    const categoryName = categoryMap[category] || category;
+    // Map category ID to category name for enum validation (only if provided)
+    const categoryName = (category && category.trim()) ? (categoryMap[category] || category) : null;
 
     // Parse location if it's a string
     const locationData = typeof location === 'string' ? JSON.parse(location) : location;
@@ -269,11 +270,10 @@ router.post('/experience', authenticate, requireHost, upload.single('image'), as
       coordinates: locationData.coordinates || {}
     };
 
-    const experience = new Experience({
+    // Build experience object with optional category/subcategory
+    const experienceData = {
       title: title.trim(),
       description: description.trim(),
-      category: categoryName,
-      subcategory: subcategory.trim(),
       provider: req.user._id,
       location: normalizedLocation,
       availableDates: typeof availableDates === 'string' 
@@ -306,7 +306,17 @@ router.post('/experience', authenticate, requireHost, upload.single('image'), as
       imageUrl: req.file ? (req.file.path || `/uploads/${req.file.filename}`) : null,
       duration: duration || 2,
       maxParticipants: maxParticipants || 10
-    });
+    };
+
+    // Only add category/subcategory if provided
+    if (categoryName) {
+      experienceData.category = categoryName;
+    }
+    if (subcategory && subcategory.trim()) {
+      experienceData.subcategory = subcategory.trim();
+    }
+
+    const experience = new Experience(experienceData);
 
     await experience.save();
 

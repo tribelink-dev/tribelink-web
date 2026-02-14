@@ -90,11 +90,11 @@ const experienceSchema = new mongoose.Schema({
       'Gastronomy & Ancestral Flavors',
       'Regional Exclusives'
     ],
-    required: true
+    required: false
   },
   subcategory: {
     type: String,
-    required: true
+    required: false
   },
   averageRating: {
     type: Number,

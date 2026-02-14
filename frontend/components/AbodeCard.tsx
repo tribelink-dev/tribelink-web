@@ -226,23 +226,23 @@ export default function AbodeCard({ abode, imageUrl, index = 0, onClick }: Abode
             )}
           </div>
 
-          {/* Price Section */}
-          <div className="flex items-baseline justify-between">
-            <div>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-3xl font-bold text-gray-900">
-                  {formatPrice(price, abode.pricing?.currency || 'INR')}
-                </span>
-              </div>
-              <p className="text-sm text-gray-500 font-medium mt-0.5">per night</p>
-            </div>
-            
-            {/* Property Type Badge */}
-            <div className="px-3 py-1.5 bg-gradient-to-r from-heritage-gold/10 to-cream-500/20 text-heritage-gold-dark rounded-xl border border-heritage-gold/20">
-              <span className="text-xs font-bold uppercase tracking-wide">
+          {/* Property Type Badge - Moved above price for better positioning */}
+          <div className="mb-3">
+            <div className="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-heritage-gold/10 to-cream-500/20 text-heritage-gold-dark rounded-xl border border-heritage-gold/20">
+              <span className="text-xs font-bold uppercase tracking-wide whitespace-nowrap">
                 {propertyType}
               </span>
             </div>
+          </div>
+
+          {/* Price Section */}
+          <div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-3xl font-bold text-gray-900">
+                {formatPrice(price, abode.pricing?.currency || 'INR')}
+              </span>
+            </div>
+            <p className="text-sm text-gray-500 font-medium mt-0.5">per night</p>
           </div>
         </div>
 
