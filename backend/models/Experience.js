@@ -56,6 +56,12 @@ const experienceSchema = new mongoose.Schema({
     required: true,
     min: 0
   },
+  currency: {
+    type: String,
+    default: 'USD',
+    uppercase: true,
+    enum: ['USD', 'EUR', 'GBP', 'INR', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'SGD', 'HKD', 'NZD', 'SEK', 'NOK', 'DKK', 'PLN', 'MXN', 'BRL', 'ZAR', 'AED', 'SAR', 'THB', 'MYR', 'IDR', 'KRW', 'PHP', 'VND', 'TRY', 'RUB']
+  },
   contentUrl: {
     type: String,
     default: null

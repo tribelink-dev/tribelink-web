@@ -8,6 +8,7 @@ import { getImageUrl } from '@/lib/imageUtils';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import CategorySelector, { EXPERIENCE_CATEGORIES } from '@/components/CategorySelector';
+import { CURRENCIES, POPULAR_CURRENCIES, getCurrencyByCode } from '@/lib/currency';
 
 export default function EditExperiencePage() {
   const router = useRouter();
@@ -25,6 +26,7 @@ export default function EditExperiencePage() {
       district: ''
     },
     price: '',
+    currency: 'USD',
     duration: '2',
     maxParticipants: '10',
     contentUrl: '',
@@ -83,6 +85,7 @@ export default function EditExperiencePage() {
           district: experience.location?.district || ''
         },
         price: experience.price?.toString() || '',
+        currency: experience.currency || 'USD',
         duration: experience.duration?.toString() || '2',
         maxParticipants: experience.maxParticipants?.toString() || '10',
         contentUrl: experience.contentUrl || '',
@@ -243,6 +246,7 @@ export default function EditExperiencePage() {
       formDataToSend.append('availableDates', JSON.stringify(formattedDates));
       
       formDataToSend.append('price', formData.price);
+      formDataToSend.append('currency', formData.currency);
       formDataToSend.append('duration', formData.duration);
       formDataToSend.append('maxParticipants', formData.maxParticipants);
       if (formData.contentUrl) {
@@ -463,19 +467,52 @@ export default function EditExperiencePage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Price per Person (USD) *
-                </label>
-                <input
-                  type="number"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  required
-                  min="0"
-                  step="0.01"
-                  placeholder="50.00"
-                  className="input-field"
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Currency <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formData.currency}
+                      onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                      required
+                      className="input-field"
+                    >
+                      {POPULAR_CURRENCIES.map((curr) => (
+                        <option key={curr.code} value={curr.code}>
+                          {curr.flag} {curr.code} - {curr.name}
+                        </option>
+                      ))}
+                      <optgroup label="Other Currencies">
+                        {CURRENCIES.filter(c => !POPULAR_CURRENCIES.find(pc => pc.code === c.code)).map((curr) => (
+                          <option key={curr.code} value={curr.code}>
+                            {curr.flag} {curr.code} - {curr.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Price per Person <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">
+                        {getCurrencyByCode(formData.currency)?.symbol || '$'}
+                      </span>
+                      <input
+                        type="number"
+                        value={formData.price}
+                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                        required
+                        min="0"
+                        step="0.01"
+                        placeholder="50.00"
+                        className="input-field pl-8"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">

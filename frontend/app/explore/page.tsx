@@ -59,6 +59,29 @@ export default function ExplorePage() {
   const [authModalAction, setAuthModalAction] = useState<'save' | 'book' | 'view'>('save');
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
+  // Filter and Sort state
+  const [showAbodeFilterDropdown, setShowAbodeFilterDropdown] = useState(false);
+  const [showAbodeSortDropdown, setShowAbodeSortDropdown] = useState(false);
+  const [showExperienceFilterDropdown, setShowExperienceFilterDropdown] = useState(false);
+  const [showExperienceSortDropdown, setShowExperienceSortDropdown] = useState(false);
+  
+  const [abodeFilters, setAbodeFilters] = useState({
+    minPrice: '',
+    maxPrice: '',
+    minRating: '',
+    capacity: '',
+  });
+  
+  const [abodeSort, setAbodeSort] = useState('rating');
+  
+  const [experienceFilters, setExperienceFilters] = useState({
+    minPrice: '',
+    maxPrice: '',
+    minRating: '',
+  });
+  
+  const [experienceSort, setExperienceSort] = useState('rating');
+
   // Scroll animations
   const { scrollY } = useScroll();
   const heroOpacity = useTransform(scrollY, [0, 300], [1, 0]);
@@ -252,7 +275,7 @@ export default function ExplorePage() {
       // Build query params from filters
       const params: any = { 
         limit: 50,
-        sort: 'rating',
+        sort: abodeSort,
         page 
       };
 
@@ -275,6 +298,12 @@ export default function ExplorePage() {
       if (filters.guests > 1) {
         params.capacity = filters.guests;
       }
+
+      // Add additional filters
+      if (abodeFilters.minPrice) params.minPrice = abodeFilters.minPrice;
+      if (abodeFilters.maxPrice) params.maxPrice = abodeFilters.maxPrice;
+      if (abodeFilters.minRating) params.minRating = abodeFilters.minRating;
+      if (abodeFilters.capacity) params.capacity = abodeFilters.capacity;
 
       const abodesRes = await api.get('/abodes', { params });
       
@@ -330,6 +359,93 @@ export default function ExplorePage() {
     }, 100);
   };
 
+  // Handle filter changes for abodes (just update state, don't fetch yet)
+  const handleAbodeFilterChange = (key: string, value: string) => {
+    setAbodeFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  // Apply abode filters
+  const applyAbodeFilters = () => {
+    setAllAbodes([]);
+    setAbodesPage(1);
+    fetchAllAbodes(1, searchFilters);
+    setShowAbodeFilterDropdown(false);
+  };
+
+  // Handle sort changes for abodes
+  const handleAbodeSortChange = (sort: string) => {
+    setAbodeSort(sort);
+    setAllAbodes([]);
+    setAbodesPage(1);
+    fetchAllAbodes(1, searchFilters);
+    setShowAbodeSortDropdown(false);
+  };
+
+  // Clear abode filters
+  const clearAbodeFilters = () => {
+    setAbodeFilters({
+      minPrice: '',
+      maxPrice: '',
+      minRating: '',
+      capacity: '',
+    });
+    setAllAbodes([]);
+    setAbodesPage(1);
+    fetchAllAbodes(1, searchFilters);
+    setShowAbodeFilterDropdown(false);
+  };
+
+  // Handle filter changes for experiences (just update state, don't fetch yet)
+  const handleExperienceFilterChange = (key: string, value: string) => {
+    setExperienceFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  // Apply experience filters
+  const applyExperienceFilters = () => {
+    setAllExperiences([]);
+    setExperiencesPage(1);
+    fetchAllExperiences(1, searchFilters);
+    setShowExperienceFilterDropdown(false);
+  };
+
+  // Handle sort changes for experiences
+  const handleExperienceSortChange = (sort: string) => {
+    setExperienceSort(sort);
+    setAllExperiences([]);
+    setExperiencesPage(1);
+    fetchAllExperiences(1, searchFilters);
+    setShowExperienceSortDropdown(false);
+  };
+
+  // Clear experience filters
+  const clearExperienceFilters = () => {
+    setExperienceFilters({
+      minPrice: '',
+      maxPrice: '',
+      minRating: '',
+    });
+    setAllExperiences([]);
+    setExperiencesPage(1);
+    fetchAllExperiences(1, searchFilters);
+    setShowExperienceFilterDropdown(false);
+  };
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.filter-dropdown-container') && !target.closest('.sort-dropdown-container')) {
+        setShowAbodeFilterDropdown(false);
+        setShowAbodeSortDropdown(false);
+        setShowExperienceFilterDropdown(false);
+        setShowExperienceSortDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const fetchAllExperiences = async (page = 1, filters = searchFilters) => {
     try {
       setLoadingExperiences(true);
@@ -337,7 +453,7 @@ export default function ExplorePage() {
       // Build query params from filters
       const params: any = { 
         limit: 50,
-        sort: 'rating',
+        sort: experienceSort,
         page 
       };
 
@@ -348,6 +464,11 @@ export default function ExplorePage() {
         if (state) params.state = state;
         if (district) params.district = district;
       }
+
+      // Add additional filters
+      if (experienceFilters.minPrice) params.minPrice = experienceFilters.minPrice;
+      if (experienceFilters.maxPrice) params.maxPrice = experienceFilters.maxPrice;
+      if (experienceFilters.minRating) params.minRating = experienceFilters.minRating;
       
       const experiencesRes = await api.get('/experiences', { params });
       
@@ -459,7 +580,13 @@ export default function ExplorePage() {
           >
             <div className="inline-flex bg-white/95 backdrop-blur-xl rounded-3xl p-2 shadow-2xl border border-gray-200/50 relative z-10">
               <button
-                onClick={() => setActiveSection('abodes')}
+                onClick={() => {
+                  setActiveSection('abodes');
+                  setShowAbodeFilterDropdown(false);
+                  setShowAbodeSortDropdown(false);
+                  setShowExperienceFilterDropdown(false);
+                  setShowExperienceSortDropdown(false);
+                }}
                 className={`relative px-10 py-5 rounded-2xl font-bold text-base transition-all duration-300 ${
                   activeSection === 'abodes'
                     ? 'text-white'
@@ -479,7 +606,13 @@ export default function ExplorePage() {
                 </span>
               </button>
               <button
-                onClick={() => setActiveSection('experiences')}
+                onClick={() => {
+                  setActiveSection('experiences');
+                  setShowAbodeFilterDropdown(false);
+                  setShowAbodeSortDropdown(false);
+                  setShowExperienceFilterDropdown(false);
+                  setShowExperienceSortDropdown(false);
+                }}
                 className={`relative px-10 py-5 rounded-2xl font-bold text-base transition-all duration-300 ${
                   activeSection === 'experiences'
                     ? 'text-white'
@@ -665,17 +798,139 @@ export default function ExplorePage() {
                         <span className="font-bold text-gray-900">{abodesPagination.total}</span> abodes
                       </p>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <button className="px-6 py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-heritage-gold hover:bg-heritage-gold/5 transition-all text-sm font-semibold text-gray-700 flex items-center gap-2 shadow-sm hover:shadow-md">
-                        <Filter className="w-4 h-4" />
-                        Filters
-                      </button>
-                      <button className="px-6 py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-heritage-gold hover:bg-heritage-gold/5 transition-all text-sm font-semibold text-gray-700 flex items-center gap-2 shadow-sm hover:shadow-md">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                        </svg>
-                        Sort
-                      </button>
+                    <div className="flex items-center gap-3 relative">
+                      {/* Filter Button and Dropdown */}
+                      <div className="filter-dropdown-container relative">
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => {
+                            setShowAbodeFilterDropdown(!showAbodeFilterDropdown);
+                            setShowAbodeSortDropdown(false);
+                          }}
+                          className="px-6 py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-heritage-gold hover:bg-heritage-gold/5 transition-all text-sm font-semibold text-gray-700 flex items-center gap-2 shadow-sm hover:shadow-md"
+                        >
+                          <Filter className="w-4 h-4" />
+                          Filters
+                        </motion.button>
+                        {showAbodeFilterDropdown && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 p-6 z-50"
+                          >
+                            <h4 className="font-bold text-gray-900 mb-4">Filter Abodes</h4>
+                            <div className="space-y-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Min Price (₹)</label>
+                                <input
+                                  type="number"
+                                  value={abodeFilters.minPrice}
+                                  onChange={(e) => handleAbodeFilterChange('minPrice', e.target.value)}
+                                  placeholder="0"
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Max Price (₹)</label>
+                                <input
+                                  type="number"
+                                  value={abodeFilters.maxPrice}
+                                  onChange={(e) => handleAbodeFilterChange('maxPrice', e.target.value)}
+                                  placeholder="10000"
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Min Rating</label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="5"
+                                  step="0.1"
+                                  value={abodeFilters.minRating}
+                                  onChange={(e) => handleAbodeFilterChange('minRating', e.target.value)}
+                                  placeholder="0"
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Capacity</label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={abodeFilters.capacity}
+                                  onChange={(e) => handleAbodeFilterChange('capacity', e.target.value)}
+                                  placeholder="2"
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
+                                />
+                              </div>
+                            </div>
+                            <div className="flex gap-2 mt-6">
+                              <button
+                                onClick={clearAbodeFilters}
+                                className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                              >
+                                Clear
+                              </button>
+                              <button
+                                onClick={applyAbodeFilters}
+                                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-heritage-gold rounded-lg hover:bg-heritage-gold-dark"
+                              >
+                                Apply
+                              </button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </div>
+                      
+                      {/* Sort Button and Dropdown */}
+                      <div className="sort-dropdown-container relative">
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => {
+                            setShowAbodeSortDropdown(!showAbodeSortDropdown);
+                            setShowAbodeFilterDropdown(false);
+                          }}
+                          className="px-6 py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-heritage-gold hover:bg-heritage-gold/5 transition-all text-sm font-semibold text-gray-700 flex items-center gap-2 shadow-sm hover:shadow-md"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                          </svg>
+                          Sort
+                        </motion.button>
+                        {showAbodeSortDropdown && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50"
+                          >
+                            <h4 className="font-bold text-gray-900 mb-3">Sort By</h4>
+                            <div className="space-y-2">
+                              {[
+                                { value: 'rating', label: 'Highest Rated' },
+                                { value: 'price', label: 'Price: Low to High' },
+                                { value: 'newest', label: 'Newest First' },
+                              ].map((option) => (
+                                <button
+                                  key={option.value}
+                                  onClick={() => handleAbodeSortChange(option.value)}
+                                  className={`w-full text-left px-4 py-2 rounded-lg transition-all ${
+                                    abodeSort === option.value
+                                      ? 'bg-heritage-gold text-white'
+                                      : 'hover:bg-gray-100 text-gray-700'
+                                  }`}
+                                >
+                                  {option.label}
+                                </button>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </div>
                     </div>
                   </motion.div>
                   
@@ -870,25 +1125,128 @@ export default function ExplorePage() {
                         <span className="font-bold text-gray-900">{experiencesPagination.total}</span> experiences
                       </p>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="px-6 py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-indigo-400 hover:bg-indigo-50/50 transition-all text-sm font-semibold text-gray-700 flex items-center gap-2 shadow-sm hover:shadow-md"
-                      >
-                        <Filter className="w-4 h-4" />
-                        Filters
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="px-6 py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-indigo-400 hover:bg-indigo-50/50 transition-all text-sm font-semibold text-gray-700 flex items-center gap-2 shadow-sm hover:shadow-md"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                        </svg>
-                        Sort
-                      </motion.button>
+                    <div className="flex items-center gap-3 relative">
+                      {/* Filter Button and Dropdown */}
+                      <div className="filter-dropdown-container relative">
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => {
+                            setShowExperienceFilterDropdown(!showExperienceFilterDropdown);
+                            setShowExperienceSortDropdown(false);
+                          }}
+                          className="px-6 py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-indigo-400 hover:bg-indigo-50/50 transition-all text-sm font-semibold text-gray-700 flex items-center gap-2 shadow-sm hover:shadow-md"
+                        >
+                          <Filter className="w-4 h-4" />
+                          Filters
+                        </motion.button>
+                        {showExperienceFilterDropdown && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 p-6 z-50"
+                          >
+                            <h4 className="font-bold text-gray-900 mb-4">Filter Experiences</h4>
+                            <div className="space-y-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Min Price (₹)</label>
+                                <input
+                                  type="number"
+                                  value={experienceFilters.minPrice}
+                                  onChange={(e) => handleExperienceFilterChange('minPrice', e.target.value)}
+                                  placeholder="0"
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Max Price (₹)</label>
+                                <input
+                                  type="number"
+                                  value={experienceFilters.maxPrice}
+                                  onChange={(e) => handleExperienceFilterChange('maxPrice', e.target.value)}
+                                  placeholder="10000"
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Min Rating</label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="5"
+                                  step="0.1"
+                                  value={experienceFilters.minRating}
+                                  onChange={(e) => handleExperienceFilterChange('minRating', e.target.value)}
+                                  placeholder="0"
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                />
+                              </div>
+                            </div>
+                            <div className="flex gap-2 mt-6">
+                              <button
+                                onClick={clearExperienceFilters}
+                                className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                              >
+                                Clear
+                              </button>
+                              <button
+                                onClick={applyExperienceFilters}
+                                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
+                              >
+                                Apply
+                              </button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </div>
+                      
+                      {/* Sort Button and Dropdown */}
+                      <div className="sort-dropdown-container relative">
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => {
+                            setShowExperienceSortDropdown(!showExperienceSortDropdown);
+                            setShowExperienceFilterDropdown(false);
+                          }}
+                          className="px-6 py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-indigo-400 hover:bg-indigo-50/50 transition-all text-sm font-semibold text-gray-700 flex items-center gap-2 shadow-sm hover:shadow-md"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                          </svg>
+                          Sort
+                        </motion.button>
+                        {showExperienceSortDropdown && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50"
+                          >
+                            <h4 className="font-bold text-gray-900 mb-3">Sort By</h4>
+                            <div className="space-y-2">
+                              {[
+                                { value: 'rating', label: 'Highest Rated' },
+                                { value: 'price', label: 'Price: Low to High' },
+                                { value: 'newest', label: 'Newest First' },
+                              ].map((option) => (
+                                <button
+                                  key={option.value}
+                                  onClick={() => handleExperienceSortChange(option.value)}
+                                  className={`w-full text-left px-4 py-2 rounded-lg transition-all ${
+                                    experienceSort === option.value
+                                      ? 'bg-indigo-600 text-white'
+                                      : 'hover:bg-gray-100 text-gray-700'
+                                  }`}
+                                >
+                                  {option.label}
+                                </button>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </div>
                     </div>
                   </motion.div>
                   

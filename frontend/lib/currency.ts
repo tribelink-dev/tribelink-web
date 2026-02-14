@@ -49,7 +49,8 @@ export const POPULAR_CURRENCIES: Currency[] = [
   CURRENCIES.find(c => c.code === 'SGD')!,
 ].filter(Boolean);
 
-export function getCurrencyByCode(code: string): Currency | undefined {
+export function getCurrencyByCode(code: string | undefined | null): Currency | undefined {
+  if (!code) return undefined;
   return CURRENCIES.find(c => c.code.toUpperCase() === code.toUpperCase());
 }
 

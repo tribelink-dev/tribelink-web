@@ -9,6 +9,7 @@ import 'react-day-picker/dist/style.css';
 import { format } from 'date-fns';
 import LocationPicker from '@/components/LocationPicker';
 import CategorySelector from '@/components/CategorySelector';
+import { CURRENCIES, POPULAR_CURRENCIES, getCurrencyByCode } from '@/lib/currency';
 
 interface DateWithTimeSlots {
   date: string; // ISO date string (YYYY-MM-DD)
@@ -32,6 +33,7 @@ export default function AddExperiencePage() {
       coordinates: { lat: 0, lng: 0 }
     },
     price: '',
+    currency: 'USD',
     duration: '2',
     maxParticipants: '10',
     contentUrl: '',
@@ -435,6 +437,7 @@ export default function AddExperiencePage() {
       }));
       formDataToSend.append('availableDates', JSON.stringify(formattedDates));
       formDataToSend.append('price', formData.price);
+      formDataToSend.append('currency', formData.currency);
       formDataToSend.append('duration', formData.duration);
       formDataToSend.append('maxParticipants', formData.maxParticipants);
       if (formData.contentUrl) {
@@ -733,10 +736,36 @@ export default function AddExperiencePage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Price per Person (USD) <span className="text-red-500">*</span>
+                      Currency <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formData.currency}
+                      onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                      required
+                      className="input-field bg-white border-2 border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                    >
+                      {POPULAR_CURRENCIES.map((curr) => (
+                        <option key={curr.code} value={curr.code}>
+                          {curr.flag} {curr.code} - {curr.name}
+                        </option>
+                      ))}
+                      <optgroup label="Other Currencies">
+                        {CURRENCIES.filter(c => !POPULAR_CURRENCIES.find(pc => pc.code === c.code)).map((curr) => (
+                          <option key={curr.code} value={curr.code}>
+                            {curr.flag} {curr.code} - {curr.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Price per Person <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">
+                        {getCurrencyByCode(formData.currency)?.symbol || '$'}
+                      </span>
                       <input
                         type="number"
                         value={formData.price}

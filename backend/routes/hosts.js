@@ -300,6 +300,7 @@ router.post('/experience', authenticate, requireHost, upload.single('image'), as
             };
           }),
       price,
+      currency: currency || 'USD',
       contentUrl: contentUrl || null,
       // Cloudinary returns full URL in req.file.path, local storage uses filename
       imageUrl: req.file ? (req.file.path || `/uploads/${req.file.filename}`) : null,
@@ -616,6 +617,7 @@ router.put('/experience/:experienceId', authenticate, requireHost, upload.single
       location,
       availableDates,
       price,
+      currency,
       contentUrl,
       duration,
       maxParticipants
@@ -627,6 +629,7 @@ router.put('/experience/:experienceId', authenticate, requireHost, upload.single
       hasLocation: !!location,
       hasAvailableDates: !!availableDates,
       price: price,
+      currency: currency,
       duration: duration,
       maxParticipants: maxParticipants
     });
@@ -761,6 +764,9 @@ router.put('/experience/:experienceId', authenticate, requireHost, upload.single
         return res.status(400).json({ message: 'Price must be a valid positive number' });
       }
       experience.price = priceNum;
+    }
+    if (currency !== undefined && currency !== null && currency !== '') {
+      experience.currency = String(currency).toUpperCase();
     }
     if (contentUrl !== undefined) {
       experience.contentUrl = contentUrl && contentUrl.trim() !== '' ? contentUrl.trim() : null;
