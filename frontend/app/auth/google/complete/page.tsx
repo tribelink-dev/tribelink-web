@@ -2,10 +2,13 @@
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { motion } from 'framer-motion';
 import { getProviderDashboard } from '@/lib/providerUtils';
 import api from '@/lib/api';
 import Image from 'next/image';
+import PhoneInput from '@/components/PhoneInput';
 import { LOGO_PATH, LOGO_ALT_TEXT } from '@/lib/constants';
+import { Phone, Mail, User, Home, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function GoogleAuthComplete() {
   const router = useRouter();
@@ -19,26 +22,14 @@ export default function GoogleAuthComplete() {
   const name = searchParams.get('name') || '';
   const googleId = searchParams.get('googleId') || '';
   const type = searchParams.get('type') || 'user';
-
-  const validatePhoneNumber = (phone: string): boolean => {
-    const cleaned = phone.replace(/[\s\-\(\)]/g, '');
-    return /^\+?[1-9]\d{9,14}$/.test(cleaned);
-  };
-
-  const formatPhoneNumber = (phone: string): string => {
-    const cleaned = phone.replace(/[^\d+]/g, '');
-    if (cleaned.length > 0 && !cleaned.startsWith('+')) {
-      return '+' + cleaned;
-    }
-    return cleaned;
-  };
+  const profilePicture = searchParams.get('profilePicture') || '';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    if (!phoneNumber) {
+    if (!phoneNumber || phoneNumber.trim() === '') {
       setError('Phone number is required');
       setLoading(false);
       return;
@@ -50,32 +41,36 @@ export default function GoogleAuthComplete() {
       return;
     }
 
-    if (!validatePhoneNumber(phoneNumber)) {
-      setError('Please enter a valid phone number (e.g., +1234567890)');
+    // PhoneInput component already formats with country code
+    if (phoneNumber.length < 10) {
+      setError('Please enter a valid phone number');
       setLoading(false);
       return;
     }
 
     try {
-      const formattedPhone = formatPhoneNumber(phoneNumber);
       const response = await api.post('/auth/google/complete', {
         email,
         name,
         googleId,
-        phoneNumber: formattedPhone,
+        phoneNumber: phoneNumber.trim(), // PhoneInput already formats it
         type,
         providerType: type === 'host' ? providerType : undefined,
-        role: type === 'host' && providerType === 'EXPERIENCE_HOST' ? 'Host' : undefined
+        profilePicture: profilePicture || undefined
       });
 
       const { token, user, host } = response.data;
 
+      if (!token) {
+        throw new Error('No token received from server');
+      }
+
       // Store authentication
       if (typeof window !== 'undefined') {
         localStorage.setItem('token', token);
-        if (type === 'user') {
+        if (type === 'user' && user) {
           localStorage.setItem('user', JSON.stringify(user));
-        } else if (type === 'host') {
+        } else if (type === 'host' && host) {
           localStorage.setItem('host', JSON.stringify(host));
           localStorage.setItem('userType', 'host');
         }
@@ -84,9 +79,11 @@ export default function GoogleAuthComplete() {
       // Redirect based on provider type
       if (type === 'user') {
         router.push('/explore');
-      } else {
-        const dashboardRoute = getProviderDashboard(host?.providerType || 'EXPERIENCE_HOST');
+      } else if (host) {
+        const dashboardRoute = getProviderDashboard(host.providerType || 'EXPERIENCE_HOST');
         router.push(dashboardRoute);
+      } else {
+        router.push('/host/dashboard');
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to complete registration');
@@ -96,123 +93,239 @@ export default function GoogleAuthComplete() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-tourism p-4 sm:p-6 lg:p-8">
-      <div className="w-full max-w-md">
-        <div className="content-card">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl mb-6 shadow-medium p-2">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-50 p-4 sm:p-6 lg:p-8 relative overflow-hidden">
+      {/* Animated Background Elements - Matching Explore Page */}
+      <div className="absolute inset-0 overflow-hidden">
+        <motion.div
+          animate={{
+            x: [0, 100, 0],
+            y: [0, 50, 0],
+          }}
+          transition={{
+            duration: 20,
+            repeat: Infinity,
+            ease: "linear"
+          }}
+          className="absolute top-20 right-10 w-96 h-96 bg-heritage-gold/10 rounded-full blur-3xl"
+        />
+        <motion.div
+          animate={{
+            x: [0, -100, 0],
+            y: [0, -50, 0],
+          }}
+          transition={{
+            duration: 25,
+            repeat: Infinity,
+            ease: "linear"
+          }}
+          className="absolute bottom-20 left-10 w-96 h-96 bg-cream-500/10 rounded-full blur-3xl"
+        />
+      </div>
+
+      <div className="w-full max-w-2xl relative z-10">
+        {/* Main Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="bg-white rounded-2xl shadow-2xl overflow-hidden"
+        >
+          {/* Header Section */}
+          <div className="bg-gradient-to-r from-heritage-gold via-heritage-gold-dark to-heritage-gold p-8 text-center">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: "spring" }}
+              className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-2xl mb-4 shadow-lg"
+            >
               <Image 
                 src={LOGO_PATH} 
                 alt={LOGO_ALT_TEXT} 
                 width={64} 
                 height={64}
-                className="w-full h-full"
+                className="w-full h-full object-contain p-2"
               />
-            </div>
-            <h1 className="heading-primary text-gray-900">
+            </motion.div>
+            <motion.h1
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="text-3xl font-bold text-white mb-2"
+            >
               Complete Your Registration
-            </h1>
-            <p className="text-subtitle text-gray-600 mb-0">
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="text-white/90 text-lg"
+            >
               Just one more step to get started
-            </p>
+            </motion.p>
           </div>
 
-          {error && (
-            <div className="alert-error mb-6">
-              <span className="text-lg">⚠️</span>
-              <span className="flex-1">{error}</span>
-            </div>
-          )}
-
-          <div className="mb-6 p-4 bg-gray-50 rounded-xl">
-            <p className="text-sm text-gray-600 mb-1">Email:</p>
-            <p className="font-semibold text-gray-900">{email}</p>
-            <p className="text-sm text-gray-600 mb-1 mt-3">Name:</p>
-            <p className="font-semibold text-gray-900">{name}</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Phone Number <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="tel"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                required
-                placeholder="+1234567890"
-                className="input-field"
-              />
-              <p className="text-xs text-gray-500 mt-1.5">Use international format (e.g., +1234567890)</p>
-            </div>
-
-            {type === 'host' && (
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  What type of host are you? <span className="text-red-500">*</span>
-                </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <label className={`flex items-start p-4 rounded-xl cursor-pointer transition-all card-hover border-2 ${
-                    providerType === 'LOCAL_HOST' 
-                      ? 'bg-primary-500 text-white shadow-medium border-primary-600' 
-                      : 'bg-white border-gray-200 hover:border-primary-300'
-                  }`}>
-                    <input
-                      type="radio"
-                      name="providerType"
-                      value="LOCAL_HOST"
-                      checked={providerType === 'LOCAL_HOST'}
-                      onChange={(e) => setProviderType(e.target.value as 'LOCAL_HOST')}
-                      className="mt-1 mr-3 w-5 h-5"
-                    />
-                    <div className="flex-1">
-                      <div className="font-bold text-lg mb-1.5">Local Host</div>
-                      <div className={`text-sm leading-relaxed ${providerType === 'LOCAL_HOST' ? 'text-white/90' : 'text-gray-600'}`}>
-                        Provide travelers the chance to live with a local, understanding their traditions, regular routines, and how they live. You can take them to different historical or cultural places nearby.
-                      </div>
-                    </div>
-                  </label>
-                  <label className={`flex items-start p-4 rounded-xl cursor-pointer transition-all card-hover border-2 ${
-                    providerType === 'EXPERIENCE_HOST' 
-                      ? 'bg-primary-500 text-white shadow-medium border-primary-600' 
-                      : 'bg-white border-gray-200 hover:border-primary-300'
-                  }`}>
-                    <input
-                      type="radio"
-                      name="providerType"
-                      value="EXPERIENCE_HOST"
-                      checked={providerType === 'EXPERIENCE_HOST'}
-                      onChange={(e) => setProviderType(e.target.value as 'EXPERIENCE_HOST')}
-                      className="mt-1 mr-3 w-5 h-5"
-                    />
-                    <div className="flex-1">
-                      <div className="font-bold text-lg mb-1.5">Experience Provider</div>
-                      <div className={`text-sm leading-relaxed ${providerType === 'EXPERIENCE_HOST' ? 'text-white/90' : 'text-gray-600'}`}>
-                        Perform, host, or organize short experiences, live events, or live performances for travelers.
-                      </div>
-                    </div>
-                  </label>
-                </div>
-              </div>
+          {/* Content Section */}
+          <div className="p-8">
+            {/* Error Message */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg flex items-start gap-3"
+              >
+                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <p className="text-red-700 text-sm flex-1">{error}</p>
+              </motion.div>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary w-full text-base py-3.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            {/* Google Account Info */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="mb-8 p-6 bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl border border-slate-200"
             >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="spinner w-4 h-4"></span>
-                  Completing registration...
-                </span>
-              ) : (
-                'Complete Registration'
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm">
+                  <Sparkles className="w-5 h-5 text-heritage-gold" />
+                </div>
+                <h3 className="font-semibold text-gray-900">Google Account</h3>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <Mail className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm text-gray-600">Email:</span>
+                  <span className="font-semibold text-gray-900 flex-1">{email}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <User className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm text-gray-600">Name:</span>
+                  <span className="font-semibold text-gray-900 flex-1">{name}</span>
+                </div>
+              </div>
+            </motion.div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Phone Number Input */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-heritage-gold" />
+                  Phone Number <span className="text-red-500">*</span>
+                </label>
+                <PhoneInput
+                  value={phoneNumber}
+                  onChange={setPhoneNumber}
+                  className="w-full"
+                />
+                <p className="text-xs text-gray-500 mt-2 ml-1">We'll use this to verify your account</p>
+              </motion.div>
+
+              {/* Provider Type Selection (for hosts) */}
+              {type === 'host' && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                >
+                  <label className="block text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                    <Home className="w-4 h-4 text-heritage-gold" />
+                    What type of host are you? <span className="text-red-500">*</span>
+                  </label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <motion.label
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className={`relative flex flex-col p-5 rounded-xl cursor-pointer transition-all border-2 ${
+                        providerType === 'LOCAL_HOST' 
+                          ? 'bg-gradient-to-br from-heritage-gold to-heritage-gold-dark text-white shadow-lg border-heritage-gold-dark' 
+                          : 'bg-white border-gray-200 hover:border-heritage-gold/50 hover:shadow-md'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="providerType"
+                        value="LOCAL_HOST"
+                        checked={providerType === 'LOCAL_HOST'}
+                        onChange={(e) => setProviderType(e.target.value as 'LOCAL_HOST')}
+                        className="sr-only"
+                      />
+                      <div className="flex items-start gap-3 mb-3">
+                        {providerType === 'LOCAL_HOST' ? (
+                          <CheckCircle2 className="w-6 h-6 text-white flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <div className="w-6 h-6 rounded-full border-2 border-gray-300 flex-shrink-0 mt-0.5" />
+                        )}
+                        <div className="flex-1">
+                          <div className="font-bold text-lg mb-2">Local Host</div>
+                          <div className={`text-sm leading-relaxed ${providerType === 'LOCAL_HOST' ? 'text-white/90' : 'text-gray-600'}`}>
+                            Provide travelers the chance to live with a local, understanding their traditions, regular routines, and how they live. You can take them to different historical or cultural places nearby.
+                          </div>
+                        </div>
+                      </div>
+                    </motion.label>
+
+                    <motion.label
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className={`relative flex flex-col p-5 rounded-xl cursor-pointer transition-all border-2 ${
+                        providerType === 'EXPERIENCE_HOST' 
+                          ? 'bg-gradient-to-br from-heritage-gold to-heritage-gold-dark text-white shadow-lg border-heritage-gold-dark' 
+                          : 'bg-white border-gray-200 hover:border-heritage-gold/50 hover:shadow-md'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="providerType"
+                        value="EXPERIENCE_HOST"
+                        checked={providerType === 'EXPERIENCE_HOST'}
+                        onChange={(e) => setProviderType(e.target.value as 'EXPERIENCE_HOST')}
+                        className="sr-only"
+                      />
+                      <div className="flex items-start gap-3 mb-3">
+                        {providerType === 'EXPERIENCE_HOST' ? (
+                          <CheckCircle2 className="w-6 h-6 text-white flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <div className="w-6 h-6 rounded-full border-2 border-gray-300 flex-shrink-0 mt-0.5" />
+                        )}
+                        <div className="flex-1">
+                          <div className="font-bold text-lg mb-2">Experience Provider</div>
+                          <div className={`text-sm leading-relaxed ${providerType === 'EXPERIENCE_HOST' ? 'text-white/90' : 'text-gray-600'}`}>
+                            Perform, host, or organize short experiences, live events, or live performances for travelers.
+                          </div>
+                        </div>
+                      </div>
+                    </motion.label>
+                  </div>
+                </motion.div>
               )}
-            </button>
-          </form>
-        </div>
+
+              {/* Submit Button */}
+              <motion.button
+                type="submit"
+                disabled={loading}
+                whileHover={{ scale: loading ? 1 : 1.02 }}
+                whileTap={{ scale: loading ? 1 : 0.98 }}
+                className="w-full bg-gradient-to-r from-heritage-gold via-heritage-gold-dark to-heritage-gold text-white font-semibold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Completing registration...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span>Complete Registration</span>
+                  </>
+                )}
+              </motion.button>
+            </form>
+          </div>
+        </motion.div>
       </div>
     </div>
   );
