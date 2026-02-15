@@ -183,6 +183,19 @@ router.get('/', async (req, res) => {
 // Get experience by ID
 router.get('/:id', async (req, res) => {
   try {
+    // First get raw experience to get provider ID
+    const experienceRaw = await Experience.findById(req.params.id)
+      .select('provider')
+      .lean();
+    
+    if (!experienceRaw) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Experience not found' 
+      });
+    }
+
+    // Get full experience with populate
     const experience = await Experience.findById(req.params.id)
       .populate({
         path: 'provider',
@@ -191,59 +204,48 @@ router.get('/:id', async (req, res) => {
       })
       .lean();
 
-    if (!experience) {
-      return res.status(404).json({ 
-        success: false,
-        message: 'Experience not found' 
-      });
-    }
-
     // Normalize image URL
     const baseUrl = getBaseUrlFromRequest(req);
     const normalizedExperience = normalizeExperiences([experience], baseUrl)[0];
 
     // Format provider information - handle missing or invalid provider
     let providerData = null;
+    const expId = experience._id?.toString();
     
-    if (normalizedExperience.provider) {
-      if (normalizedExperience.provider.name && normalizedExperience.provider.name.trim()) {
-        // Provider is properly populated
-        providerData = {
-          _id: normalizedExperience.provider._id,
-          name: normalizedExperience.provider.name.trim(),
-          rating: normalizedExperience.provider.rating || 0,
-          ratingCount: normalizedExperience.provider.ratingCount || 0,
-          profilePicture: normalizedExperience.provider.profilePicture || null,
-          email: normalizedExperience.provider.email || null,
-          phoneNumber: normalizedExperience.provider.phoneNumber || null
-        };
-      } else if (normalizedExperience.provider._id) {
-        // Provider exists but name is missing, try to fetch it
-        try {
-          const provider = await Host.findById(normalizedExperience.provider._id)
-            .select('name rating ratingCount profilePicture email phoneNumber')
-            .lean();
-          if (provider && provider.name && provider.name.trim()) {
-            providerData = {
-              _id: provider._id,
-              name: provider.name.trim(),
-              rating: provider.rating || 0,
-              ratingCount: provider.ratingCount || 0,
-              profilePicture: provider.profilePicture || null,
-              email: provider.email || null,
-              phoneNumber: provider.phoneNumber || null
-            };
-          }
-        } catch (err) {
-          console.error(`Error fetching provider ${normalizedExperience.provider._id}:`, err);
-        }
-      }
-    } else if (experience.provider && typeof experience.provider === 'string') {
-      // Provider is just an ID string, fetch it
+    // Get provider ID from multiple possible sources
+    let providerId = normalizedExperience.provider?._id 
+      ? normalizedExperience.provider._id.toString()
+      : (typeof normalizedExperience.provider === 'string' ? normalizedExperience.provider : null);
+    
+    // If populate failed, try to get provider ID from raw data
+    if (!providerId && experienceRaw.provider) {
+      providerId = typeof experienceRaw.provider === 'string' 
+        ? experienceRaw.provider 
+        : (experienceRaw.provider._id ? experienceRaw.provider._id.toString() : null);
+    }
+    
+    // If we still don't have a provider ID, check the original experience document
+    if (!providerId && experience.provider) {
+      providerId = typeof experience.provider === 'string' 
+        ? experience.provider 
+        : (experience.provider._id ? experience.provider._id.toString() : null);
+    }
+    
+    // If provider is populated and has name, use it
+    if (normalizedExperience.provider && normalizedExperience.provider.name && normalizedExperience.provider.name.trim()) {
+      providerData = {
+        _id: normalizedExperience.provider._id,
+        name: normalizedExperience.provider.name.trim(),
+        rating: normalizedExperience.provider.rating || 0,
+        ratingCount: normalizedExperience.provider.ratingCount || 0,
+        profilePicture: normalizedExperience.provider.profilePicture || null,
+        email: normalizedExperience.provider.email || null,
+        phoneNumber: normalizedExperience.provider.phoneNumber || null
+      };
+    } else if (providerId) {
+      // Provider ID exists but populate failed or name is missing, fetch directly
       try {
-        const provider = await Host.findById(experience.provider)
-          .select('name rating ratingCount profilePicture email phoneNumber')
-          .lean();
+        const provider = await Host.findById(providerId).select('name rating ratingCount profilePicture email phoneNumber').lean();
         if (provider && provider.name && provider.name.trim()) {
           providerData = {
             _id: provider._id,
@@ -256,7 +258,8 @@ router.get('/:id', async (req, res) => {
           };
         }
       } catch (err) {
-        console.error(`Error fetching provider ${experience.provider}:`, err);
+        // Silently handle errors - will default to Unknown Host
+        console.error(`[Experience ${expId}] Error fetching provider by ID ${providerId}:`, err);
       }
     }
     
