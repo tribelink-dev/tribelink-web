@@ -65,3 +65,7 @@ logs/
 !README.md
 !TEST_USERS.md
 
+# Local debugging scripts
+backend/scripts/findExperienceSimple.js
+backend/scripts/findAndDeleteExperience.js
+
