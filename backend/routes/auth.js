@@ -7,6 +7,7 @@ const Host = require('../models/Host'); // Backward compatibility alias
 const Provider = require('../models/Provider');
 const OTP = require('../models/OTP');
 const { sendOTPViaSMS, sendOTPViaEmail } = require('../services/otpService');
+const oauthService = require('../services/oauthService');
 
 const router = express.Router();
 
@@ -924,251 +925,275 @@ router.post('/host/login', async (req, res) => {
   }
 });
 
-// Google OAuth Routes for Users
+/**
+ * Google OAuth Routes for Users
+ * Modern implementation with proper error handling and state management
+ */
+
+// Initiate Google OAuth for users
 router.get('/google', (req, res, next) => {
-  console.log('Google OAuth route hit:', req.url);
-  // Verify passport strategy is configured
+  // Verify OAuth credentials
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-    console.error('Google OAuth credentials missing');
+    console.error('[OAuth] Google OAuth credentials missing');
     return res.status(500).json({ 
+      success: false,
       message: 'Google OAuth not configured. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env',
       error: 'Missing OAuth credentials'
     });
   }
-  console.log('Passport authenticate called');
-  // Call passport authenticate
-  const authMiddleware = passport.authenticate('google-user', { scope: ['profile', 'email'] });
+  
+  // Generate state token for CSRF protection
+  const returnUrl = req.query.returnUrl || '/';
+  const state = oauthService.generateStateToken({ 
+    type: 'user',
+    returnUrl,
+    timestamp: Date.now()
+  });
+  
+  // Store state in session/cookie for validation
+  req.session = req.session || {};
+  req.session.oauthState = state;
+  
+  // Call passport authenticate with state
+  const authMiddleware = passport.authenticate('google-user', { 
+    scope: ['profile', 'email'],
+    state: state
+  });
   authMiddleware(req, res, next);
 });
 
+// Google OAuth callback for users
 router.get('/google/callback', 
-  passport.authenticate('google-user', { session: false }),
+  passport.authenticate('google-user', { session: false, failureRedirect: '/login?error=oauth_failed' }),
   async (req, res) => {
     try {
       const profile = req.user;
-
-      // If user exists and has phone number, log them in
-      if (profile.user && profile.user.phoneNumber) {
-        const token = jwt.sign(
-          { userId: profile.user._id },
-          process.env.JWT_SECRET || 'fallback-secret-key',
-          { expiresIn: '7d' }
-        );
-
-        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/google/success?token=${token}&type=user&name=${encodeURIComponent(profile.user.name)}&email=${encodeURIComponent(profile.user.email)}`);
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      
+      if (!profile) {
+        throw new Error('OAuth profile not received');
       }
 
-      // User needs to provide phone number
+      // User is fully registered and logged in
+      if (profile.token && profile.user) {
+        const redirectUrl = oauthService.buildRedirectUrl(frontendUrl, '/auth/google/success', {
+          token: profile.token,
+          type: 'user',
+          name: profile.user.name,
+          email: profile.user.email
+        });
+        return res.redirect(redirectUrl);
+      }
+
+      // User needs to complete registration (phone number required)
       if (profile.needsPhoneNumber) {
-        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/google/complete?email=${encodeURIComponent(profile.email)}&name=${encodeURIComponent(profile.name)}&googleId=${profile.googleId}&type=user`);
+        const redirectUrl = oauthService.buildRedirectUrl(frontendUrl, '/auth/google/complete', {
+          email: profile.email,
+          name: profile.name,
+          googleId: profile.googleId,
+          type: 'user',
+          profilePicture: profile.profilePicture || ''
+        });
+        return res.redirect(redirectUrl);
       }
 
-      // Existing user login
-      const token = jwt.sign(
-        { userId: profile.user._id },
-        process.env.JWT_SECRET || 'fallback-secret-key',
-        { expiresIn: '7d' }
-      );
-
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/google/success?token=${token}&type=user&name=${encodeURIComponent(profile.user.name)}&email=${encodeURIComponent(profile.user.email)}`);
+      // Fallback error
+      throw new Error('Unexpected OAuth state');
     } catch (error) {
-      console.error('Google OAuth callback error:', error);
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=oauth_failed`);
+      console.error('[OAuth] Google OAuth callback error:', error);
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const errorMessage = encodeURIComponent(error.message || 'OAuth authentication failed');
+      return res.redirect(`${frontendUrl}/login?error=${errorMessage}`);
     }
   }
 );
 
-// Google OAuth Routes for Hosts
+/**
+ * Google OAuth Routes for Hosts
+ * Modern implementation with proper error handling and state management
+ */
+
+// Initiate Google OAuth for hosts
 router.get('/google/host', (req, res, next) => {
-  console.log('Google OAuth Host route hit:', req.url);
-  // Verify passport strategy is configured
+  // Verify OAuth credentials
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-    console.error('Google OAuth credentials missing');
+    console.error('[OAuth] Google OAuth credentials missing');
     return res.status(500).json({ 
+      success: false,
       message: 'Google OAuth not configured. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env',
       error: 'Missing OAuth credentials'
     });
   }
-  console.log('Passport authenticate called');
-  // Call passport authenticate
-  const authMiddleware = passport.authenticate('google-host', { scope: ['profile', 'email'] });
+  
+  // Generate state token for CSRF protection
+  const returnUrl = req.query.returnUrl || '/host/dashboard';
+  const state = oauthService.generateStateToken({ 
+    type: 'host',
+    returnUrl,
+    timestamp: Date.now()
+  });
+  
+  // Store state in session/cookie for validation
+  req.session = req.session || {};
+  req.session.oauthState = state;
+  
+  // Call passport authenticate with state
+  const authMiddleware = passport.authenticate('google-host', { 
+    scope: ['profile', 'email'],
+    state: state
+  });
   authMiddleware(req, res, next);
 });
 
+// Google OAuth callback for hosts
 router.get('/google/host/callback',
-  passport.authenticate('google-host', { session: false }),
+  passport.authenticate('google-host', { session: false, failureRedirect: '/host/login?error=oauth_failed' }),
   async (req, res) => {
     try {
       const profile = req.user;
-
-      // If host exists and has phone number, log them in
-      if (profile.host && profile.host.phoneNumber) {
-        const token = jwt.sign(
-          { userId: profile.host._id },
-          process.env.JWT_SECRET || 'fallback-secret-key',
-          { expiresIn: '7d' }
-        );
-
-        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/google/success?token=${token}&type=host&name=${encodeURIComponent(profile.host.name)}&email=${encodeURIComponent(profile.host.email)}`);
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      
+      if (!profile) {
+        throw new Error('OAuth profile not received');
       }
 
-      // Host needs to provide phone number and role
+      // Host is fully registered and logged in
+      if (profile.token && profile.host) {
+        const redirectUrl = oauthService.buildRedirectUrl(frontendUrl, '/auth/google/success', {
+          token: profile.token,
+          type: 'host',
+          name: profile.host.name,
+          email: profile.host.email,
+          providerType: profile.host.providerType
+        });
+        return res.redirect(redirectUrl);
+      }
+
+      // Host needs to complete registration (phone number and provider type required)
       if (profile.needsPhoneNumber) {
-        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/google/complete?email=${encodeURIComponent(profile.email)}&name=${encodeURIComponent(profile.name)}&googleId=${profile.googleId}&type=host`);
+        const redirectUrl = oauthService.buildRedirectUrl(frontendUrl, '/auth/google/complete', {
+          email: profile.email,
+          name: profile.name,
+          googleId: profile.googleId,
+          type: 'host',
+          profilePicture: profile.profilePicture || ''
+        });
+        return res.redirect(redirectUrl);
       }
 
-      // Existing host login
-      const token = jwt.sign(
-        { userId: profile.host._id },
-        process.env.JWT_SECRET || 'fallback-secret-key',
-        { expiresIn: '7d' }
-      );
-
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/google/success?token=${token}&type=host&name=${encodeURIComponent(profile.host.name)}&email=${encodeURIComponent(profile.host.email)}`);
+      // Fallback error
+      throw new Error('Unexpected OAuth state');
     } catch (error) {
-      console.error('Google OAuth callback error:', error);
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/host/login?error=oauth_failed`);
+      console.error('[OAuth] Google OAuth host callback error:', error);
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const errorMessage = encodeURIComponent(error.message || 'OAuth authentication failed');
+      return res.redirect(`${frontendUrl}/host/login?error=${errorMessage}`);
     }
   }
 );
 
-// Complete Google OAuth registration with phone number
+/**
+ * Complete Google OAuth registration
+ * Handles phone number and provider type collection for new OAuth users
+ */
 router.post('/google/complete', async (req, res) => {
   try {
-    const { email, name, googleId, phoneNumber, type, providerType, role } = req.body;
+    const { email, name, googleId, phoneNumber, type, providerType, profilePicture } = req.body;
 
+    // Validate required fields
     if (!email || !phoneNumber || !googleId || !type) {
-      return res.status(400).json({ message: 'Email, phone number, and account type are required' });
-    }
-
-    // Normalize phone number
-    const normalizedPhone = normalizePhoneNumber(phoneNumber);
-    
-    if (!/^\+?[1-9]\d{1,14}$/.test(normalizedPhone)) {
-      return res.status(400).json({ message: 'Invalid phone number format' });
-    }
-
-    if (type === 'user') {
-      // Check if user already exists
-      const existingUser = await User.findOne({ 
-        $or: [
-          { email: email.toLowerCase() },
-          { phoneNumber: normalizedPhone }
-        ]
+      return res.status(400).json({ 
+        success: false,
+        message: 'Email, phone number, and account type are required' 
       });
+    }
 
-      if (existingUser) {
-        return res.status(400).json({ message: 'Account with this email or phone number already exists' });
-      }
-
-      // Create user with Google OAuth
-      const user = new User({
-        email: email.toLowerCase(),
-        phoneNumber: normalizedPhone,
+    let result;
+    
+    if (type === 'user') {
+      // Complete user registration
+      result = await oauthService.completeUserRegistration({
+        email,
         name,
         googleId,
-        password: await bcrypt.hash(googleId + Date.now(), 10), // Random password for OAuth users
-        tripWallet: { balance: 0, currency: 'USD' },
-        tokens: 2 // Give 2 tokens on signup
+        phoneNumber,
+        profilePicture
       });
-
-      await user.save();
-
-      const token = jwt.sign(
-        { userId: user._id },
-        process.env.JWT_SECRET || 'fallback-secret-key',
-        { expiresIn: '7d' }
-      );
-
+      
       return res.json({
+        success: true,
         message: 'Account created successfully',
-        token,
-        user: {
-          id: user._id,
-          email: user.email,
-          phoneNumber: user.phoneNumber,
-          name: user.name
-        }
+        token: result.token,
+        user: result.user
       });
+      
     } else if (type === 'host') {
+      // Validate provider type for hosts
       if (!providerType) {
-        return res.status(400).json({ message: 'Provider type is required for host accounts' });
-      }
-
-      // Validate providerType - only allow LOCAL_HOST and EXPERIENCE_HOST
-      const validProviderTypes = ['EXPERIENCE_HOST', 'LOCAL_HOST'];
-      if (!validProviderTypes.includes(providerType)) {
         return res.status(400).json({ 
-          message: 'Invalid provider type. Only Local Host and Experience Provider are allowed for signup.' 
+          success: false,
+          message: 'Provider type is required for host accounts' 
         });
       }
 
-      // Map providerType to role if needed (for EXPERIENCE_HOST)
-      let finalRole = null;
-      if (providerType === 'EXPERIENCE_HOST') {
-        finalRole = role || 'Host';
-      }
-      // LOCAL_HOST doesn't need a role
-
-      // Check if host already exists
-      const existingHost = await Host.findOne({
-        $or: [
-          { email: email.toLowerCase() },
-          { phoneNumber: normalizedPhone }
-        ]
-      });
-
-      if (existingHost) {
-        return res.status(400).json({ message: 'Host account with this email or phone number already exists' });
-      }
-
-      // Create host with Google OAuth
-      const host = new Host({
-        email: email.toLowerCase(),
-        phoneNumber: normalizedPhone,
+      // Complete host registration
+      result = await oauthService.completeHostRegistration({
+        email,
         name,
         googleId,
-        password: await bcrypt.hash(googleId + Date.now(), 10), // Random password for OAuth users
+        phoneNumber,
         providerType,
-        role: finalRole
+        profilePicture
       });
-
-      await host.save();
-
-      const token = jwt.sign(
-        { userId: host._id },
-        process.env.JWT_SECRET || 'fallback-secret-key',
-        { expiresIn: '7d' }
-      );
-
+      
       return res.json({
+        success: true,
         message: 'Host account created successfully',
-        token,
-        host: {
-          id: host._id,
-          email: host.email,
-          phoneNumber: host.phoneNumber,
-          name: host.name,
-          providerType: host.providerType,
-          role: host.role
-        }
+        token: result.token,
+        host: result.host
       });
     }
 
-    return res.status(400).json({ message: 'Invalid account type' });
+    return res.status(400).json({ 
+      success: false,
+      message: 'Invalid account type. Must be "user" or "host"' 
+    });
+    
   } catch (error) {
-    console.error('Google OAuth complete error:', error);
+    console.error('[OAuth] Complete registration error:', error);
+    
+    // Handle duplicate key errors
     if (error.code === 11000) {
       if (error.keyPattern?.email) {
-        return res.status(400).json({ message: 'Account with this email already exists' });
+        return res.status(400).json({ 
+          success: false,
+          message: 'Account with this email already exists' 
+        });
       }
       if (error.keyPattern?.phoneNumber) {
-        return res.status(400).json({ message: 'Account with this phone number already exists' });
+        return res.status(400).json({ 
+          success: false,
+          message: 'Account with this phone number already exists' 
+        });
       }
     }
-    res.status(500).json({ message: 'Server error', error: error.message });
+    
+    // Handle validation errors
+    if (error.message) {
+      return res.status(400).json({ 
+        success: false,
+        message: error.message 
+      });
+    }
+    
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error during registration',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
 module.exports = router;
+
 
