@@ -23,6 +23,7 @@ interface Experience {
   category?: string;
   subcategory?: string;
   price: number;
+  currency?: string;
   imageUrl?: string;
   contentUrl?: string;
   averageRating: number;
@@ -375,7 +376,7 @@ export default function ExperienceDetailModal({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-baseline gap-1.5">
                             <span className="text-2xl lg:text-3xl font-bold text-gray-900">
-                            {formatPrice(experience.price, 'USD')}
+                            {formatPrice(experience.price, experience.currency || 'USD')}
                             </span>
                           </div>
                           <p className="text-xs lg:text-sm text-gray-500 font-medium mt-0.5">per person</p>
