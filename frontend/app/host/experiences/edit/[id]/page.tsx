@@ -311,7 +311,7 @@ export default function EditExperiencePage() {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <HostSidebar />
         <div className="lg:ml-72 flex items-center justify-center min-h-screen">
-          <div className="text-center">
+        <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-slate-600 border-t-transparent mb-4"></div>
             <div className="text-xl font-medium text-slate-900">Loading experience details...</div>
           </div>
@@ -334,22 +334,22 @@ export default function EditExperiencePage() {
             <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-800 via-indigo-700 to-slate-800 p-8 md:p-12 shadow-2xl">
               <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl -mr-48 -mt-48"></div>
               <div className="absolute bottom-0 left-0 w-72 h-72 bg-slate-500/10 rounded-full blur-2xl -ml-36 -mb-36"></div>
-              
+
               <div className="relative z-10">
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/30">
                     <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
-                  </div>
+            </div>
                   <div>
                     <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">
                       Edit Your Experience
-                    </h1>
+            </h1>
                     <p className="text-white/90 text-lg">
                       Update your experience information and make it even more appealing to travelers.
-                    </p>
-                  </div>
+            </p>
+          </div>
                 </div>
               </div>
             </div>
@@ -367,7 +367,7 @@ export default function EditExperiencePage() {
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
                 <span className="whitespace-pre-line">{error}</span>
-              </div>
+            </div>
             </motion.div>
           )}
 
@@ -382,7 +382,7 @@ export default function EditExperiencePage() {
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
                 Experience updated successfully! Redirecting...
-              </div>
+            </div>
             </motion.div>
           )}
 
@@ -401,37 +401,37 @@ export default function EditExperiencePage() {
               </div>
 
               <div className="space-y-6">
-                <div>
+            <div>
                   <label className="block text-sm font-semibold text-slate-900 mb-2">
                     Experience Title * <span className="text-slate-600 text-xs font-normal">(Max 100 characters)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              </label>
+              <input
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     maxLength={100}
-                    required
+                required
                     placeholder="e.g., Tea Plantation Tour in Munnar"
                     className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all text-lg"
-                  />
+              />
                   <p className="mt-1 text-sm text-slate-600">
                     {formData.title.length}/100 characters
                   </p>
-                </div>
+            </div>
 
-                <div>
+            <div>
                   <label className="block text-sm font-semibold text-slate-900 mb-2">
-                    Description *
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    required
+                Description *
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                required
                     rows={6}
-                    placeholder="Describe your experience in detail..."
+                placeholder="Describe your experience in detail..."
                     className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all resize-none"
-                  />
-                </div>
+              />
+            </div>
               </div>
             </motion.div>
 
@@ -468,55 +468,55 @@ export default function EditExperiencePage() {
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-12 h-12 bg-gradient-to-br from-slate-600 to-indigo-600 rounded-xl flex items-center justify-center text-white text-2xl">
                   📍
-                </div>
+            </div>
                 <h2 className="text-2xl font-bold text-slate-900">Location</h2>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+              <div>
                   <label className="block text-sm font-semibold text-slate-900 mb-2">
                     State *
-                  </label>
-                  <select
-                    value={formData.location.state}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      location: { ...formData.location, state: e.target.value, district: '' }
-                    })}
-                    required
+                </label>
+                <select
+                  value={formData.location.state}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    location: { ...formData.location, state: e.target.value, district: '' }
+                  })}
+                  required
                     className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
-                  >
+                >
                     <option value="">Select State</option>
-                    {INDIAN_STATES.map((state) => (
-                      <option key={state} value={state}>
-                        {state}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
+                  {INDIAN_STATES.map((state) => (
+                    <option key={state} value={state}>
+                      {state}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
                   <label className="block text-sm font-semibold text-slate-900 mb-2">
                     District *
-                  </label>
-                  <select
-                    value={formData.location.district}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      location: { ...formData.location, district: e.target.value }
-                    })}
-                    required
-                    disabled={!formData.location.state || availableDistricts.length === 0}
+                </label>
+                <select
+                  value={formData.location.district}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    location: { ...formData.location, district: e.target.value }
+                  })}
+                  required
+                  disabled={!formData.location.state || availableDistricts.length === 0}
                     className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all disabled:bg-slate-50 disabled:cursor-not-allowed"
-                  >
+                >
                     <option value="">Select District</option>
-                    {availableDistricts.map((district) => (
-                      <option key={district} value={district}>
-                        {district}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  {availableDistricts.map((district) => (
+                    <option key={district} value={district}>
+                      {district}
+                    </option>
+                  ))}
+                </select>
               </div>
+            </div>
             </motion.div>
 
             {/* Pricing & Details */}
@@ -534,78 +534,78 @@ export default function EditExperiencePage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
+              <div>
                   <label className="block text-sm font-semibold text-slate-900 mb-2">
                     Currency *
-                  </label>
-                  <select
-                    value={formData.currency}
-                    onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                    required
+                    </label>
+                    <select
+                      value={formData.currency}
+                      onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                      required
                     className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
-                  >
-                    {POPULAR_CURRENCIES.map((curr) => (
-                      <option key={curr.code} value={curr.code}>
-                        {curr.flag} {curr.code} - {curr.name}
-                      </option>
-                    ))}
-                    <optgroup label="Other Currencies">
-                      {CURRENCIES.filter(c => !POPULAR_CURRENCIES.find(pc => pc.code === c.code)).map((curr) => (
+                    >
+                      {POPULAR_CURRENCIES.map((curr) => (
                         <option key={curr.code} value={curr.code}>
                           {curr.flag} {curr.code} - {curr.name}
                         </option>
                       ))}
-                    </optgroup>
-                  </select>
-                </div>
-                <div>
+                      <optgroup label="Other Currencies">
+                        {CURRENCIES.filter(c => !POPULAR_CURRENCIES.find(pc => pc.code === c.code)).map((curr) => (
+                          <option key={curr.code} value={curr.code}>
+                            {curr.flag} {curr.code} - {curr.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    </select>
+                  </div>
+                  <div>
                   <label className="block text-sm font-semibold text-slate-900 mb-2">
                     Price per Person *
-                  </label>
-                  <div className="relative">
+                    </label>
+                    <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-semibold">
-                      {getCurrencyByCode(formData.currency)?.symbol || '$'}
-                    </span>
-                    <input
-                      type="number"
-                      value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                      required
-                      min="0"
-                      step="0.01"
-                      placeholder="50.00"
+                        {getCurrencyByCode(formData.currency)?.symbol || '$'}
+                      </span>
+                      <input
+                        type="number"
+                        value={formData.price}
+                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                        required
+                        min="0"
+                        step="0.01"
+                        placeholder="50.00"
                       className="w-full px-4 py-3 pl-8 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
-                    />
-                  </div>
+                      />
                 </div>
-                <div>
+              </div>
+              <div>
                   <label className="block text-sm font-semibold text-slate-900 mb-2">
-                    Duration (hours)
-                  </label>
+                  Duration (hours)
+                </label>
                   <div className="relative">
-                    <input
-                      type="number"
-                      value={formData.duration}
-                      onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                      min="1"
-                      placeholder="2"
+                <input
+                  type="number"
+                  value={formData.duration}
+                  onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                  min="1"
+                  placeholder="2"
                       className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
-                    />
+                />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">hrs</span>
                   </div>
-                </div>
-                <div>
+              </div>
+              <div>
                   <label className="block text-sm font-semibold text-slate-900 mb-2">
-                    Max Participants
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.maxParticipants}
-                    onChange={(e) => setFormData({ ...formData, maxParticipants: e.target.value })}
-                    min="1"
-                    placeholder="10"
+                  Max Participants
+                </label>
+                <input
+                  type="number"
+                  value={formData.maxParticipants}
+                  onChange={(e) => setFormData({ ...formData, maxParticipants: e.target.value })}
+                  min="1"
+                  placeholder="10"
                     className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
-                  />
+                />
                 </div>
               </div>
             </motion.div>
@@ -622,71 +622,71 @@ export default function EditExperiencePage() {
                   📷
                 </div>
                 <h2 className="text-2xl font-bold text-slate-900">Media</h2>
-              </div>
+            </div>
 
               <div className="space-y-6">
-                <div>
+            <div>
                   <label className="block text-sm font-semibold text-slate-900 mb-2">
-                    Experience Image
-                  </label>
-                  {imagePreview || currentImageUrl ? (
-                    <div className="mb-4">
+                Experience Image
+              </label>
+              {imagePreview || currentImageUrl ? (
+                <div className="mb-4">
                       <div className="relative w-full h-64 rounded-xl overflow-hidden border-2 border-slate-200 shadow-lg">
-                        <img 
-                          src={imagePreview || currentImageUrl || ''} 
-                          alt="Preview" 
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                            const parent = e.currentTarget.parentElement;
-                            if (parent) {
+                    <img 
+                      src={imagePreview || currentImageUrl || ''} 
+                      alt="Preview" 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        const parent = e.currentTarget.parentElement;
+                        if (parent) {
                               parent.innerHTML = '<div class="w-full h-64 bg-slate-100 flex items-center justify-center"><span class="text-6xl">🎬</span></div>';
-                            }
-                          }}
-                        />
-                        <button
-                          type="button"
-                          onClick={handleRemoveImage}
-                          className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-colors z-10 shadow-lg"
-                        >
-                          ×
-                        </button>
-                      </div>
-                      <p className="text-xs text-slate-500 mt-2">Upload a new image to replace the current one</p>
-                    </div>
-                  ) : null}
-                  <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-slate-400 transition-colors bg-slate-50">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="hidden"
-                      id="image-upload"
+                        }
+                      }}
                     />
-                    <label
-                      htmlFor="image-upload"
-                      className="cursor-pointer flex flex-col items-center gap-2"
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                          className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-colors z-10 shadow-lg"
                     >
-                      <span className="text-4xl">📷</span>
-                      <span className="text-slate-600 font-medium">
-                        {currentImageUrl ? 'Replace Image' : 'Click to upload image'}
-                      </span>
-                      <span className="text-sm text-slate-500">PNG, JPG, GIF up to 5MB</span>
-                    </label>
+                      ×
+                    </button>
                   </div>
+                      <p className="text-xs text-slate-500 mt-2">Upload a new image to replace the current one</p>
                 </div>
+              ) : null}
+                  <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-slate-400 transition-colors bg-slate-50">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                  id="image-upload"
+                />
+                <label
+                  htmlFor="image-upload"
+                  className="cursor-pointer flex flex-col items-center gap-2"
+                >
+                  <span className="text-4xl">📷</span>
+                      <span className="text-slate-600 font-medium">
+                    {currentImageUrl ? 'Replace Image' : 'Click to upload image'}
+                  </span>
+                      <span className="text-sm text-slate-500">PNG, JPG, GIF up to 5MB</span>
+                </label>
+              </div>
+            </div>
 
-                <div>
+            <div>
                   <label className="block text-sm font-semibold text-slate-900 mb-2">
-                    Content URL (optional)
-                  </label>
-                  <input
-                    type="url"
-                    value={formData.contentUrl}
-                    onChange={(e) => setFormData({ ...formData, contentUrl: e.target.value })}
-                    placeholder="https://example.com/video.mp4"
+                Content URL (optional)
+              </label>
+              <input
+                type="url"
+                value={formData.contentUrl}
+                onChange={(e) => setFormData({ ...formData, contentUrl: e.target.value })}
+                placeholder="https://example.com/video.mp4"
                     className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
-                  />
+              />
                   <p className="text-xs text-slate-500 mt-1.5">Link to video or content about this experience</p>
                 </div>
               </div>
@@ -704,7 +704,7 @@ export default function EditExperiencePage() {
                   📅
                 </div>
                 <h2 className="text-2xl font-bold text-slate-900">Available Dates *</h2>
-              </div>
+            </div>
 
               <p className="text-sm text-slate-600 mb-4">Click on dates in the calendar to select/deselect them</p>
               <div className="border border-slate-200 rounded-xl p-4 bg-slate-50">

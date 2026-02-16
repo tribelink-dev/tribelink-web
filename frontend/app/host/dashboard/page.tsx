@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Sparkles, 
   DollarSign, 
-  Clock,
+  Clock, 
   Calendar,
   Star, 
   MapPin,
@@ -731,7 +731,7 @@ export default function HostDashboard() {
                   </motion.div>
               )}
               </AnimatePresence>
-            </motion.div>
+          </motion.div>
 
           {/* Enhanced Empty State */}
           {experiences.length === 0 && (
