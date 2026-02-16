@@ -4,6 +4,7 @@ import { AuthProvider } from "@/lib/auth";
 import { CurrencyProvider } from "@/lib/CurrencyContext";
 import ConditionalLayout from "@/components/ConditionalLayout";
 import EmergencySOS from "@/components/EmergencySOS";
+import DesktopViewport from "@/components/DesktopViewport";
 
 export const metadata: Metadata = {
   title: "Tribelink - Authentic Global Journeys",
@@ -18,6 +19,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        <DesktopViewport />
         <AuthProvider>
           <CurrencyProvider>
             <ConditionalLayout>
