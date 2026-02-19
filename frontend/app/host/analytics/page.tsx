@@ -24,6 +24,7 @@ import {
 interface Booking {
   _id: string;
   ticketId: string;
+  type?: 'experience' | 'abode';
   experienceDetails?: {
     title: string;
     price: number;
