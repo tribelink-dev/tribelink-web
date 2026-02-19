@@ -21,6 +21,12 @@ export default function ConditionalLayout({
     pathname === '/stories' ||
     pathname === '/contact';
 
+  // Host routes (don't show Navbar, they have their own sidebar)
+  const isHostRoute = pathname.startsWith('/host/') || 
+    pathname.startsWith('/provider/') ||
+    pathname.startsWith('/adobes/register') ||
+    pathname.startsWith('/hosts/');
+
   if (isMarketingRoute) {
     return (
       <>
@@ -29,6 +35,11 @@ export default function ConditionalLayout({
         <MarketingFooter />
       </>
     );
+  }
+
+  // Host routes - no Navbar (they have sidebar)
+  if (isHostRoute) {
+    return <>{children}</>;
   }
 
   // Platform routes

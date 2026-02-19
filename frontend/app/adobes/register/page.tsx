@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
-import AbodeSidebar from '@/components/AbodeSidebar';
+import HostSidebar from '@/components/HostSidebar';
 import LocationPicker from '@/components/LocationPicker';
 import { INDIAN_STATES, DISTRICTS_BY_STATE } from '@/lib/indianStates';
 import { DayPicker } from 'react-day-picker';
@@ -94,9 +94,7 @@ export default function RegisterAbodePage() {
 
       try {
         const hostData = JSON.parse(host);
-        if (hostData.providerType !== 'LOCAL_HOST') {
-          setError('You must be registered as a LOCAL_HOST provider. Please update your provider type first.');
-        }
+        // Any host can now register abodes, regardless of provider type
       } catch (e) {
         router.push('/host/login');
       }
@@ -105,14 +103,14 @@ export default function RegisterAbodePage() {
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    if (files.length + imageFiles.length > 10) {
-      setError('Maximum 10 images allowed');
-      return;
-    }
-
+    
     files.forEach(file => {
-      if (file.size > 5 * 1024 * 1024) {
-        setError('Each image must be less than 5MB');
+      // Check file size (100MB limit for videos, 10MB for images)
+      const isVideo = file.type.startsWith('video/');
+      const maxSize = isVideo ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+      
+      if (file.size > maxSize) {
+        setError(`${isVideo ? 'Video' : 'Image'} must be less than ${maxSize / (1024 * 1024)}MB`);
         return;
       }
 
@@ -491,7 +489,7 @@ export default function RegisterAbodePage() {
       if (response.data.success) {
         setSuccess(true);
         setTimeout(() => {
-          router.push('/host/abodes/dashboard');
+          router.push('/host/abodes');
         }, 2000);
       }
     } catch (err: any) {
@@ -514,8 +512,8 @@ export default function RegisterAbodePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <AbodeSidebar />
+    <div className="min-h-screen bg-gray-50">
+      <HostSidebar />
       <div className="lg:ml-72">
         <div className="p-6 md:p-8 lg:p-10">
           {/* Header */}
@@ -973,14 +971,14 @@ export default function RegisterAbodePage() {
                   <div className="w-12 h-12 bg-gradient-to-br from-slate-600 to-indigo-600 rounded-xl flex items-center justify-center text-white text-2xl">
                     📸
                   </div>
-                  <h2 className="text-2xl font-bold text-slate-900">Upload Images</h2>
+                  <h2 className="text-2xl font-bold text-slate-900">Upload Media</h2>
                 </div>
 
                 <div className="space-y-6">
                   <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-slate-400 transition-all">
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/*,video/*"
                       multiple
                       onChange={handleImageChange}
                       className="hidden"
@@ -993,51 +991,78 @@ export default function RegisterAbodePage() {
                       <svg className="w-16 h-16 text-slate-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
-                      <p className="text-slate-700 font-semibold mb-2">Click to upload images</p>
-                      <p className="text-sm text-slate-600">Up to 10 images, max 5MB each</p>
+                      <p className="text-slate-700 font-semibold mb-2">Click to upload images and videos</p>
+                      <p className="text-sm text-slate-600">Images: max 10MB each | Videos: max 100MB each</p>
                     </label>
                   </div>
 
                   {imagePreviews.length > 0 && (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {imagePreviews.map((preview, index) => (
-                        <motion.div
-                          key={index}
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          draggable
-                          onDragStart={() => handleDragStart(index)}
-                          onDragOver={(e) => handleDragOver(e, index)}
-                          onDrop={(e) => handleDrop(e, index)}
-                          className={`relative group cursor-move ${
-                            draggedIndex === index ? 'opacity-50' : ''
-                          }`}
-                        >
-                          <img
-                            src={preview}
-                            alt={`Preview ${index + 1}`}
-                            className="w-full h-32 object-cover rounded-xl shadow-md"
-                          />
-                          <div className="absolute top-2 left-2 px-2 py-1 bg-black/50 text-white text-xs rounded-full flex items-center gap-1">
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-                            </svg>
-                            {index + 1}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removeImage(index)}
-                            className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-lg hover:bg-red-600 z-10"
+                      {imagePreviews.map((preview, index) => {
+                        const file = imageFiles[index];
+                        const isVideo = file?.type.startsWith('video/');
+                        return (
+                          <motion.div
+                            key={index}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            draggable
+                            onDragStart={() => handleDragStart(index)}
+                            onDragOver={(e) => handleDragOver(e, index)}
+                            onDrop={(e) => handleDrop(e, index)}
+                            className={`relative group cursor-move ${
+                              draggedIndex === index ? 'opacity-50' : ''
+                            }`}
                           >
-                            ×
-                          </button>
-                          {index === 0 && (
-                            <span className="absolute bottom-2 left-2 px-2 py-1 bg-slate-600 text-white text-xs rounded-full font-semibold">
-                              Main
-                            </span>
-                          )}
-                        </motion.div>
-                      ))}
+                            {isVideo ? (
+                              <video
+                                src={preview}
+                                className="w-full h-32 object-cover rounded-xl shadow-md"
+                                controls={false}
+                              />
+                            ) : (
+                              <img
+                                src={preview}
+                                alt={`Preview ${index + 1}`}
+                                className="w-full h-32 object-cover rounded-xl shadow-md"
+                              />
+                            )}
+                            {isVideo && (
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="w-12 h-12 bg-black/50 rounded-full flex items-center justify-center">
+                                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z" />
+                                  </svg>
+                                </div>
+                              </div>
+                            )}
+                            <div className="absolute top-2 left-2 px-2 py-1 bg-black/50 text-white text-xs rounded-full flex items-center gap-1">
+                              {isVideo ? (
+                                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M8 5v14l11-7z" />
+                                </svg>
+                              ) : (
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                                </svg>
+                              )}
+                              {index + 1}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeImage(index)}
+                              className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-lg hover:bg-red-600 z-10"
+                            >
+                              ×
+                            </button>
+                            {index === 0 && (
+                              <span className="absolute bottom-2 left-2 px-2 py-1 bg-slate-600 text-white text-xs rounded-full font-semibold">
+                                Main
+                              </span>
+                            )}
+                          </motion.div>
+                        );
+                      })}
                     </div>
                   )}
                   {imagePreviews.length > 1 && (

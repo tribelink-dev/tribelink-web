@@ -139,8 +139,12 @@ export default function EditExperiencePage() {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setError('Image size must be less than 5MB');
+      // Check file size (100MB limit for videos, 10MB for images)
+      const isVideo = file.type.startsWith('video/');
+      const maxSize = isVideo ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+      
+      if (file.size > maxSize) {
+        setError(`${isVideo ? 'Video' : 'Image'} size must be less than ${maxSize / (1024 * 1024)}MB`);
         return;
       }
       setImageFile(file);
@@ -207,7 +211,7 @@ export default function EditExperiencePage() {
     try {
       setDeleting(true);
       await api.delete(`/hosts/experience/${experienceId}`);
-      router.push('/host/experiences');
+      router.push('/host/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to delete experience');
       setDeleting(false);
@@ -272,7 +276,7 @@ export default function EditExperiencePage() {
       
       // Redirect after 2 seconds
       setTimeout(() => {
-        router.push('/host/experiences');
+        router.push('/host/dashboard');
       }, 2000);
     } catch (err: any) {
       console.error('Error updating experience:', err);
@@ -658,7 +662,7 @@ export default function EditExperiencePage() {
                   <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-slate-400 transition-colors bg-slate-50">
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/*,video/*"
                   onChange={handleImageChange}
                   className="hidden"
                   id="image-upload"
@@ -669,9 +673,9 @@ export default function EditExperiencePage() {
                 >
                   <span className="text-4xl">📷</span>
                       <span className="text-slate-600 font-medium">
-                    {currentImageUrl ? 'Replace Image' : 'Click to upload image'}
+                    {currentImageUrl ? 'Replace Media' : 'Click to upload image or video'}
                   </span>
-                      <span className="text-sm text-slate-500">PNG, JPG, GIF up to 5MB</span>
+                      <span className="text-sm text-slate-500">Images: max 10MB | Videos: max 100MB</span>
                 </label>
               </div>
             </div>
@@ -758,7 +762,7 @@ export default function EditExperiencePage() {
               <div className="flex flex-col md:flex-row gap-4">
                 <button
                   type="button"
-                  onClick={() => router.push('/host/experiences')}
+                  onClick={() => router.push('/host/dashboard')}
                   className="flex-1 px-6 py-4 bg-slate-100 hover:bg-slate-200 text-slate-900 font-semibold rounded-xl transition-all"
                 >
                   Cancel

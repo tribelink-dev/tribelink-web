@@ -59,8 +59,7 @@ export default function Navbar() {
         if (hostData) {
           try {
             const host = JSON.parse(hostData);
-            // Only check for LOCAL_HOST type
-            if (host.providerType === 'LOCAL_HOST') {
+            // Any host can own abodes, regardless of provider type
               // Fetch host's abodes to check if they own this abode
               try {
                 const response = await api.get('/abodes/owner/my-abodes');
@@ -69,9 +68,6 @@ export default function Navbar() {
                 setIsViewingOwnAbode(ownsAbode);
               } catch (err) {
                 // If API call fails, assume not viewing own abode
-                setIsViewingOwnAbode(false);
-              }
-            } else {
               setIsViewingOwnAbode(false);
             }
           } catch (e) {

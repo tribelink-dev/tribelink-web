@@ -67,6 +67,18 @@ export default function TravelerDashboard() {
   const [deletingAllTrips, setDeletingAllTrips] = useState(false);
   const [removingFavoriteId, setRemovingFavoriteId] = useState<string | null>(null);
 
+  // If the current authenticated session is a host, redirect to the host dashboard.
+  // This ensures hosts never see the traveler dashboard at /dashboard.
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const userType = localStorage.getItem('userType');
+      const hostData = localStorage.getItem('host');
+      if (userType === 'host' || hostData) {
+        router.replace('/host/dashboard');
+      }
+    }
+  }, [router]);
+
   useEffect(() => {
     fetchUserData();
   }, []);

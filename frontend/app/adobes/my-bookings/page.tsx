@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
-import AbodeSidebar from '@/components/AbodeSidebar';
+import HostSidebar from '@/components/HostSidebar';
 import ToastContainer, { useToast } from '@/components/Toast';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
@@ -47,10 +47,7 @@ export default function MyBookingsPage() {
       if (host) {
         try {
           const hostData = JSON.parse(host);
-          if (hostData.providerType !== 'LOCAL_HOST') {
-            router.push('/host/dashboard');
-            return;
-          }
+          // Any host can now view abode bookings, regardless of provider type
           fetchAbodeId();
         } catch (e) {
           router.push('/host/login');
@@ -148,12 +145,12 @@ export default function MyBookingsPage() {
 
   if (loading && !abodeId) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-        <AbodeSidebar />
+      <div className="min-h-screen bg-gray-50">
+        <HostSidebar />
         <div className="lg:ml-72 flex items-center justify-center min-h-screen">
           <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-slate-600 border-t-transparent mb-4"></div>
-            <div className="text-xl font-medium text-slate-900">Loading bookings...</div>
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-indigo-600 mb-3"></div>
+            <p className="text-sm text-gray-600">Loading bookings...</p>
           </div>
         </div>
       </div>
@@ -169,8 +166,8 @@ export default function MyBookingsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <AbodeSidebar />
+    <div className="min-h-screen bg-gray-50">
+      <HostSidebar />
       <div className="lg:ml-72">
         <div className="p-6 md:p-8 lg:p-10">
           {/* Modern Header */}

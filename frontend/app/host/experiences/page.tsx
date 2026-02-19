@@ -8,6 +8,7 @@ import HostSidebar from '@/components/HostSidebar';
 import ToastContainer, { useToast } from '@/components/Toast';
 import ConfirmationModal from '@/components/ConfirmationModal';
 import { SkeletonCard } from '@/components/SkeletonLoader';
+import { Sparkles } from 'lucide-react';
 
 interface Experience {
   _id: string;
@@ -188,27 +189,23 @@ export default function HostExperiencesPage() {
       <div className="lg:ml-72">
         <div className="p-6 md:p-8">
           {/* Header */}
-          <div className="mb-8">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-6">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                  My Experiences
-                </h1>
-                <p className="text-gray-600">
-                  Manage and view all your listed experiences ({experiences.length} total)
-                </p>
+                <h1 className="text-2xl font-semibold text-gray-900 mb-1">My Experiences</h1>
+                <p className="text-gray-600 text-sm">Manage and view all your experience listings</p>
               </div>
               <button
                 onClick={() => router.push('/host/experiences/add')}
-                className="btn-primary flex items-center gap-2 px-6 py-3"
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
               >
-                <span className="text-xl">+</span>
-                <span>Add New Experience</span>
+                <span className="text-lg">+</span>
+                <span>Add Experience</span>
               </button>
             </div>
 
             {/* Search and Filters */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 mb-6">
+            <div className="bg-white rounded-lg p-4 border border-gray-200 mb-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Search */}
                 <div className="relative">
@@ -220,7 +217,7 @@ export default function HostExperiencesPage() {
                     placeholder="Search experiences..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
                   />
                 </div>
 
@@ -228,7 +225,7 @@ export default function HostExperiencesPage() {
                 <select
                   value={filterState}
                   onChange={(e) => setFilterState(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
                 >
                   <option value="">All States</option>
                   {uniqueStates.map(state => (
@@ -240,7 +237,7 @@ export default function HostExperiencesPage() {
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as any)}
-                  className="px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
                 >
                   <option value="newest">Newest First</option>
                   <option value="oldest">Oldest First</option>
@@ -282,24 +279,25 @@ export default function HostExperiencesPage() {
           )}
 
           {filteredExperiences.length === 0 ? (
-            <div className="bg-white rounded-2xl p-16 text-center shadow-sm border border-gray-200">
-              <div className="text-6xl mb-4">
-                {experiences.length === 0 ? '🎯' : '🔍'}
+            <div className="bg-white rounded-lg p-12 text-center border border-gray-200">
+              <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Sparkles className="w-8 h-8 text-gray-400" />
               </div>
-              <p className="text-xl text-gray-700 mb-2 font-semibold">
-                {experiences.length === 0 ? 'No experiences yet' : 'No experiences match your filters'}
-              </p>
-              <p className="text-gray-500 mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                {experiences.length === 0 ? 'No Experiences Yet' : 'No experiences match your filters'}
+              </h3>
+              <p className="text-sm text-gray-600 mb-6 max-w-sm mx-auto">
                 {experiences.length === 0
-                  ? 'Start by creating your first experience'
+                  ? 'Create unique cultural experiences and share them with travelers from around the world'
                   : 'Try adjusting your search or filter criteria'}
               </p>
               {experiences.length === 0 && (
                 <button
                   onClick={() => router.push('/host/experiences/add')}
-                  className="btn-primary"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
                 >
-                  Create Your First Experience
+                  <span>+</span>
+                  <span>Create Your First Experience</span>
                 </button>
               )}
             </div>

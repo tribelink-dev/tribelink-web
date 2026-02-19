@@ -77,10 +77,7 @@ export default function AbodeDashboard() {
       }
 
       const parsedHost = JSON.parse(hostData);
-      if (parsedHost.providerType !== 'LOCAL_HOST') {
-        router.push('/host/dashboard');
-        return;
-      }
+      // Any host can now access abode dashboard, regardless of provider type
 
       setHost(parsedHost);
       setLoading(false);

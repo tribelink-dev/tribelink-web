@@ -277,38 +277,8 @@ router.post('/signup', async (req, res) => {
       return res.status(400).json({ message: 'User with this phone number already exists' });
     }
     
-    // SECURITY: Check if email/phone is already registered as a Host/Provider
-    const existingHostByEmail = await Host.findOne({ email: normalizedEmail });
-    const existingProviderByEmail = existingHostByEmail ? null : await Provider.findOne({ email: normalizedEmail });
-    if (existingHostByEmail || existingProviderByEmail) {
-      console.log('Security: Email is already registered as a Host/Provider');
-      return res.status(400).json({ 
-        message: 'This email is already registered as a host/provider account. Please use the host login page or use a different email.' 
-      });
-    }
-    
-    // Check phone variations for Host/Provider
-    let existingHostByPhone = await Host.findOne({ phoneNumber: normalizedPhone });
-    let existingProviderByPhone = existingHostByPhone ? null : await Provider.findOne({ phoneNumber: normalizedPhone });
-    
-    // Also check phone variations
-    if (!existingHostByPhone && !existingProviderByPhone && normalizedPhone.startsWith('+')) {
-      const phoneWithoutPlus = normalizedPhone.substring(1);
-      existingHostByPhone = await Host.findOne({ phoneNumber: phoneWithoutPlus });
-      existingProviderByPhone = existingHostByPhone ? null : await Provider.findOne({ phoneNumber: phoneWithoutPlus });
-    }
-    if (!existingHostByPhone && !existingProviderByPhone && !normalizedPhone.startsWith('+')) {
-      const phoneWithPlus = '+' + normalizedPhone;
-      existingHostByPhone = await Host.findOne({ phoneNumber: phoneWithPlus });
-      existingProviderByPhone = existingHostByPhone ? null : await Provider.findOne({ phoneNumber: phoneWithPlus });
-    }
-    
-    if (existingHostByPhone || existingProviderByPhone) {
-      console.log('Security: Phone number is already registered as a Host/Provider');
-      return res.status(400).json({ 
-        message: 'This phone number is already registered as a host/provider account. Please use the host login page or use a different phone number.' 
-      });
-    }
+    // Note: Users can now have accounts even if email/phone is registered as Host/Provider
+    // This allows dual accounts (hosts can also be travelers)
     
     console.log('No existing user found, proceeding with creation...');
 
@@ -431,39 +401,12 @@ router.post('/login', async (req, res) => {
     if (hasEmail) {
       normalizedEmail = email.toLowerCase().trim();
       
-      // SECURITY: Check if this email belongs to a Host/Provider account first
-      const existingHost = await Host.findOne({ email: normalizedEmail });
-      const existingProvider = existingHost ? null : await Provider.findOne({ email: normalizedEmail });
-      if (existingHost || existingProvider) {
-        console.log('Security: Email belongs to a Host/Provider account, not a User');
-        return res.status(401).json({ message: 'Invalid credentials. This email is registered as a host/provider account. Please use the host login page.' });
-      }
-      
+      // Allow login if User account exists, regardless of Host account (dual accounts supported)
       user = await User.findOne({ email: normalizedEmail });
     } else if (hasPhone) {
       normalizedPhone = normalizePhoneNumber(phoneNumber);
       
-      // SECURITY: Check if this phone belongs to a Host/Provider account first
-      let existingHost = await Host.findOne({ phoneNumber: normalizedPhone });
-      let existingProvider = existingHost ? null : await Provider.findOne({ phoneNumber: normalizedPhone });
-      
-      // Also check phone variations for Host/Provider accounts
-      if (!existingHost && !existingProvider && normalizedPhone.startsWith('+')) {
-        const phoneWithoutPlus = normalizedPhone.substring(1);
-        existingHost = await Host.findOne({ phoneNumber: phoneWithoutPlus });
-        existingProvider = existingHost ? null : await Provider.findOne({ phoneNumber: phoneWithoutPlus });
-      }
-      if (!existingHost && !existingProvider && !normalizedPhone.startsWith('+')) {
-        const phoneWithPlus = '+' + normalizedPhone;
-        existingHost = await Host.findOne({ phoneNumber: phoneWithPlus });
-        existingProvider = existingHost ? null : await Provider.findOne({ phoneNumber: phoneWithPlus });
-      }
-      
-      if (existingHost || existingProvider) {
-        console.log('Security: Phone number belongs to a Host/Provider account, not a User');
-        return res.status(401).json({ message: 'Invalid credentials. This phone number is registered as a host/provider account. Please use the host login page.' });
-      }
-      
+      // Allow login if User account exists, regardless of Host account (dual accounts supported)
       user = await User.findOne({ phoneNumber: normalizedPhone });
     }
 
@@ -541,20 +484,9 @@ router.post('/host/signup', async (req, res) => {
       return res.status(400).json({ message: 'All fields are required' });
     }
 
-    // Validate providerType - only allow LOCAL_HOST and EXPERIENCE_HOST
-    const validProviderTypes = ['EXPERIENCE_HOST', 'LOCAL_HOST'];
-    
-    if (!providerType) {
-      return res.status(400).json({ message: 'Provider type is required. Please select either Local Host or Experience Provider.' });
-    }
-    
-    if (!validProviderTypes.includes(providerType)) {
-      return res.status(400).json({ 
-        message: 'Invalid provider type. Only Local Host and Experience Provider are allowed for signup.' 
-      });
-    }
-
-    const finalProviderType = providerType;
+    // Provider type is optional - default to EXPERIENCE_HOST if not provided
+    // Hosts can create both abodes and experiences regardless of provider type
+    const finalProviderType = providerType || 'EXPERIENCE_HOST';
 
     // Set role for backward compatibility (map providerType to role)
     let finalRole = null;
@@ -628,34 +560,8 @@ router.post('/host/signup', async (req, res) => {
       });
     }
     
-    // SECURITY: Check if email/phone is already registered as a User
-    const existingUserByEmail = await User.findOne({ email: normalizedEmail });
-    if (existingUserByEmail) {
-      console.log('Security: Email is already registered as a User');
-      return res.status(400).json({ 
-        message: 'This email is already registered as a traveler account. Please use the traveler login page or use a different email.' 
-      });
-    }
-    
-    // Check phone variations for User
-    let existingUserByPhone = await User.findOne({ phoneNumber: normalizedPhone });
-    
-    // Also check phone variations
-    if (!existingUserByPhone && normalizedPhone.startsWith('+')) {
-      const phoneWithoutPlus = normalizedPhone.substring(1);
-      existingUserByPhone = await User.findOne({ phoneNumber: phoneWithoutPlus });
-    }
-    if (!existingUserByPhone && !normalizedPhone.startsWith('+')) {
-      const phoneWithPlus = '+' + normalizedPhone;
-      existingUserByPhone = await User.findOne({ phoneNumber: phoneWithPlus });
-    }
-    
-    if (existingUserByPhone) {
-      console.log('Security: Phone number is already registered as a User');
-      return res.status(400).json({ 
-        message: 'This phone number is already registered as a traveler account. Please use the traveler login page or use a different phone number.' 
-      });
-    }
+    // Note: Hosts can now have accounts even if email/phone is registered as User
+    // This allows dual accounts (hosts can also be travelers)
     
     console.log('No existing provider found, proceeding with creation...');
 
@@ -801,13 +707,7 @@ router.post('/host/login', async (req, res) => {
     if (hasEmail) {
       normalizedEmail = email.toLowerCase().trim();
       
-      // SECURITY: Check if this email belongs to a User account first
-      const existingUser = await User.findOne({ email: normalizedEmail });
-      if (existingUser) {
-        console.log('Security: Email belongs to a User account, not a Host');
-        return res.status(401).json({ message: 'Invalid credentials. This email is registered as a traveler account. Please use the traveler login page.' });
-      }
-      
+      // Allow login if Host account exists, regardless of User account (dual accounts supported)
       host = await Host.findOne({ email: normalizedEmail });
       // Also try Provider model (in case Host is an alias)
       if (!host) {
@@ -816,31 +716,7 @@ router.post('/host/login', async (req, res) => {
     } else if (hasPhone) {
       normalizedPhone = normalizePhoneNumber(phoneNumber);
       
-      // SECURITY: Check if this phone belongs to a User account first
-      const existingUser = await User.findOne({ phoneNumber: normalizedPhone });
-      if (existingUser) {
-        console.log('Security: Phone number belongs to a User account, not a Host');
-        return res.status(401).json({ message: 'Invalid credentials. This phone number is registered as a traveler account. Please use the traveler login page.' });
-      }
-      
-      // Also check phone variations for User accounts
-      if (!existingUser && normalizedPhone.startsWith('+')) {
-        const phoneWithoutPlus = normalizedPhone.substring(1);
-        const userWithoutPlus = await User.findOne({ phoneNumber: phoneWithoutPlus });
-        if (userWithoutPlus) {
-          console.log('Security: Phone number (without +) belongs to a User account');
-          return res.status(401).json({ message: 'Invalid credentials. This phone number is registered as a traveler account. Please use the traveler login page.' });
-        }
-      }
-      if (!existingUser && !normalizedPhone.startsWith('+')) {
-        const phoneWithPlus = '+' + normalizedPhone;
-        const userWithPlus = await User.findOne({ phoneNumber: phoneWithPlus });
-        if (userWithPlus) {
-          console.log('Security: Phone number (with +) belongs to a User account');
-          return res.status(401).json({ message: 'Invalid credentials. This phone number is registered as a traveler account. Please use the traveler login page.' });
-        }
-      }
-      
+      // Allow login if Host account exists, regardless of User account (dual accounts supported)
       // Try to find host with normalized phone number
       host = await Host.findOne({ phoneNumber: normalizedPhone });
       
@@ -1128,21 +1004,14 @@ router.post('/google/complete', async (req, res) => {
       });
       
     } else if (type === 'host') {
-      // Validate provider type for hosts
-      if (!providerType) {
-        return res.status(400).json({ 
-          success: false,
-          message: 'Provider type is required for host accounts' 
-        });
-      }
-
+      // Provider type is optional - backend will default to EXPERIENCE_HOST
       // Complete host registration
       result = await oauthService.completeHostRegistration({
         email,
         name,
         googleId,
         phoneNumber,
-        providerType,
+        providerType: providerType || undefined, // Optional, backend defaults to EXPERIENCE_HOST
         profilePicture
       });
       

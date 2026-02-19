@@ -60,10 +60,7 @@ export default function ManageAbodePage() {
       }
 
       const parsedHost = JSON.parse(hostData);
-      if (parsedHost.providerType !== 'LOCAL_HOST') {
-        router.push('/host/dashboard');
-        return;
-      }
+      // Any host can now manage abodes, regardless of provider type
 
       setHost(parsedHost);
       fetchAbodes();

@@ -4,10 +4,12 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { motion, AnimatePresence } from 'framer-motion';
 import { getProviderDashboard } from '@/lib/providerUtils';
 import api from '@/lib/api';
 import PhoneInput from '@/components/PhoneInput';
 import { LOGO_PATH, LOGO_ALT_TEXT } from '@/lib/constants';
+import { Sparkles } from 'lucide-react';
 
 export default function HostSignupPage() {
   const router = useRouter();
@@ -15,8 +17,7 @@ export default function HostSignupPage() {
     name: '',
     email: '',
     phoneNumber: '',
-    password: '',
-    providerType: 'EXPERIENCE_HOST' as 'EXPERIENCE_HOST' | 'LOCAL_HOST'
+    password: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -27,7 +28,7 @@ export default function HostSignupPage() {
     setError('');
     setLoading(true);
 
-    if (!formData.name || !formData.email || !formData.phoneNumber || !formData.password || !formData.providerType) {
+    if (!formData.name || !formData.email || !formData.phoneNumber || !formData.password) {
       setError('Please fill all fields');
       setLoading(false);
       return;
@@ -51,8 +52,8 @@ export default function HostSignupPage() {
         email: formData.email.trim(),
         phoneNumber: formData.phoneNumber,
         password: formData.password,
-        name: formData.name,
-        providerType: formData.providerType
+        name: formData.name
+        // providerType is optional - backend will default to EXPERIENCE_HOST
       });
 
       const { token, host } = response.data;
@@ -64,7 +65,7 @@ export default function HostSignupPage() {
         localStorage.setItem('userType', 'host');
       }
 
-      // Redirect to dashboard based on provider type
+      // Redirect to dashboard
         const dashboardRoute = getProviderDashboard(host.providerType || 'EXPERIENCE_HOST');
         router.push(dashboardRoute);
     } catch (err: any) {
@@ -79,67 +80,115 @@ export default function HostSignupPage() {
     }
   };
 
-  const getProviderTypeLabel = (type: string): string => {
-    switch (type) {
-      case 'EXPERIENCE_HOST': return 'Experience Provider';
-      case 'LOCAL_HOST': return 'Local Host';
-      default: return 'Account';
-    }
-  };
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 sm:p-6 lg:p-8 relative overflow-hidden">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute inset-0" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        }}></div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+      {/* Hero Section - Matching Explore Page Style */}
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6 }}
+        className="relative bg-gradient-to-br from-heritage-gold/10 via-cream-50/80 to-heritage-gold-light/5 pb-20 pt-32 overflow-hidden"
+      >
+        {/* Animated Background Elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <motion.div
+            animate={{
+              x: [0, 100, 0],
+              y: [0, 50, 0],
+            }}
+            transition={{
+              duration: 20,
+              repeat: Infinity,
+              ease: "linear"
+            }}
+            className="absolute top-20 right-10 w-96 h-96 bg-heritage-gold/10 rounded-full blur-3xl"
+          />
+          <motion.div
+            animate={{
+              x: [0, -100, 0],
+              y: [0, -50, 0],
+            }}
+            transition={{
+              duration: 25,
+              repeat: Infinity,
+              ease: "linear"
+            }}
+            className="absolute bottom-20 left-10 w-96 h-96 bg-cream-500/10 rounded-full blur-3xl"
+          />
       </div>
 
-      <div className="w-full max-w-4xl relative z-10">
-        {/* Main Card */}
-        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
-          {/* Header Section with Gradient */}
-          <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-8 py-10 text-center">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl mb-6 shadow-lg">
-              <Image 
-                src={LOGO_PATH} 
-                alt={LOGO_ALT_TEXT} 
-                width={48} 
-                height={48}
-                className="w-12 h-12"
-              />
+        <div className="relative max-w-7xl mx-auto px-6 z-10">
+          {/* Main Heading */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
+            className="text-center mb-12"
+          >
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+              className="inline-block mb-6"
+            >
+              <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-heritage-gold to-heritage-gold-dark flex items-center justify-center shadow-2xl">
+                <Sparkles className="w-10 h-10 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">
-              Become a Host
+            </motion.div>
+            <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight">
+              Become a
+              <span className="block bg-gradient-to-r from-heritage-gold via-heritage-gold-dark to-heritage-gold bg-clip-text text-transparent">
+                Host
+              </span>
             </h1>
-            <p className="text-blue-100 text-base">
-              Join our platform as a Local Host or Experience Provider
+            <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+              Share your culture, create experiences, and welcome travelers into your world
             </p>
+          </motion.div>
           </div>
+      </motion.div>
 
           {/* Form Section */}
-          <div className="px-8 py-8">
+      <div className="max-w-4xl mx-auto px-6 py-12 -mt-16 relative z-20">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.3 }}
+          className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-heritage-gold/20"
+        >
+          {/* Form Content */}
+          <div className="px-8 py-10 md:px-12 md:py-16">
+            <AnimatePresence>
             {error && (
-              <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="mb-8 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg"
+                >
                 <div className="flex items-start gap-3">
                   <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <p className="text-red-800 text-sm font-medium flex-1">{error}</p>
                 </div>
-              </div>
+                </motion.div>
             )}
+            </AnimatePresence>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.4 }}
+                >
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Full Name
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
                     </div>
@@ -149,18 +198,22 @@ export default function HostSignupPage() {
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       required
                       placeholder="John Doe"
-                      className="w-full pl-12 pr-4 py-3.5 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-slate-900 font-medium"
+                      className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 rounded-xl focus:border-heritage-gold focus:ring-2 focus:ring-heritage-gold/20 outline-none transition-all text-gray-900 font-medium"
                     />
                   </div>
-                </div>
+                </motion.div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Email Address
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                       </svg>
                     </div>
@@ -170,13 +223,17 @@ export default function HostSignupPage() {
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       required
                       placeholder="you@example.com"
-                      className="w-full pl-12 pr-4 py-3.5 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-slate-900 font-medium"
+                      className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 rounded-xl focus:border-heritage-gold focus:ring-2 focus:ring-heritage-gold/20 outline-none transition-all text-gray-900 font-medium"
                     />
                   </div>
-                </div>
+                </motion.div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.6 }}
+                >
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Phone Number
                   </label>
                   <PhoneInput
@@ -186,15 +243,19 @@ export default function HostSignupPage() {
                     required
                     disabled={loading}
                   />
-                </div>
+                </motion.div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.7 }}
+                >
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Password
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                       </svg>
                     </div>
@@ -205,12 +266,12 @@ export default function HostSignupPage() {
                       required
                       minLength={6}
                       placeholder="At least 6 characters"
-                      className="w-full pl-12 pr-12 py-3.5 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-slate-900 font-medium"
+                      className="w-full pl-12 pr-12 py-3.5 border-2 border-gray-200 rounded-xl focus:border-heritage-gold focus:ring-2 focus:ring-heritage-gold/20 outline-none transition-all text-gray-900 font-medium"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600"
+                      className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
                     >
                       {showPassword ? (
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -224,73 +285,24 @@ export default function HostSignupPage() {
                       )}
                     </button>
                   </div>
-                  <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
+                  <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     Minimum 6 characters
                   </p>
-                </div>
+                </motion.div>
               </div>
 
-              {/* Provider Type Selection */}
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-4">
-                  What type of host are you? <span className="text-red-500">*</span>
-                </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <label className={`block p-6 rounded-xl cursor-pointer transition-all border-2 ${
-                    formData.providerType === 'LOCAL_HOST' 
-                      ? 'bg-blue-50 border-blue-500 shadow-md' 
-                      : 'bg-white border-slate-200 hover:border-blue-300 hover:shadow-sm'
-                  }`}>
-                    <div className="flex items-start gap-4">
-                      <input
-                        type="radio"
-                        name="providerType"
-                        value="LOCAL_HOST"
-                        checked={formData.providerType === 'LOCAL_HOST'}
-                        onChange={(e) => setFormData({ ...formData, providerType: e.target.value as 'LOCAL_HOST' })}
-                        className="mt-1 w-5 h-5 text-blue-600 focus:ring-blue-500"
-                      />
-                      <div className="flex-1">
-                        <div className="font-bold text-slate-900 mb-2 text-lg">Local Host</div>
-                        <div className="text-sm text-slate-600 leading-relaxed">
-                          Provide travelers the chance to live with a local, understanding their traditions, regular routines, and how they live. You can take them to different historical or cultural places nearby.
-                        </div>
-                      </div>
-                    </div>
-                  </label>
-                  
-                  <label className={`block p-6 rounded-xl cursor-pointer transition-all border-2 ${
-                    formData.providerType === 'EXPERIENCE_HOST' 
-                      ? 'bg-blue-50 border-blue-500 shadow-md' 
-                      : 'bg-white border-slate-200 hover:border-blue-300 hover:shadow-sm'
-                  }`}>
-                    <div className="flex items-start gap-4">
-                      <input
-                        type="radio"
-                        name="providerType"
-                        value="EXPERIENCE_HOST"
-                        checked={formData.providerType === 'EXPERIENCE_HOST'}
-                        onChange={(e) => setFormData({ ...formData, providerType: e.target.value as 'EXPERIENCE_HOST' })}
-                        className="mt-1 w-5 h-5 text-blue-600 focus:ring-blue-500"
-                      />
-                      <div className="flex-1">
-                        <div className="font-bold text-slate-900 mb-2 text-lg">Experience Provider</div>
-                        <div className="text-sm text-slate-600 leading-relaxed">
-                          Perform, host, or organize short experiences, live events, or live performances for travelers.
-                        </div>
-                      </div>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8 }}
+              >
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-100 flex items-center justify-center gap-2 mt-6"
+                  className="w-full py-4 bg-gradient-to-r from-heritage-gold to-heritage-gold-dark hover:from-heritage-gold-dark hover:to-heritage-gold text-white font-bold text-lg rounded-2xl transition-all shadow-2xl hover:shadow-3xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 mt-6"
               >
                 {loading ? (
                   <>
@@ -302,26 +314,35 @@ export default function HostSignupPage() {
                   </>
                 ) : (
                   <>
-                    <span>Create {getProviderTypeLabel(formData.providerType)} Account</span>
+                      <span>Create Host Account</span>
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                     </svg>
                   </>
                 )}
               </button>
+              </motion.div>
             </form>
 
             {/* Divider */}
-            <div className="my-8 flex items-center">
-              <div className="flex-1 border-t border-slate-200"></div>
-              <span className="px-4 text-sm text-slate-500 font-medium">OR</span>
-              <div className="flex-1 border-t border-slate-200"></div>
-            </div>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.9 }}
+              className="my-8 flex items-center"
+            >
+              <div className="flex-1 border-t border-gray-200"></div>
+              <span className="px-4 text-sm text-gray-500 font-medium">OR</span>
+              <div className="flex-1 border-t border-gray-200"></div>
+            </motion.div>
 
             {/* Google Sign In */}
-            <a
+            <motion.a
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1 }}
               href={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000'}/api/auth/google/host`}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3.5 border-2 border-slate-300 rounded-xl font-semibold text-slate-700 bg-white hover:bg-slate-50 hover:border-slate-400 transition-all shadow-sm hover:shadow-md mb-6"
+              className="w-full flex items-center justify-center gap-3 px-4 py-3.5 border-2 border-gray-300 rounded-xl font-semibold text-gray-700 bg-white hover:bg-gray-50 hover:border-heritage-gold/30 transition-all shadow-sm hover:shadow-md mb-6"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -330,25 +351,30 @@ export default function HostSignupPage() {
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
               </svg>
               Sign up with Google
-            </a>
+            </motion.a>
 
             {/* Footer Links */}
-            <div className="mt-8 space-y-3 text-center pt-6 border-t border-slate-200">
-              <p className="text-sm text-slate-600">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1.1 }}
+              className="mt-8 space-y-3 text-center pt-6 border-t border-gray-200"
+            >
+              <p className="text-sm text-gray-600">
                 Already have a host account?{' '}
-                <Link href="/host/login" className="font-bold text-blue-600 hover:text-blue-700 transition-colors">
+                <Link href="/host/login" className="font-bold text-heritage-gold hover:text-heritage-gold-dark transition-colors">
                   Sign in here
                 </Link>
               </p>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-gray-500">
                 Looking to book trips?{' '}
-                <Link href="/signup" className="font-semibold text-blue-600 hover:text-blue-700 transition-colors">
+                <Link href="/signup" className="font-semibold text-heritage-gold hover:text-heritage-gold-dark transition-colors">
                   Sign up as a traveler
                 </Link>
               </p>
-            </div>
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

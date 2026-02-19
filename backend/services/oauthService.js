@@ -293,15 +293,13 @@ async function completeHostRegistration(data) {
   const { email, name, googleId, phoneNumber, providerType, profilePicture } = data;
   
   // Validate required fields
-  if (!email || !phoneNumber || !googleId || !providerType) {
-    throw new Error('Email, phone number, Google ID, and provider type are required');
+  if (!email || !phoneNumber || !googleId) {
+    throw new Error('Email, phone number, and Google ID are required');
   }
   
-  // Validate provider type
-  const validProviderTypes = ['EXPERIENCE_HOST', 'LOCAL_HOST'];
-  if (!validProviderTypes.includes(providerType)) {
-    throw new Error('Invalid provider type. Only Local Host and Experience Provider are allowed for signup.');
-  }
+  // Provider type is optional - default to EXPERIENCE_HOST if not provided
+  // Hosts can create both abodes and experiences regardless of provider type
+  const finalProviderType = providerType || 'EXPERIENCE_HOST';
   
   // Normalize phone number
   const normalizedPhone = normalizePhoneNumber(phoneNumber);
@@ -328,7 +326,7 @@ async function completeHostRegistration(data) {
     name,
     googleId,
     password: await bcrypt.hash(googleId + Date.now(), 10), // Random password for OAuth users
-    providerType,
+    providerType: finalProviderType,
     profilePicture: profilePicture || null
   });
   

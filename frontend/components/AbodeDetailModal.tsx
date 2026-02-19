@@ -372,10 +372,10 @@ export default function AbodeDetailModal({
                     onDragEnd={handleDragEnd}
                     whileDrag={{ cursor: 'grabbing' }}
                   >
-                    <motion.img
-                      key={selectedImageIndex}
-                      src={imageUrl}
-                      alt={`${hostName}'s ${propertyType}`}
+                  <motion.img
+                    key={selectedImageIndex}
+                    src={imageUrl}
+                    alt={`${hostName}'s ${propertyType}`}
                       className="w-full h-full object-cover cursor-grab active:cursor-grabbing select-none touch-none"
                       initial={{ opacity: 0, scale: 1.05 }}
                       animate={{ 
@@ -663,8 +663,8 @@ export default function AbodeDetailModal({
                               <div className="flex items-center gap-2 px-4 py-2 bg-white/60 rounded-full w-fit">
                                 <Sparkles className="w-4 h-4 text-heritage-gold" />
                                 <p className="text-sm md:text-base text-gray-700 font-semibold">
-                                  {fullAbode.familyInfo.generations} generation{fullAbode.familyInfo.generations !== 1 ? 's' : ''} of tradition
-                                </p>
+                                {fullAbode.familyInfo.generations} generation{fullAbode.familyInfo.generations !== 1 ? 's' : ''} of tradition
+                              </p>
                               </div>
                             )}
                           </div>
@@ -701,7 +701,7 @@ export default function AbodeDetailModal({
                                 className="flex items-center gap-3 p-4 md:p-5 bg-white rounded-xl border-2 border-gray-200 hover:border-heritage-gold hover:bg-heritage-gold/5 transition-all shadow-sm hover:shadow-md"
                               >
                                 <div className="p-2 bg-heritage-gold/10 rounded-lg">
-                                  <CheckCircle2 className="w-5 h-5 text-heritage-gold flex-shrink-0" />
+                                <CheckCircle2 className="w-5 h-5 text-heritage-gold flex-shrink-0" />
                                 </div>
                                 <span className="text-gray-800 font-semibold text-base">{amenity}</span>
                               </div>
@@ -798,8 +798,8 @@ export default function AbodeDetailModal({
                                     <div className="flex items-center gap-2 text-amber-700">
                                       <MapPin className="w-4 h-4" />
                                       <p className="text-sm font-semibold">
-                                        {place.distance} km away
-                                      </p>
+                                      {place.distance} km away
+                                    </p>
                                     </div>
                                   )}
                                 </div>
@@ -827,9 +827,9 @@ export default function AbodeDetailModal({
                                 // Remove .00 or .0 from the end if present
                                 return formatted.replace(/\.0+$/, '');
                               })()}
-                            </span>
+                    </span>
                             <span className="text-base md:text-lg text-gray-600 font-medium">/night</span>
-                          </div>
+                  </div>
                           {(fullAbode.pricing?.weeklyDiscount ?? 0) > 0 && (
                             <div className="flex items-center gap-2 mt-2">
                               <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">
@@ -837,7 +837,7 @@ export default function AbodeDetailModal({
                               </span>
                               <p className="text-sm text-gray-600">
                                 for 7+ nights
-                              </p>
+                    </p>
                             </div>
                           )}
                         </>
@@ -845,30 +845,30 @@ export default function AbodeDetailModal({
                         <div className="text-lg md:text-xl text-gray-600 font-medium">
                           Price on request
                         </div>
-                      )}
-                    </div>
+                  )}
+                </div>
                     <div className="flex items-center gap-3 md:gap-4 w-full md:w-auto">
                       <motion.button
-                        onClick={() => setIsFavorite(!isFavorite)}
+                    onClick={() => setIsFavorite(!isFavorite)}
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
                         className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center transition-all shadow-lg ${
-                          isFavorite
+                      isFavorite
                             ? 'bg-red-500 text-white hover:bg-red-600'
                             : 'bg-white text-gray-600 hover:bg-gray-100 border-2 border-gray-200'
-                        }`}
-                      >
+                    }`}
+                  >
                         <Heart className={`w-6 h-6 ${isFavorite ? 'fill-current' : ''}`} />
-                      </motion.button>
-                      <motion.button
-                        onClick={handleBook}
+                  </motion.button>
+                  <motion.button
+                    onClick={handleBook}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         className="flex-1 md:flex-none px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-heritage-gold to-heritage-gold-dark text-white font-bold text-base md:text-lg rounded-xl shadow-xl hover:shadow-2xl transition-all flex items-center justify-center gap-2"
-                      >
+                  >
                         <Calendar className="w-5 h-5" />
                         <span>Book Now</span>
-                      </motion.button>
+                  </motion.button>
                     </div>
                   </div>
                 </div>

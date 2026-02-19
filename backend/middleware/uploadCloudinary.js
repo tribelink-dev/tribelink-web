@@ -55,15 +55,17 @@ const fileFilter = (req, file, cb) => {
       }
     }
   } else {
-    // For regular uploads (hotels, experiences), only allow images
-    const allowedTypes = /jpeg|jpg|png|gif|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = /^image\/(jpeg|jpg|png|gif|webp)$/.test(file.mimetype);
+    // For regular uploads (hotels, experiences, abodes), allow images and videos
+    const allowedImageTypes = /jpeg|jpg|png|gif|webp/;
+    const allowedVideoTypes = /mp4|mov|avi|mkv|webm|quicktime/;
+    const extname = path.extname(file.originalname).toLowerCase();
+    const isImage = allowedImageTypes.test(extname) && /^image\/(jpeg|jpg|png|gif|webp)$/.test(file.mimetype);
+    const isVideo = allowedVideoTypes.test(extname) && /^video\/(mp4|quicktime|x-msvideo|x-matroska|webm)$/.test(file.mimetype);
 
-    if (mimetype && extname) {
+    if (isImage || isVideo) {
       return cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed (jpeg, jpg, png, gif, webp)'));
+      cb(new Error('Only image files (jpeg, jpg, png, gif, webp) and video files (mp4, mov, avi, mkv, webm) are allowed'));
     }
   }
 };
@@ -116,7 +118,7 @@ if (isCloudinaryConfigured) {
   upload = multer({
     storage: storage,
     limits: {
-      fileSize: 10 * 1024 * 1024 // 10MB limit
+      fileSize: 100 * 1024 * 1024 // 100MB limit (for videos)
     },
     fileFilter: fileFilter
   });
@@ -153,7 +155,7 @@ if (isCloudinaryConfigured) {
   upload = multer({
     storage: localStorage,
     limits: {
-      fileSize: 10 * 1024 * 1024
+      fileSize: 100 * 1024 * 1024 // 100MB limit (for videos)
     },
     fileFilter: fileFilter
   });

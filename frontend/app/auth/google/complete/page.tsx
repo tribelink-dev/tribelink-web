@@ -14,7 +14,6 @@ export default function GoogleAuthComplete() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [providerType, setProviderType] = useState<'EXPERIENCE_HOST' | 'LOCAL_HOST' | ''>('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -35,12 +34,6 @@ export default function GoogleAuthComplete() {
       return;
     }
 
-    if (type === 'host' && !providerType) {
-      setError('Please select a provider type');
-      setLoading(false);
-      return;
-    }
-
     // PhoneInput component already formats with country code
     if (phoneNumber.length < 10) {
       setError('Please enter a valid phone number');
@@ -55,7 +48,7 @@ export default function GoogleAuthComplete() {
         googleId,
         phoneNumber: phoneNumber.trim(), // PhoneInput already formats it
         type,
-        providerType: type === 'host' ? providerType : undefined,
+        // providerType is optional - backend will default to EXPERIENCE_HOST
         profilePicture: profilePicture || undefined
       });
 
@@ -223,85 +216,6 @@ export default function GoogleAuthComplete() {
                 />
                 <p className="text-xs text-gray-500 mt-2 ml-1">We'll use this to verify your account</p>
               </motion.div>
-
-              {/* Provider Type Selection (for hosts) */}
-              {type === 'host' && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                >
-                  <label className="block text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                    <Home className="w-4 h-4 text-heritage-gold" />
-                    What type of host are you? <span className="text-red-500">*</span>
-                  </label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <motion.label
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className={`relative flex flex-col p-5 rounded-xl cursor-pointer transition-all border-2 ${
-                        providerType === 'LOCAL_HOST' 
-                          ? 'bg-gradient-to-br from-heritage-gold to-heritage-gold-dark text-white shadow-lg border-heritage-gold-dark' 
-                          : 'bg-white border-gray-200 hover:border-heritage-gold/50 hover:shadow-md'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="providerType"
-                        value="LOCAL_HOST"
-                        checked={providerType === 'LOCAL_HOST'}
-                        onChange={(e) => setProviderType(e.target.value as 'LOCAL_HOST')}
-                        className="sr-only"
-                      />
-                      <div className="flex items-start gap-3 mb-3">
-                        {providerType === 'LOCAL_HOST' ? (
-                          <CheckCircle2 className="w-6 h-6 text-white flex-shrink-0 mt-0.5" />
-                        ) : (
-                          <div className="w-6 h-6 rounded-full border-2 border-gray-300 flex-shrink-0 mt-0.5" />
-                        )}
-                        <div className="flex-1">
-                          <div className="font-bold text-lg mb-2">Local Host</div>
-                          <div className={`text-sm leading-relaxed ${providerType === 'LOCAL_HOST' ? 'text-white/90' : 'text-gray-600'}`}>
-                            Provide travelers the chance to live with a local, understanding their traditions, regular routines, and how they live. You can take them to different historical or cultural places nearby.
-                          </div>
-                        </div>
-                      </div>
-                    </motion.label>
-
-                    <motion.label
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className={`relative flex flex-col p-5 rounded-xl cursor-pointer transition-all border-2 ${
-                        providerType === 'EXPERIENCE_HOST' 
-                          ? 'bg-gradient-to-br from-heritage-gold to-heritage-gold-dark text-white shadow-lg border-heritage-gold-dark' 
-                          : 'bg-white border-gray-200 hover:border-heritage-gold/50 hover:shadow-md'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="providerType"
-                        value="EXPERIENCE_HOST"
-                        checked={providerType === 'EXPERIENCE_HOST'}
-                        onChange={(e) => setProviderType(e.target.value as 'EXPERIENCE_HOST')}
-                        className="sr-only"
-                      />
-                      <div className="flex items-start gap-3 mb-3">
-                        {providerType === 'EXPERIENCE_HOST' ? (
-                          <CheckCircle2 className="w-6 h-6 text-white flex-shrink-0 mt-0.5" />
-                        ) : (
-                          <div className="w-6 h-6 rounded-full border-2 border-gray-300 flex-shrink-0 mt-0.5" />
-                        )}
-                        <div className="flex-1">
-                          <div className="font-bold text-lg mb-2">Experience Provider</div>
-                          <div className={`text-sm leading-relaxed ${providerType === 'EXPERIENCE_HOST' ? 'text-white/90' : 'text-gray-600'}`}>
-                            Perform, host, or organize short experiences, live events, or live performances for travelers.
-                          </div>
-                        </div>
-                      </div>
-                    </motion.label>
-                  </div>
-                </motion.div>
-              )}
 
               {/* Submit Button */}
               <motion.button

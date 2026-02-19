@@ -149,16 +149,11 @@ router.get('/:id', async (req, res) => {
 });
 
 // Register as local host (create LocalHost profile)
-router.post('/register', authenticate, requireHost, upload.array('images', 10), async (req, res) => {
+router.post('/register', authenticate, requireHost, upload.array('images'), async (req, res) => {
   try {
     const providerId = req.user._id; // Assuming req.user is the Provider
 
-    // Check if provider is LOCAL_HOST type
-    if (req.user.providerType !== 'LOCAL_HOST') {
-      return res.status(400).json({ 
-        message: 'Provider type must be LOCAL_HOST. Please update your provider type first.' 
-      });
-    }
+    // Note: Any authenticated host can now register abodes, regardless of provider type
 
     // Check if LocalHost profile already exists
     const existingHost = await LocalHost.findOne({ providerId });
@@ -286,7 +281,7 @@ router.post('/register', authenticate, requireHost, upload.array('images', 10), 
 });
 
 // Update local host profile
-router.put('/:id', authenticate, requireHost, upload.array('images', 10), async (req, res) => {
+router.put('/:id', authenticate, requireHost, upload.array('images'), async (req, res) => {
   try {
     const localHost = await LocalHost.findById(req.params.id);
 
@@ -445,13 +440,7 @@ router.put('/:id', authenticate, requireHost, upload.array('images', 10), async 
 // Get abodes by owner (for abode host dashboard)
 router.get('/owner/my-abodes', authenticate, requireHost, async (req, res) => {
   try {
-    // Check if provider is LOCAL_HOST type
-    if (req.user.providerType !== 'LOCAL_HOST') {
-      return res.status(403).json({ 
-        message: 'Access denied. Only LOCAL_HOST providers can access this endpoint.' 
-      });
-    }
-
+    // Any authenticated host can now access their abodes, regardless of provider type
     const abodes = await LocalHost.find({ providerId: req.user._id })
       .populate('providerId', 'name email phoneNumber profilePicture rating ratingCount')
       .sort({ createdAt: -1 });
