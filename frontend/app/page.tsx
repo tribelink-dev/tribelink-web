@@ -10,6 +10,8 @@ import CulturalImmersion from '@/components/marketing/sections/CulturalImmersion
 import Stories from '@/components/marketing/sections/Stories';
 import Contact from '@/components/marketing/sections/Contact';
 
+// Note: Metadata is handled by root layout.tsx since this is a client component
+// The root layout provides comprehensive SEO metadata for the homepage
 export default function Home() {
     // Show marketing page to everyone - no authentication required
     return (
