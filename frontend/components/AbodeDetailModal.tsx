@@ -9,6 +9,22 @@ import { useCurrency } from '@/lib/CurrencyContext';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
 
+interface RoomVariant {
+  variantId: string;
+  name: string;
+  description?: string;
+  pricePerNight: number;
+  capacity?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  amenities?: string[];
+  images?: Array<{
+    url: string;
+    isMain?: boolean;
+    caption?: string;
+  }>;
+}
+
 interface Abode {
   _id: string;
   images?: Array<{ url: string; isMain?: boolean; caption?: string }>;
@@ -33,6 +49,14 @@ interface Abode {
     description?: string;
     category: string;
   }>;
+  linkedExperiences?: Array<{
+    _id: string;
+    title: string;
+    description?: string;
+    duration?: number;
+    maxParticipants?: number;
+    imageUrl?: string;
+  }>;
   nearbyPlaces?: Array<{
     name: string;
     description?: string;
@@ -52,6 +76,8 @@ interface Abode {
     weeklyDiscount?: number;
     monthlyDiscount?: number;
   };
+  roomVariants?: RoomVariant[];
+  defaultVariantId?: string | null;
   rating?: number;
   ratingCount?: number;
   isVerified?: boolean;
@@ -83,7 +109,7 @@ export default function AbodeDetailModal({
   const [loading, setLoading] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'amenities' | 'cultural' | 'location'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'amenities' | 'experiences' | 'location'>('overview');
   const [isFullscreenGallery, setIsFullscreenGallery] = useState(false);
   const [dragX, setDragX] = useState(0);
 
@@ -92,6 +118,14 @@ export default function AbodeDetailModal({
     if (isOpen && abode?._id && !fullAbode?.abodeDetails?.description) {
       fetchFullAbode();
     } else if (abode) {
+      // Debug: Log initial abode data
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[AbodeDetailModal] Initial abode:', {
+          id: abode._id,
+          hasRoomVariants: !!(abode.roomVariants && abode.roomVariants.length > 0),
+          roomVariantsCount: abode.roomVariants?.length || 0
+        });
+      }
       setFullAbode(abode);
     }
   }, [isOpen, abode?._id]);
@@ -135,7 +169,25 @@ export default function AbodeDetailModal({
     try {
       setLoading(true);
       const response = await api.get(`/abodes/${abode._id}`);
-      setFullAbode(response.data.localHost);
+      const fetchedAbode = response.data.localHost;
+      const linkedExperiences = response.data.linkedExperiences || [];
+      
+      // Debug: Log room variants
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[AbodeDetailModal] Fetched abode:', {
+          id: fetchedAbode._id,
+          hasRoomVariants: !!(fetchedAbode.roomVariants && fetchedAbode.roomVariants.length > 0),
+          roomVariantsCount: fetchedAbode.roomVariants?.length || 0,
+          roomVariants: fetchedAbode.roomVariants,
+          linkedExperiencesCount: linkedExperiences.length
+        });
+      }
+      
+      // Add linked experiences to the abode object
+      setFullAbode({
+        ...fetchedAbode,
+        linkedExperiences
+      });
     } catch (error) {
       console.error('Error fetching abode details:', error);
     } finally {
@@ -196,7 +248,35 @@ export default function AbodeDetailModal({
 
   // Calculate derived values after early return check
   const mainImage = images.find(img => img.isMain) || images[0];
-  const price = fullAbode.pricing?.pricePerNight || 0;
+  
+  // Calculate price from room variants or base pricing
+  const { price, showFromPrefix } = (() => {
+    // If room variants exist, use the minimum price from variants
+    if (fullAbode.roomVariants && fullAbode.roomVariants.length > 0) {
+      const validPrices = fullAbode.roomVariants
+        .map((variant) => variant.pricePerNight)
+        .filter((p) => p > 0 && !isNaN(p));
+      
+      if (validPrices.length > 0) {
+        const minPrice = Math.min(...validPrices);
+        const maxPrice = Math.max(...validPrices);
+        const hasPriceRange = minPrice !== maxPrice;
+        
+        return {
+          price: minPrice,
+          showFromPrefix: hasPriceRange && fullAbode.roomVariants.length > 1
+        };
+      }
+    }
+    
+    // Fallback to base pricing
+    const basePrice = fullAbode.pricing?.pricePerNight || 0;
+    return {
+      price: basePrice,
+      showFromPrefix: false
+    };
+  })();
+  
   const currency = fullAbode.pricing?.currency || 'INR';
   const rating = fullAbode.rating || 0;
   const ratingCount = fullAbode.ratingCount || 0;
@@ -500,7 +580,8 @@ export default function AbodeDetailModal({
                       <span className="text-sm font-bold">Verified</span>
                     </motion.div>
                   )}
-                  {fullAbode.culturalPractices && fullAbode.culturalPractices.length > 0 && (
+                  {(fullAbode.culturalPractices && fullAbode.culturalPractices.length > 0) || 
+                   (fullAbode.linkedExperiences && fullAbode.linkedExperiences.length > 0) ? (
                     <motion.div
                       initial={{ scale: 0, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
@@ -508,9 +589,9 @@ export default function AbodeDetailModal({
                       className="bg-gradient-to-r from-purple-500/95 to-indigo-500/95 backdrop-blur-md text-white px-5 py-2.5 rounded-full shadow-2xl flex items-center gap-2 border-2 border-white/30"
                     >
                       <Sparkles className="w-5 h-5" />
-                      <span className="text-sm font-semibold">Cultural Experience</span>
+                      <span className="text-sm font-semibold">Experiences</span>
                     </motion.div>
-                  )}
+                  ) : null}
                 </div>
 
                 {/* Rating Badge - Enhanced */}
@@ -601,7 +682,7 @@ export default function AbodeDetailModal({
                     {[
                       { id: 'overview', label: 'Overview', icon: Home },
                       { id: 'amenities', label: 'Amenities', icon: CheckCircle2 },
-                      { id: 'cultural', label: 'Cultural', icon: Sparkles },
+                      { id: 'experiences', label: 'Experiences', icon: Sparkles },
                       { id: 'location', label: 'Location', icon: MapPin },
                     ].map((tab) => {
                       const Icon = tab.icon;
@@ -716,36 +797,93 @@ export default function AbodeDetailModal({
                       </motion.div>
                     )}
 
-                    {activeTab === 'cultural' && (
+                    {activeTab === 'experiences' && (
                       <motion.div
-                        key="cultural"
+                        key="experiences"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
+                        className="space-y-8"
                       >
-                        {fullAbode.culturalPractices && fullAbode.culturalPractices.length > 0 ? (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {fullAbode.culturalPractices.map((practice, idx) => (
-                              <div
-                                key={idx}
-                                className="bg-gradient-to-br from-purple-50 via-indigo-50 to-purple-100 rounded-2xl p-6 md:p-7 border-2 border-purple-200 hover:border-purple-400 transition-all shadow-sm hover:shadow-lg"
-                              >
-                                <div className="flex items-center gap-3 mb-4">
-                                  <span className="px-4 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-bold rounded-full shadow-md">
-                                    {practice.category}
-                                  </span>
-                                  <h4 className="font-bold text-gray-900 text-lg">{practice.practice}</h4>
+                        {/* Base Experiences (Cultural Practices) - Included with stay */}
+                        {fullAbode.culturalPractices && fullAbode.culturalPractices.length > 0 && (
+                          <div>
+                            <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">Included Experiences</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              {fullAbode.culturalPractices.map((practice, idx) => (
+                                <div
+                                  key={idx}
+                                  className="bg-gradient-to-br from-purple-50 via-indigo-50 to-purple-100 rounded-2xl p-6 md:p-7 border-2 border-purple-200 hover:border-purple-400 transition-all shadow-sm hover:shadow-lg"
+                                >
+                                  <div className="flex items-center gap-3 mb-4">
+                                    <span className="px-4 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-bold rounded-full shadow-md">
+                                      {practice.category}
+                                    </span>
+                                    <h4 className="font-bold text-gray-900 text-lg">{practice.practice}</h4>
+                                  </div>
+                                  {practice.description && (
+                                    <p className="text-gray-700 text-base leading-relaxed">{practice.description}</p>
+                                  )}
                                 </div>
-                                {practice.description && (
-                                  <p className="text-gray-700 text-base leading-relaxed">{practice.description}</p>
-                                )}
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
-                        ) : (
+                        )}
+
+                        {/* Additional Experiences (Linked Experiences) - Optional add-ons */}
+                        {fullAbode.linkedExperiences && fullAbode.linkedExperiences.length > 0 && (
+                          <div>
+                            {fullAbode.culturalPractices && fullAbode.culturalPractices.length > 0 && (
+                              <div className="h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent my-8"></div>
+                            )}
+                            <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">Additional Experiences</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              {fullAbode.linkedExperiences.map((experience) => (
+                                <div
+                                  key={experience._id}
+                                  className="bg-white rounded-2xl p-6 md:p-7 border-2 border-gray-200 hover:border-indigo-300 transition-all shadow-sm hover:shadow-lg"
+                                >
+                                  {experience.imageUrl && (
+                                    <div className="relative w-full h-48 rounded-xl overflow-hidden mb-4">
+                                      <img
+                                        src={getImageUrl(experience.imageUrl)}
+                                        alt={experience.title}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </div>
+                                  )}
+                                  <h4 className="font-bold text-gray-900 text-lg mb-2">{experience.title}</h4>
+                                  {experience.description && (
+                                    <p className="text-gray-700 text-base leading-relaxed mb-4 line-clamp-3">
+                                      {experience.description}
+                                    </p>
+                                  )}
+                                  <div className="flex items-center gap-4 text-sm text-gray-600">
+                                    {experience.duration && (
+                                      <div className="flex items-center gap-1.5">
+                                        <Clock className="w-4 h-4" />
+                                        <span>{experience.duration} hours</span>
+                                      </div>
+                                    )}
+                                    {experience.maxParticipants && (
+                                      <div className="flex items-center gap-1.5">
+                                        <Users className="w-4 h-4" />
+                                        <span>Up to {experience.maxParticipants}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Empty State */}
+                        {(!fullAbode.culturalPractices || fullAbode.culturalPractices.length === 0) &&
+                         (!fullAbode.linkedExperiences || fullAbode.linkedExperiences.length === 0) && (
                           <div className="text-center py-16">
                             <Sparkles className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                            <p className="text-gray-500 text-lg">No cultural practices listed</p>
+                            <p className="text-gray-500 text-lg">No experiences listed</p>
                           </div>
                         )}
                       </motion.div>
@@ -821,15 +959,18 @@ export default function AbodeDetailModal({
                       {price > 0 ? (
                         <>
                           <div className="flex items-baseline gap-2 mb-1">
+                            {showFromPrefix && (
+                              <span className="text-base md:text-lg text-gray-600 font-medium">from</span>
+                            )}
                             <span className="text-3xl md:text-4xl font-bold text-gray-900">
                               {(() => {
                                 const formatted = formatPrice(price, currency);
                                 // Remove .00 or .0 from the end if present
                                 return formatted.replace(/\.0+$/, '');
                               })()}
-                    </span>
+                            </span>
                             <span className="text-base md:text-lg text-gray-600 font-medium">/night</span>
-                  </div>
+                          </div>
                           {(fullAbode.pricing?.weeklyDiscount ?? 0) > 0 && (
                             <div className="flex items-center gap-2 mt-2">
                               <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">

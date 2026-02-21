@@ -9,7 +9,9 @@ const LocalHost = require('../models/LocalHost');
 const Experience = require('../models/Experience');
 const Event = require('../models/Event');
 const Trip = require('../models/Trip');
+const User = require('../models/User');
 const { authenticate, requireUser } = require('../middleware/auth');
+const { convertCurrency } = require('../services/currency');
 
 const router = express.Router();
 
@@ -84,10 +86,12 @@ router.post('/abode-stay', authenticate, requireUser, async (req, res) => {
   try {
     const {
       localHostId,
+      variantId,
       checkIn,
       checkOut,
       numberOfGuests,
       specialRequests,
+      linkedExperiences,
       tripId
     } = req.body;
 
@@ -96,9 +100,25 @@ router.post('/abode-stay', authenticate, requireUser, async (req, res) => {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
+    const Experience = require('../models/Experience');
     const localHost = await LocalHost.findById(localHostId);
     if (!localHost) {
       return res.status(404).json({ message: 'Local host not found' });
+    }
+
+    // Validate variant if provided
+    if (variantId) {
+      const variant = localHost.roomVariants?.find(v => v.variantId === variantId);
+      if (!variant) {
+        return res.status(400).json({ message: 'Invalid room variant' });
+      }
+      if (numberOfGuests > variant.capacity) {
+        return res.status(400).json({ message: `Maximum capacity for this variant is ${variant.capacity} guests` });
+      }
+    } else {
+      if (numberOfGuests > localHost.abodeDetails.capacity) {
+        return res.status(400).json({ message: `Maximum capacity is ${localHost.abodeDetails.capacity} guests` });
+      }
     }
 
     // Check availability
@@ -121,15 +141,58 @@ router.post('/abode-stay', authenticate, requireUser, async (req, res) => {
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    // Calculate price
-    let totalPrice = localHost.pricing.pricePerNight * nights;
+    // Calculate base price (variant or default)
+    let basePrice = 0;
+    if (variantId) {
+      const variant = localHost.roomVariants.find(v => v.variantId === variantId);
+      if (variant) {
+        basePrice = variant.pricePerNight * nights;
+      }
+    }
+    
+    if (basePrice === 0) {
+      // Fallback to base pricing
+      basePrice = localHost.pricing.pricePerNight * nights;
+    }
     
     // Apply discounts
     if (nights >= 30 && localHost.pricing.monthlyDiscount > 0) {
-      totalPrice *= (1 - localHost.pricing.monthlyDiscount / 100);
+      basePrice *= (1 - localHost.pricing.monthlyDiscount / 100);
     } else if (nights >= 7 && localHost.pricing.weeklyDiscount > 0) {
-      totalPrice *= (1 - localHost.pricing.weeklyDiscount / 100);
+      basePrice *= (1 - localHost.pricing.weeklyDiscount / 100);
     }
+
+    // Process linked experiences
+    let experienceTotal = 0;
+    const processedExperiences = [];
+    
+    if (linkedExperiences && Array.isArray(linkedExperiences)) {
+      for (const exp of linkedExperiences) {
+        const experience = await Experience.findById(exp.experienceId);
+        if (!experience) continue;
+
+        let expPrice = experience.price;
+        if (experience.isAddOn && experience.addOnPricing?.price) {
+          expPrice = experience.addOnPricing.price;
+          if (experience.addOnPricing.discount > 0) {
+            expPrice *= (1 - experience.addOnPricing.discount / 100);
+          }
+        }
+
+        experienceTotal += expPrice * (exp.numberOfParticipants || 1);
+        
+        processedExperiences.push({
+          experienceId: exp.experienceId,
+          date: new Date(exp.date),
+          startTime: exp.startTime,
+          numberOfParticipants: exp.numberOfParticipants || 1,
+          price: expPrice * (exp.numberOfParticipants || 1),
+          specialRequests: exp.specialRequests
+        });
+      }
+    }
+
+    const totalPrice = basePrice + experienceTotal;
 
     // Create booking
     const booking = new Booking({
@@ -137,13 +200,15 @@ router.post('/abode-stay', authenticate, requireUser, async (req, res) => {
       bookingType: 'ABODE_STAY',
       abodeStay: {
         localHost: localHostId,
+        variantId: variantId || null,
         checkIn: checkInDate,
         checkOut: checkOutDate,
         numberOfGuests: numberOfGuests || 1,
-        specialRequests
+        specialRequests: specialRequests || '',
+        linkedExperiences: processedExperiences
       },
       totalPrice: Math.round(totalPrice * 100) / 100,
-      currency: localHost.pricing.currency,
+      currency: localHost.pricing.currency || 'USD',
       trip: tripId || null,
       status: 'Pending',
       paymentStatus: 'Pending'
@@ -321,6 +386,69 @@ router.post('/event', authenticate, requireUser, async (req, res) => {
     });
   } catch (error) {
     console.error('Error booking event:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Pay for booking
+router.post('/:id/pay', authenticate, requireUser, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id)
+      .populate('abodeStay.localHost')
+      .populate('experience.experienceId')
+      .populate('event.eventId');
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    // Verify ownership
+    if (booking.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    if (booking.paymentStatus === 'Completed') {
+      return res.status(400).json({ message: 'Booking already paid' });
+    }
+
+    const user = await User.findById(req.user._id);
+
+    // Convert booking price to user's wallet currency
+    const priceInWalletCurrency = await convertCurrency(
+      booking.totalPrice,
+      booking.currency || 'USD',
+      user.tripWallet.currency
+    );
+
+    if (user.tripWallet.balance < priceInWalletCurrency) {
+      return res.status(400).json({
+        message: 'Insufficient balance',
+        required: priceInWalletCurrency,
+        available: user.tripWallet.balance,
+        currency: user.tripWallet.currency
+      });
+    }
+
+    // Process payment
+    user.tripWallet.balance -= priceInWalletCurrency;
+    booking.paymentStatus = 'Completed';
+    booking.status = 'Confirmed';
+    booking.paymentDate = new Date();
+    booking.paymentMethod = 'Wallet';
+    booking.transactionId = `TXN-${Date.now()}-${booking._id.toString().slice(-6)}`;
+    
+    await user.save();
+    await booking.save();
+
+    res.json({
+      success: true,
+      message: 'Payment successful',
+      booking,
+      remainingBalance: user.tripWallet.balance,
+      currency: user.tripWallet.currency
+    });
+  } catch (error) {
+    console.error('Error processing booking payment:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

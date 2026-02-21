@@ -116,7 +116,7 @@ const localHostSchema = new mongoose.Schema({
     }
   }],
   
-  // Pricing
+  // Pricing (base/default pricing for backward compatibility)
   pricing: {
     pricePerNight: {
       type: Number,
@@ -141,6 +141,86 @@ const localHostSchema = new mongoose.Schema({
       default: 0 // Percentage discount for 30+ nights
     }
   },
+  
+  // Room variants (multiple room types per abode)
+  roomVariants: [{
+    variantId: {
+      type: String,
+      required: true
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    description: {
+      type: String,
+      trim: true
+    },
+    pricePerNight: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    capacity: {
+      type: Number,
+      required: true,
+      min: 1
+    },
+    bedrooms: {
+      type: Number,
+      min: 1,
+      default: 1
+    },
+    bathrooms: {
+      type: Number,
+      min: 1,
+      default: 1
+    },
+    amenities: [{
+      type: String
+    }],
+    images: [{
+      url: {
+        type: String,
+        required: true
+      },
+      isMain: {
+        type: Boolean,
+        default: false
+      },
+      caption: {
+        type: String
+      }
+    }],
+    availability: [{
+      date: {
+        type: Date,
+        required: true
+      },
+      available: {
+        type: Boolean,
+        default: true
+      },
+      bookedSlots: {
+        type: Number,
+        default: 0,
+        min: 0
+      }
+    }]
+  }],
+  
+  // Default variant ID (for backward compatibility)
+  defaultVariantId: {
+    type: String,
+    default: null
+  },
+  
+  // Linked experiences (host-curated add-ons)
+  linkedExperiences: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Experience'
+  }],
   
   // Images of the abode
   images: [{

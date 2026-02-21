@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import { CurrencyProvider } from "@/lib/CurrencyContext";
+import { CartProvider } from "@/lib/CartContext";
 import ConditionalLayout from "@/components/ConditionalLayout";
 import EmergencySOS from "@/components/EmergencySOS";
 import DesktopViewport from "@/components/DesktopViewport";
@@ -96,10 +97,12 @@ export default function RootLayout({
         <DesktopViewport />
         <AuthProvider>
           <CurrencyProvider>
-            <ConditionalLayout>
-              {children}
-            </ConditionalLayout>
-            <EmergencySOS />
+            <CartProvider>
+              <ConditionalLayout>
+                {children}
+              </ConditionalLayout>
+              <EmergencySOS />
+            </CartProvider>
           </CurrencyProvider>
         </AuthProvider>
       </body>

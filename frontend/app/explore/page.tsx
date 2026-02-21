@@ -309,6 +309,21 @@ export default function ExplorePage() {
       
       const abodesData = abodesRes.data || { localHosts: [], pagination: {} };
       
+      // Debug: Log room variants in development
+      if (process.env.NODE_ENV === 'development') {
+        const abodesWithVariants = (abodesData.localHosts || []).filter((abode: any) => 
+          abode.roomVariants && abode.roomVariants.length > 0
+        );
+        console.log(`[ExplorePage] Fetched ${abodesData.localHosts?.length || 0} abodes, ${abodesWithVariants.length} have room variants`);
+        if (abodesWithVariants.length > 0) {
+          console.log('[ExplorePage] Abodes with variants:', abodesWithVariants.map((a: any) => ({
+            id: a._id,
+            title: a.abodeDetails?.title,
+            variants: a.roomVariants?.map((v: any) => ({ name: v.name, price: v.pricePerNight }))
+          })));
+        }
+      }
+      
       if (page === 1) {
         setAllAbodes(abodesData.localHosts || []);
       } else {

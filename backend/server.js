@@ -204,6 +204,7 @@ app.use('/api/experiences', require('./routes/experiences')); // New experiences
 app.use('/api/abodes', require('./routes/adobes')); // Local hosts (abode stays)
 app.use('/api/events', require('./routes/events')); // Events/concerts
 app.use('/api/bookings', require('./routes/bookings')); // Unified bookings
+app.use('/api/cart', require('./routes/cart')); // Shopping cart
 app.use('/api/safety', safetyRoutes);
 // app.use('/api/drivers', driverRoutes); // Removed - no longer needed
 app.use('/api/tickets', ticketRoutes);

@@ -81,6 +81,45 @@ export default function RegisterAbodePage() {
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [alwaysAvailable, setAlwaysAvailable] = useState(false);
   const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
+  
+  // Room variants state
+  const [roomVariants, setRoomVariants] = useState<Array<{
+    variantId: string;
+    name: string;
+    description: string;
+    pricePerNight: number;
+    capacity: number;
+    bedrooms: number;
+    bathrooms: number;
+    amenities: string[];
+  }>>([]);
+  const [defaultVariantId, setDefaultVariantId] = useState<string | null>(null);
+  
+  // Linked experiences state (Local Experiences)
+  const [availableExperiences, setAvailableExperiences] = useState<Array<{
+    _id: string;
+    title: string;
+    description: string;
+    price: number;
+    currency: string;
+    imageUrl?: string;
+  }>>([]);
+  const [selectedExperienceIds, setSelectedExperienceIds] = useState<string[]>([]);
+  const [loadingExperiences, setLoadingExperiences] = useState(false);
+  const [showCreateExperienceModal, setShowCreateExperienceModal] = useState(false);
+  const [creatingExperience, setCreatingExperience] = useState(false);
+  
+  // New experience form state
+  const [newExperience, setNewExperience] = useState({
+    title: '',
+    description: '',
+    price: '',
+    currency: 'INR',
+    duration: '2',
+    maxParticipants: '10',
+  });
+  const [newExperienceImage, setNewExperienceImage] = useState<File | null>(null);
+  const [newExperienceImagePreview, setNewExperienceImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -95,11 +134,161 @@ export default function RegisterAbodePage() {
       try {
         const hostData = JSON.parse(host);
         // Any host can now register abodes, regardless of provider type
+        // Fetch available experiences for this host
+        fetchAvailableExperiences();
       } catch (e) {
         router.push('/host/login');
       }
     }
   }, [router]);
+
+  // Fetch available experiences for the host
+  const fetchAvailableExperiences = async () => {
+    try {
+      setLoadingExperiences(true);
+      const response = await api.get('/hosts/experiences');
+      const experiences = response.data.experiences || [];
+      // Filter to only show experiences that can be linked (isAddOn or can be made addon)
+      setAvailableExperiences(experiences.filter((exp: any) => !exp.isArchived));
+    } catch (err: any) {
+      console.error('Error fetching experiences:', err);
+      // Don't show error, just continue without experiences
+    } finally {
+      setLoadingExperiences(false);
+    }
+  };
+
+  // Room variant management functions
+  const addRoomVariant = () => {
+    const newVariantId = `variant-${Date.now()}`;
+    setRoomVariants(prev => [...prev, {
+      variantId: newVariantId,
+      name: '',
+      description: '',
+      pricePerNight: Number(formData.pricing.pricePerNight) || 0,
+      capacity: formData.abodeDetails.capacity,
+      bedrooms: formData.abodeDetails.bedrooms,
+      bathrooms: formData.abodeDetails.bathrooms,
+      amenities: [...formData.abodeDetails.amenities],
+    }]);
+    // Set as default if it's the first variant
+    if (roomVariants.length === 0) {
+      setDefaultVariantId(newVariantId);
+    }
+  };
+
+  const updateRoomVariant = (variantId: string, field: string, value: any) => {
+    setRoomVariants(prev => prev.map(variant =>
+      variant.variantId === variantId ? { ...variant, [field]: value } : variant
+    ));
+  };
+
+  const removeRoomVariant = (variantId: string) => {
+    setRoomVariants(prev => prev.filter(v => v.variantId !== variantId));
+    if (defaultVariantId === variantId) {
+      const remaining = roomVariants.filter(v => v.variantId !== variantId);
+      setDefaultVariantId(remaining.length > 0 ? remaining[0].variantId : null);
+    }
+  };
+
+  // Linked experiences management
+  const toggleExperienceSelection = (experienceId: string) => {
+    setSelectedExperienceIds(prev =>
+      prev.includes(experienceId)
+        ? prev.filter(id => id !== experienceId)
+        : [...prev, experienceId]
+    );
+  };
+
+  // Create abode-specific experience
+  const handleCreateExperience = async () => {
+    if (!newExperience.title.trim() || !newExperience.description.trim() || !newExperience.price) {
+      setError('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      setCreatingExperience(true);
+      setError('');
+
+      const formDataToSend = new FormData();
+      formDataToSend.append('title', newExperience.title);
+      formDataToSend.append('description', newExperience.description);
+      formDataToSend.append('price', newExperience.price);
+      formDataToSend.append('currency', newExperience.currency);
+      formDataToSend.append('duration', newExperience.duration);
+      formDataToSend.append('maxParticipants', newExperience.maxParticipants);
+      formDataToSend.append('location', JSON.stringify({
+        country: formData.location.country,
+        state: formData.location.state,
+        district: formData.location.district,
+        coordinates: formData.location.coordinates
+      }));
+      
+      // Add default availability (next 90 days)
+      const availableDates = [];
+      const today = new Date();
+      for (let i = 0; i < 90; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() + i);
+        availableDates.push({
+          date: date.toISOString().split('T')[0],
+          startTime: '09:00',
+          endTime: '17:00',
+          available: true
+        });
+      }
+      formDataToSend.append('availableDates', JSON.stringify(availableDates));
+      formDataToSend.append('isAddOn', 'true'); // Mark as add-on experience
+      
+      if (newExperienceImage) {
+        formDataToSend.append('image', newExperienceImage);
+      }
+
+      const response = await api.post('/hosts/experience', formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.data.success || response.data.experience) {
+        const createdExperience = response.data.experience || response.data;
+        // Add to selected experiences and refresh list
+        setSelectedExperienceIds(prev => [...prev, createdExperience._id]);
+        await fetchAvailableExperiences();
+        
+        // Reset form
+        setNewExperience({
+          title: '',
+          description: '',
+          price: '',
+          currency: 'INR',
+          duration: '2',
+          maxParticipants: '10',
+        });
+        setNewExperienceImage(null);
+        setNewExperienceImagePreview(null);
+        setShowCreateExperienceModal(false);
+      }
+    } catch (err: any) {
+      console.error('Error creating experience:', err);
+      setError(err.response?.data?.message || 'Failed to create experience');
+    } finally {
+      setCreatingExperience(false);
+    }
+  };
+
+  const handleNewExperienceImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setNewExperienceImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewExperienceImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -475,6 +664,19 @@ export default function RegisterAbodePage() {
         generations: formData.familyInfo.generations ? Number(formData.familyInfo.generations) : undefined,
       }));
       formDataToSend.append('location', JSON.stringify(formData.location));
+      
+      // Add room variants if any
+      if (roomVariants.length > 0) {
+        formDataToSend.append('roomVariants', JSON.stringify(roomVariants));
+        if (defaultVariantId) {
+          formDataToSend.append('defaultVariantId', defaultVariantId);
+        }
+      }
+      
+      // Add linked experiences if any
+      if (selectedExperienceIds.length > 0) {
+        formDataToSend.append('linkedExperiences', JSON.stringify(selectedExperienceIds));
+      }
 
       imageFiles.forEach((file) => {
         formDataToSend.append('images', file);
@@ -938,6 +1140,234 @@ export default function RegisterAbodePage() {
                       />
                     </div>
                   </div>
+
+                  {/* Room Variants Section */}
+                  <div className="mt-8 pt-8 border-t border-slate-200">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-slate-900 mb-2">Room Types (Optional)</h3>
+                        <p className="text-sm text-slate-600">
+                          Offer different room types with varying prices and capacities. If you don't add room variants, the base price above will be used.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={addRoomVariant}
+                        className="px-6 py-3 bg-gradient-to-r from-slate-600 to-indigo-600 text-white rounded-xl hover:from-slate-700 hover:to-indigo-700 transition-all font-semibold flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Add Room Type
+                      </button>
+                    </div>
+
+                    {roomVariants.length > 0 && (
+                      <div className="space-y-6">
+                        {roomVariants.map((variant, index) => (
+                          <motion.div
+                            key={variant.variantId}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className={`relative border-2 rounded-2xl p-6 transition-all ${
+                              defaultVariantId === variant.variantId
+                                ? 'border-indigo-500 bg-gradient-to-br from-indigo-50 to-blue-50 shadow-lg'
+                                : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-md'
+                            }`}
+                          >
+                            {/* Default Badge */}
+                            {defaultVariantId === variant.variantId && (
+                              <div className="absolute -top-3 left-6 px-4 py-1 bg-gradient-to-r from-indigo-600 to-blue-600 text-white text-xs font-bold rounded-full shadow-lg flex items-center gap-1">
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                                Default Room Type
+                              </div>
+                            )}
+
+                            {/* Header */}
+                            <div className="flex items-start justify-between mb-6">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg ${
+                                    defaultVariantId === variant.variantId
+                                      ? 'bg-gradient-to-br from-indigo-600 to-blue-600 text-white'
+                                      : 'bg-slate-200 text-slate-700'
+                                  }`}>
+                                    {index + 1}
+                                  </div>
+                                  <h4 className="text-lg font-bold text-slate-900">
+                                    {variant.name || `Room Type ${index + 1}`}
+                                  </h4>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                {/* Set as Default Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => setDefaultVariantId(variant.variantId)}
+                                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
+                                    defaultVariantId === variant.variantId
+                                      ? 'bg-indigo-100 text-indigo-700 border-2 border-indigo-300'
+                                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-2 border-slate-200'
+                                  }`}
+                                >
+                                  {defaultVariantId === variant.variantId ? (
+                                    <>
+                                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                      </svg>
+                                      Default
+                                    </>
+                                  ) : (
+                                    <>
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                      </svg>
+                                      Set Default
+                                    </>
+                                  )}
+                                </button>
+                                {/* Remove Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => removeRoomVariant(variant.variantId)}
+                                  className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all"
+                                  title="Remove room type"
+                                >
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Form Fields */}
+                            <div className="space-y-4">
+                              {/* Room Name and Price - Side by Side */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <label className="block text-sm font-semibold text-slate-900 mb-2">
+                                    Room Name *
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={variant.name}
+                                    onChange={(e) => updateRoomVariant(variant.variantId, 'name', e.target.value)}
+                                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all bg-white"
+                                    placeholder="e.g., Standard Room, Deluxe Suite"
+                                    required
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="block text-sm font-semibold text-slate-900 mb-2">
+                                    Price per Night (₹) *
+                                  </label>
+                                  <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 font-semibold">₹</span>
+                                    <input
+                                      type="number"
+                                      value={variant.pricePerNight}
+                                      onChange={(e) => updateRoomVariant(variant.variantId, 'pricePerNight', Number(e.target.value))}
+                                      min="0"
+                                      step="0.01"
+                                      className="w-full pl-10 pr-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all bg-white"
+                                      required
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Capacity, Bedrooms, Bathrooms - Three columns */}
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                  <label className="block text-sm font-semibold text-slate-900 mb-2">
+                                    <span className="flex items-center gap-1">
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                      </svg>
+                                      Capacity (Guests) *
+                                    </span>
+                                  </label>
+                                  <input
+                                    type="number"
+                                    value={variant.capacity}
+                                    onChange={(e) => updateRoomVariant(variant.variantId, 'capacity', Number(e.target.value))}
+                                    min="1"
+                                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all bg-white"
+                                    required
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="block text-sm font-semibold text-slate-900 mb-2">
+                                    <span className="flex items-center gap-1">
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                      </svg>
+                                      Bedrooms *
+                                    </span>
+                                  </label>
+                                  <input
+                                    type="number"
+                                    value={variant.bedrooms}
+                                    onChange={(e) => updateRoomVariant(variant.variantId, 'bedrooms', Number(e.target.value))}
+                                    min="1"
+                                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all bg-white"
+                                    required
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="block text-sm font-semibold text-slate-900 mb-2">
+                                    <span className="flex items-center gap-1">
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+                                      </svg>
+                                      Bathrooms *
+                                    </span>
+                                  </label>
+                                  <input
+                                    type="number"
+                                    value={variant.bathrooms}
+                                    onChange={(e) => updateRoomVariant(variant.variantId, 'bathrooms', Number(e.target.value))}
+                                    min="1"
+                                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all bg-white"
+                                    required
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Description */}
+                              <div>
+                                <label className="block text-sm font-semibold text-slate-900 mb-2">
+                                  Description
+                                </label>
+                                <textarea
+                                  value={variant.description}
+                                  onChange={(e) => updateRoomVariant(variant.variantId, 'description', e.target.value)}
+                                  rows={3}
+                                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all resize-none bg-white"
+                                  placeholder="Brief description of this room type (e.g., features, view, size)..."
+                                />
+                              </div>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
+
+                    {roomVariants.length === 0 && (
+                      <div className="text-center py-12 border-2 border-dashed border-slate-300 rounded-2xl bg-slate-50">
+                        <svg className="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                        </svg>
+                        <p className="text-slate-600 mb-4">No room types added yet</p>
+                        <p className="text-sm text-slate-500">Click "Add Room Type" above to create different room options</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="mt-8 flex justify-between">
@@ -1391,6 +1821,124 @@ export default function RegisterAbodePage() {
 
                 </div>
 
+                {/* Additional Experiences Section */}
+                <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center text-white text-xl">
+                          ✨
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-xl font-bold text-slate-900">Additional Experiences (Optional)</h3>
+                          <p className="text-sm text-slate-600 mt-1">
+                            Your abode stay includes accommodation, meals, and cultural immersion. Link existing experiences or create new ones specific to this abode.
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowCreateExperienceModal(true)}
+                        className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all text-sm font-semibold flex items-center gap-2 whitespace-nowrap"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Create New
+                      </button>
+                    </div>
+                  </div>
+
+                  {loadingExperiences ? (
+                    <div className="text-center py-8">
+                      <div className="inline-block w-8 h-8 border-4 border-slate-600 border-t-transparent rounded-full animate-spin"></div>
+                      <p className="mt-4 text-slate-600">Loading your experiences...</p>
+                    </div>
+                  ) : availableExperiences.length === 0 ? (
+                    <div className="text-center py-8 border-2 border-dashed border-slate-300 rounded-xl">
+                      <p className="text-slate-600 mb-4">You don't have any experiences yet.</p>
+                      <button
+                        type="button"
+                        onClick={() => router.push('/host/experiences')}
+                        className="px-6 py-3 bg-gradient-to-r from-slate-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-slate-700 hover:to-indigo-700 transition-all"
+                      >
+                        Create Experience
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <p className="text-sm text-slate-600 mb-4 bg-indigo-50 p-3 rounded-lg border border-indigo-200">
+                        <span className="font-semibold text-indigo-900">Note:</span> Your abode already includes accommodation, meals, and cultural immersion. Select additional experiences below that guests can optionally add to their booking.
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto p-2 custom-scrollbar">
+                        {availableExperiences.map((experience) => {
+                          const isSelected = selectedExperienceIds.includes(experience._id);
+                          return (
+                            <motion.div
+                              key={experience._id}
+                              onClick={() => toggleExperienceSelection(experience._id)}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                              className={`relative p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                                isSelected
+                                  ? 'border-indigo-500 bg-gradient-to-br from-indigo-50 to-purple-50 shadow-lg ring-2 ring-indigo-200'
+                                  : 'border-slate-200 bg-white hover:border-indigo-300 hover:shadow-md'
+                              }`}
+                            >
+                              {isSelected && (
+                                <div className="absolute top-2 right-2 bg-indigo-600 text-white rounded-full p-1">
+                                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                </div>
+                              )}
+                              <div className="flex items-start gap-3">
+                                {experience.imageUrl && (
+                                  <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+                                    <img
+                                      src={experience.imageUrl}
+                                      alt={experience.title}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-semibold text-slate-900 mb-1 line-clamp-1">{experience.title}</h4>
+                                  <p className="text-xs text-slate-600 line-clamp-2 mb-2">{experience.description}</p>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-bold text-indigo-600">
+                                      ₹{experience.price.toLocaleString()}
+                                    </span>
+                                    {experience.currency !== 'INR' && (
+                                      <span className="text-xs text-slate-500">{experience.currency}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+                      {selectedExperienceIds.length > 0 && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="mt-4 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border-2 border-indigo-200"
+                        >
+                          <div className="flex items-center gap-2">
+                            <svg className="w-5 h-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                            <p className="text-sm font-semibold text-indigo-900">
+                              {selectedExperienceIds.length} additional experience{selectedExperienceIds.length !== 1 ? 's' : ''} selected
+                            </p>
+                          </div>
+                        </motion.div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 <div className="mt-8 flex justify-between">
                   <button
                     type="button"
@@ -1468,6 +2016,190 @@ export default function RegisterAbodePage() {
               </motion.div>
             )}
           </form>
+
+          {/* Create Experience Modal */}
+          {showCreateExperienceModal && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              >
+                <div className="p-6 border-b border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-2xl font-bold text-slate-900">Create Experience for this Abode</h3>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCreateExperienceModal(false);
+                        setError('');
+                      }}
+                      className="text-slate-400 hover:text-slate-600"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  <p className="text-sm text-slate-600 mt-2">
+                    Create an experience that will be linked specifically to this abode listing.
+                  </p>
+                </div>
+
+                <div className="p-6 space-y-4">
+                  {/* Title */}
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-900 mb-2">
+                      Experience Title *
+                    </label>
+                    <input
+                      type="text"
+                      value={newExperience.title}
+                      onChange={(e) => setNewExperience({ ...newExperience, title: e.target.value })}
+                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      placeholder="e.g., Traditional Cooking Class"
+                      required
+                    />
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-900 mb-2">
+                      Description *
+                    </label>
+                    <textarea
+                      value={newExperience.description}
+                      onChange={(e) => setNewExperience({ ...newExperience, description: e.target.value })}
+                      rows={4}
+                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
+                      placeholder="Describe the experience..."
+                      required
+                    />
+                  </div>
+
+                  {/* Price and Currency */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">
+                        Price (₹) *
+                      </label>
+                      <input
+                        type="number"
+                        value={newExperience.price}
+                        onChange={(e) => setNewExperience({ ...newExperience, price: e.target.value })}
+                        min="0"
+                        step="0.01"
+                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">
+                        Currency
+                      </label>
+                      <select
+                        value={newExperience.currency}
+                        onChange={(e) => setNewExperience({ ...newExperience, currency: e.target.value })}
+                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      >
+                        <option value="INR">INR</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Duration and Max Participants */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">
+                        Duration (hours)
+                      </label>
+                      <input
+                        type="number"
+                        value={newExperience.duration}
+                        onChange={(e) => setNewExperience({ ...newExperience, duration: e.target.value })}
+                        min="1"
+                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">
+                        Max Participants
+                      </label>
+                      <input
+                        type="number"
+                        value={newExperience.maxParticipants}
+                        onChange={(e) => setNewExperience({ ...newExperience, maxParticipants: e.target.value })}
+                        min="1"
+                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Image Upload */}
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-900 mb-2">
+                      Experience Image
+                    </label>
+                    <div className="border-2 border-dashed border-slate-300 rounded-xl p-4">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleNewExperienceImageChange}
+                        className="hidden"
+                        id="new-experience-image"
+                      />
+                      <label
+                        htmlFor="new-experience-image"
+                        className="cursor-pointer flex flex-col items-center"
+                      >
+                        {newExperienceImagePreview ? (
+                          <img
+                            src={newExperienceImagePreview}
+                            alt="Preview"
+                            className="w-32 h-32 object-cover rounded-lg mb-2"
+                          />
+                        ) : (
+                          <svg className="w-12 h-12 text-slate-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        )}
+                        <span className="text-sm text-slate-600">Click to upload image</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {error && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                      {error}
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-6 border-t border-slate-200 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCreateExperienceModal(false);
+                      setError('');
+                    }}
+                    className="px-6 py-3 border-2 border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCreateExperience}
+                    disabled={creatingExperience}
+                    className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {creatingExperience ? 'Creating...' : 'Create Experience'}
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
         </div>
       </div>
     </div>

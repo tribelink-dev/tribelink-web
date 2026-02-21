@@ -167,6 +167,36 @@ const experienceSchema = new mongoose.Schema({
   isArchived: {
     type: Boolean,
     default: false
+  },
+  
+  // Linked to abodes (for host-curated experiences)
+  linkedToAbodes: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'LocalHost'
+  }],
+  
+  // Add-on flag (can be added to abode bookings)
+  isAddOn: {
+    type: Boolean,
+    default: false
+  },
+  
+  // Optional pricing when added as add-on vs standalone
+  addOnPricing: {
+    price: {
+      type: Number,
+      min: 0
+    },
+    currency: {
+      type: String,
+      default: 'USD'
+    },
+    discount: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: 0 // Percentage discount when added as add-on
+    }
   }
 }, {
   timestamps: true

@@ -42,6 +42,7 @@ const CulturalActivity = ({
                     src={image}
                     alt={title}
                     className="w-full h-full object-cover"
+                    loading="lazy"
                     whileHover={{ scale: 1.1 }}
                     transition={{ duration: 0.7 }}
                 />

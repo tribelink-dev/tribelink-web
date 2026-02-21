@@ -7,7 +7,9 @@ import { MapPin, Heart, Users } from 'lucide-react';
 
 const Hero = () => {
     const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+    const [shouldLoadVideo, setShouldLoadVideo] = useState(false);
     const heroRef = useRef<HTMLElement>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
     const { scrollYProgress } = useScroll({
         target: heroRef,
         offset: ['start start', 'end start']
@@ -31,6 +33,41 @@ const Hero = () => {
         return () => window.removeEventListener('mousemove', handleMouseMove);
     }, []);
 
+    // Lazy load video after initial render to improve page load
+    useEffect(() => {
+        // Use Intersection Observer to load video when section is visible
+        // Fallback to timer if IntersectionObserver is not available
+        if (!heroRef.current) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting) {
+                    // Small delay to ensure page has rendered
+                    setTimeout(() => {
+                        setShouldLoadVideo(true);
+                    }, 300);
+                    observer.disconnect();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        observer.observe(heroRef.current);
+
+        // Fallback: load after 1 second if observer doesn't trigger
+        const fallbackTimer = setTimeout(() => {
+            if (!shouldLoadVideo) {
+                setShouldLoadVideo(true);
+            }
+            observer.disconnect();
+        }, 1000);
+
+        return () => {
+            observer.disconnect();
+            clearTimeout(fallbackTimer);
+        };
+    }, [shouldLoadVideo]);
+
     return (
         <section 
             ref={heroRef}
@@ -45,19 +82,42 @@ const Hero = () => {
                     className="absolute inset-0"
                 >
                     <div className="absolute inset-0 bg-gradient-to-b from-deep-jungle/60 via-black/40 to-black/60 z-10" />
-                    <video
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
+                    {/* Poster image shown immediately */}
+                    <img
+                        src="/assets/nandhu-kumar-TwYX-EQRXQQ-unsplash.jpg"
+                        alt="Backwaters sunrise"
                         className="w-full h-full object-cover"
-                        poster="/assets/nandhu-kumar-TwYX-EQRXQQ-unsplash.jpg"
-                    >
-                        <source
-                            src="https://cdn.coverr.co/videos/coverr-backwaters-sunrise-4514/1080p.mp4"
-                            type="video/mp4"
-                        />
-                    </video>
+                        loading="eager"
+                    />
+                    {/* Video loads lazily after initial render */}
+                    {shouldLoadVideo && (
+                        <video
+                            ref={videoRef}
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
+                            preload="none"
+                            className="absolute inset-0 w-full h-full object-cover"
+                            onLoadedData={() => {
+                                // Fade in video when loaded
+                                if (videoRef.current) {
+                                    videoRef.current.style.opacity = '0';
+                                    videoRef.current.style.transition = 'opacity 1s ease-in';
+                                    setTimeout(() => {
+                                        if (videoRef.current) {
+                                            videoRef.current.style.opacity = '1';
+                                        }
+                                    }, 100);
+                                }
+                            }}
+                        >
+                            <source
+                                src="https://cdn.coverr.co/videos/coverr-backwaters-sunrise-4514/1080p.mp4"
+                                type="video/mp4"
+                            />
+                        </video>
+                    )}
                 </motion.div>
 
                 {/* Animated Gradient Orbs - Smaller on mobile */}

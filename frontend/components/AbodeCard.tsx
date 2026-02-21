@@ -1,9 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Heart, Star, MapPin, Shield, Users, Bed, Bath, Sparkles } from 'lucide-react';
 import { useCurrency } from '@/lib/CurrencyContext';
+
+interface RoomVariant {
+  variantId: string;
+  name: string;
+  pricePerNight: number;
+  capacity?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+}
 
 interface AbodeCardProps {
   abode: {
@@ -27,10 +36,12 @@ interface AbodeCardProps {
       pricePerNight: number;
       currency?: string;
     };
+    roomVariants?: RoomVariant[];
     rating?: number;
     ratingCount?: number;
     isVerified?: boolean;
     culturalPractices?: Array<{ practice: string; category: string }>;
+    linkedExperiences?: Array<{ _id: string; title: string }>;
   };
   imageUrl: string | null;
   index?: number;
@@ -47,9 +58,45 @@ export default function AbodeCard({ abode, imageUrl, index = 0, onClick }: Abode
     setIsFavorite(!isFavorite);
   };
 
+  // Calculate price from room variants or base pricing
+  const { displayPrice, showFromPrefix } = useMemo(() => {
+    // Debug: Log room variants (remove in production)
+    if (process.env.NODE_ENV === 'development') {
+      if (abode.roomVariants && abode.roomVariants.length > 0) {
+        console.log(`[AbodeCard] Abode ${abode._id} has ${abode.roomVariants.length} room variants:`, abode.roomVariants);
+      } else {
+        console.log(`[AbodeCard] Abode ${abode._id} has no room variants, using base price:`, abode.pricing?.pricePerNight);
+      }
+    }
+    
+    // If room variants exist, use the minimum price from variants
+    if (abode.roomVariants && abode.roomVariants.length > 0) {
+      const validPrices = abode.roomVariants
+        .map((variant) => variant.pricePerNight)
+        .filter((price) => price > 0 && !isNaN(price));
+      
+      if (validPrices.length > 0) {
+        const minPrice = Math.min(...validPrices);
+        const maxPrice = Math.max(...validPrices);
+        const hasPriceRange = minPrice !== maxPrice;
+        
+        return {
+          displayPrice: minPrice,
+          showFromPrefix: hasPriceRange && abode.roomVariants.length > 1
+        };
+      }
+    }
+    
+    // Fallback to base pricing
+    const basePrice = abode.pricing?.pricePerNight || 0;
+    return {
+      displayPrice: basePrice,
+      showFromPrefix: false
+    };
+  }, [abode.roomVariants, abode.pricing?.pricePerNight, abode._id]);
+
   const rating = abode.rating || 0;
   const ratingCount = abode.ratingCount || 0;
-  const price = abode.pricing?.pricePerNight || 0;
   const propertyType = abode.abodeDetails?.propertyType || 'Property';
   const capacity = abode.abodeDetails?.capacity || 0;
   const bedrooms = abode.abodeDetails?.bedrooms || 0;
@@ -58,6 +105,7 @@ export default function AbodeCard({ abode, imageUrl, index = 0, onClick }: Abode
     ? `${abode.location.district}, ${abode.location.state}`
     : 'Location not specified';
   const hostName = abode.providerId?.name || 'Host';
+  const currency = abode.pricing?.currency || 'INR';
   
   // Use custom title if available, otherwise fall back to default format
   const displayTitle = abode.abodeDetails?.title 
@@ -174,6 +222,22 @@ export default function AbodeCard({ abode, imageUrl, index = 0, onClick }: Abode
             </motion.div>
           )}
 
+          {/* Additional Experiences Indicator */}
+          {abode.linkedExperiences && abode.linkedExperiences.length > 0 && (
+            <motion.div
+              initial={{ x: 20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ duration: 0.3 }}
+              className="absolute top-4 right-4 bg-gradient-to-r from-indigo-500/95 to-purple-500/95 backdrop-blur-md text-white px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 border border-white/20 z-10"
+              title={`${abode.linkedExperiences.length} additional experience${abode.linkedExperiences.length !== 1 ? 's' : ''} available (accommodation + meals + cultural immersion included)`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span className="text-xs font-semibold">
+                +{abode.linkedExperiences.length} More
+              </span>
+            </motion.div>
+          )}
+          
           {/* Cultural Practices Indicator */}
           {abode.culturalPractices && abode.culturalPractices.length > 0 && (
             <motion.div
@@ -236,13 +300,16 @@ export default function AbodeCard({ abode, imageUrl, index = 0, onClick }: Abode
           </div>
 
           {/* Price Section */}
-            <div>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-3xl font-bold text-gray-900">
-                  {formatPrice(price, abode.pricing?.currency || 'INR')}
-                </span>
-              </div>
-              <p className="text-sm text-gray-500 font-medium mt-0.5">per night</p>
+          <div>
+            <div className="flex items-baseline gap-1.5">
+              {showFromPrefix && (
+                <span className="text-base text-gray-600 font-medium">from</span>
+              )}
+              <span className="text-3xl font-bold text-gray-900">
+                {formatPrice(displayPrice, currency)}
+              </span>
+            </div>
+            <p className="text-sm text-gray-500 font-medium mt-0.5">per night</p>
           </div>
         </div>
 

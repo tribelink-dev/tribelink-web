@@ -52,6 +52,7 @@ const ExperienceCard = ({
                         src={image}
                         alt={title}
                         className="w-full h-full object-cover"
+                        loading="lazy"
                         animate={{ scale: isHovered ? 1.15 : 1 }}
                         transition={{ duration: 0.7 }}
                     />

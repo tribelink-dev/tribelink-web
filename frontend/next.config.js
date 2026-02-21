@@ -72,9 +72,11 @@ const nextConfig = {
             value: [
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // unsafe-eval needed for Next.js, unsafe-inline for structured data
-              "style-src 'self' 'unsafe-inline'", // unsafe-inline needed for Tailwind
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // Allow Google Fonts
+              "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com", // Allow Google Fonts in style elements
               "img-src 'self' data: https://res.cloudinary.com https://triberoutes.com https://www.triberoutes.com https://tribelink-app.vercel.app",
-              "font-src 'self' data:",
+              "font-src 'self' data: https://fonts.gstatic.com", // Allow Google Fonts
+              "media-src 'self' https://cdn.coverr.co", // Allow Coverr videos
               "connect-src 'self' https://api.triberoutes.com http://localhost:5000",
               "frame-ancestors 'self'",
               "base-uri 'self'",

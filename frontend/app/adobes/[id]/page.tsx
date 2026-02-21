@@ -4,11 +4,15 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { useCart } from '@/lib/CartContext';
 import { getImageUrl } from '@/lib/imageUtils';
 import { useCurrency } from '@/lib/CurrencyContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DayPicker } from 'react-day-picker';
-import { Calendar, Users, ChevronLeft, ChevronRight, Star, MapPin, Shield, Home, Bed, Bath, CheckCircle2, Sparkles, Award, Languages } from 'lucide-react';
+import { Calendar, Users, ChevronLeft, ChevronRight, Star, MapPin, Shield, Home, Bed, Bath, CheckCircle2, Sparkles, Award, Languages, ShoppingCart } from 'lucide-react';
+import RoomVariantSelector from '@/components/booking/RoomVariantSelector';
+import ExperienceAddOnCard from '@/components/booking/ExperienceAddOnCard';
+import CartSidebar from '@/components/cart/CartSidebar';
 import 'react-day-picker/dist/style.css';
 
 interface LocalHost {
@@ -80,6 +84,44 @@ interface LocalHost {
     available: boolean;
     bookedSlots: number;
   }>;
+  roomVariants?: Array<{
+    variantId: string;
+    name: string;
+    description?: string;
+    pricePerNight: number;
+    capacity: number;
+    bedrooms: number;
+    bathrooms: number;
+    amenities: string[];
+    images: Array<{
+      url: string;
+      isMain?: boolean;
+      caption?: string;
+    }>;
+  }>;
+  defaultVariantId?: string | null;
+  linkedExperiences?: Array<{
+    _id: string;
+    title: string;
+    description: string;
+    price: number;
+    currency: string;
+    duration: number;
+    imageUrl?: string;
+    maxParticipants: number;
+    availableDates?: Array<{
+      date: Date | string;
+      startTime?: string;
+      endTime?: string;
+      available: boolean;
+    }>;
+    isAddOn?: boolean;
+    addOnPricing?: {
+      price?: number;
+      currency?: string;
+      discount?: number;
+    };
+  }>;
 }
 
 export default function AbodeDetailPage() {
@@ -87,14 +129,19 @@ export default function AbodeDetailPage() {
   const params = useParams();
   const { user } = useAuth();
   const { formatPrice } = useCurrency();
+  const { addAbodeToCart, addExperienceToCartItem } = useCart();
   const [abode, setAbode] = useState<LocalHost | null>(null);
+  const [linkedExperiences, setLinkedExperiences] = useState<LocalHost['linkedExperiences']>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [checkIn, setCheckIn] = useState<Date | undefined>();
   const [checkOut, setCheckOut] = useState<Date | undefined>();
   const [guests, setGuests] = useState(1);
-  const [booking, setBooking] = useState(false);
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+  const [addedExperiences, setAddedExperiences] = useState<Map<string, { date: Date; startTime: string; participants: number }>>(new Map());
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [showCartSidebar, setShowCartSidebar] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState<'checkin' | 'checkout' | null>(null);
   const [isOwner, setIsOwner] = useState(false);
 
@@ -128,7 +175,28 @@ export default function AbodeDetailPage() {
     try {
       setLoading(true);
       const response = await api.get(`/abodes/${params.id}`);
-      setAbode(response.data.localHost);
+      const fetchedAbode = response.data.localHost;
+      
+      // Debug: Log room variants
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[AbodeDetailPage] Fetched abode:', {
+          id: fetchedAbode._id,
+          hasRoomVariants: !!(fetchedAbode.roomVariants && fetchedAbode.roomVariants.length > 0),
+          roomVariantsCount: fetchedAbode.roomVariants?.length || 0,
+          roomVariants: fetchedAbode.roomVariants,
+          defaultVariantId: fetchedAbode.defaultVariantId
+        });
+      }
+      
+      setAbode(fetchedAbode);
+      setLinkedExperiences(response.data.linkedExperiences || []);
+      
+      // Set default variant
+      if (fetchedAbode?.defaultVariantId) {
+        setSelectedVariantId(fetchedAbode.defaultVariantId);
+      } else if (fetchedAbode?.roomVariants && fetchedAbode.roomVariants.length > 0) {
+        setSelectedVariantId(fetchedAbode.roomVariants[0].variantId);
+      }
     } catch (err: any) {
       console.error('Error fetching abode:', err);
       setError(err.response?.data?.message || 'Failed to load abode details');
@@ -137,7 +205,7 @@ export default function AbodeDetailPage() {
     }
   };
 
-  const handleBooking = async () => {
+  const handleAddToCart = async () => {
     if (!user) {
       const currentPath = `/abodes/${params.id}`;
       router.push(`/login?redirect=${encodeURIComponent(currentPath)}`);
@@ -154,48 +222,84 @@ export default function AbodeDetailPage() {
       return;
     }
 
-    if (guests > (abode?.abodeDetails.capacity || 1)) {
-      alert(`Maximum capacity is ${abode?.abodeDetails.capacity} guests`);
+    if (!abode) return;
+
+    // Check capacity based on variant
+    const selectedVariant = abode.roomVariants?.find(v => v.variantId === selectedVariantId);
+    const maxCapacity = selectedVariant ? selectedVariant.capacity : abode.abodeDetails.capacity;
+    
+    if (guests > maxCapacity) {
+      alert(`Maximum capacity is ${maxCapacity} guests`);
       return;
     }
 
     try {
-      setBooking(true);
-      const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
-      const basePrice = (abode?.pricing.pricePerNight || 0) * nights;
-      let discount = 0;
+      setAddingToCart(true);
       
-      if (nights >= 30 && abode?.pricing.monthlyDiscount) {
-        discount = basePrice * (abode.pricing.monthlyDiscount / 100);
-      } else if (nights >= 7 && abode?.pricing.weeklyDiscount) {
-        discount = basePrice * (abode.pricing.weeklyDiscount / 100);
-      }
-      
-      const totalPrice = basePrice - discount;
+      // Add abode to cart
+      await addAbodeToCart({
+        localHostId: abode._id,
+        variantId: selectedVariantId,
+        checkIn,
+        checkOut,
+        guests,
+        specialRequests: ''
+      });
 
-      const bookingData = {
-        bookingType: 'ABODE_STAY',
-        abodeStay: {
-          localHost: abode?._id,
-          checkIn: checkIn.toISOString(),
-          checkOut: checkOut.toISOString(),
-          guests,
-        },
-        totalPrice,
-        status: 'PENDING',
-      };
-
-      const response = await api.post('/bookings', bookingData);
-      
-      if (response.data.success) {
-        router.push(`/bookings/${response.data.booking._id}`);
-      }
+      // Get the cart item ID (we'll need to refresh cart to get it)
+      // For now, we'll add experiences after a short delay
+      setTimeout(async () => {
+        // Add experiences if any
+        const cartResponse = await api.get('/cart');
+        if (cartResponse.data.success && cartResponse.data.cart.items.length > 0) {
+          const cartItemId = cartResponse.data.cart.items[cartResponse.data.cart.items.length - 1]._id;
+          
+          for (const [experienceId, expData] of addedExperiences.entries()) {
+            try {
+              // Ensure participants is a valid number (between 1 and 50)
+              const participants = Math.max(1, Math.min(50, Number(expData.participants) || 1));
+              await addExperienceToCartItem(cartItemId, {
+                experienceId,
+                date: expData.date,
+                startTime: expData.startTime,
+                participants
+              });
+            } catch (err) {
+              console.error('Error adding experience to cart:', err);
+            }
+          }
+        }
+        
+        setShowCartSidebar(true);
+        setAddingToCart(false);
+      }, 500);
     } catch (err: any) {
-      console.error('Error creating booking:', err);
-      alert(err.response?.data?.message || 'Failed to create booking');
-    } finally {
-      setBooking(false);
+      console.error('Error adding to cart:', err);
+      alert(err.message || 'Failed to add to cart');
+      setAddingToCart(false);
     }
+  };
+
+  const handleAddExperience = (experience: any) => {
+    setAddedExperiences(prev => {
+      const newMap = new Map(prev);
+      // Use default values: today's date, default time, 1 participant
+      const defaultDate = new Date();
+      newMap.set(experience._id, { 
+        date: defaultDate, 
+        startTime: '09:00', 
+        participants: 1 
+      });
+      return newMap;
+    });
+  };
+
+  const handleRemoveExperience = (experienceId: string) => {
+    setAddedExperiences(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(experienceId);
+      return newMap;
+    });
   };
 
   if (loading) {
@@ -237,14 +341,49 @@ export default function AbodeDetailPage() {
   const nights = checkIn && checkOut 
     ? Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24))
     : 0;
-  const basePrice = abode.pricing.pricePerNight * nights;
+  
+  // Calculate price based on selected variant
+  const selectedVariant = abode.roomVariants?.find(v => v.variantId === selectedVariantId);
+  let basePrice = 0;
+  if (selectedVariant && nights > 0) {
+    basePrice = selectedVariant.pricePerNight * nights;
+  } else if (nights > 0) {
+    basePrice = abode.pricing.pricePerNight * nights;
+  }
+  
   let discount = 0;
   if (nights >= 30 && abode.pricing.monthlyDiscount) {
     discount = basePrice * (abode.pricing.monthlyDiscount / 100);
   } else if (nights >= 7 && abode.pricing.weeklyDiscount) {
     discount = basePrice * (abode.pricing.weeklyDiscount / 100);
   }
-  const totalPrice = basePrice - discount;
+  
+  // Add experience prices
+  let experienceTotal = 0;
+  for (const [expId, expData] of addedExperiences.entries()) {
+    const experience = linkedExperiences.find(e => e._id === expId);
+    if (experience) {
+      let expPrice = experience.price;
+      if (experience.isAddOn && experience.addOnPricing?.price) {
+        expPrice = experience.addOnPricing.price;
+        if (experience.addOnPricing.discount) {
+          expPrice *= (1 - experience.addOnPricing.discount / 100);
+        }
+      }
+      experienceTotal += expPrice * expData.participants;
+    }
+  }
+  
+  const totalPrice = basePrice - discount + experienceTotal;
+  
+  // Get price per night for display
+  const pricePerNight = selectedVariant ? selectedVariant.pricePerNight : abode.pricing.pricePerNight;
+  
+  // Check if we should show "from" prefix (multiple variants with different prices)
+  const showFromPrefix = abode.roomVariants && abode.roomVariants.length > 1 && 
+    !selectedVariant && 
+    Math.min(...abode.roomVariants.map(v => v.pricePerNight)) !== 
+    Math.max(...abode.roomVariants.map(v => v.pricePerNight));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pt-20 pb-16">
@@ -424,6 +563,44 @@ export default function AbodeDetailPage() {
               </p>
             </motion.div>
 
+            {/* Additional Experiences Section - Prominent Position */}
+            {linkedExperiences && linkedExperiences.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="w-full"
+              >
+                <div className="bg-gradient-to-br from-heritage-gold/5 via-amber-50/30 to-cream-500/10 rounded-2xl shadow-lg p-4 md:p-5 border border-heritage-gold/20">
+                  {/* Compact Header */}
+                  <div className="flex items-center gap-2.5 mb-4">
+                    <div className="p-2 bg-gradient-to-br from-heritage-gold to-amber-600 rounded-lg shadow-md">
+                      <Sparkles className="w-4 h-4 md:w-5 md:h-5 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg md:text-xl font-bold text-gray-900">Enhance Your Stay</h2>
+                      <p className="text-xs md:text-sm text-gray-600">
+                        Optional cultural experiences
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Compact Cards List */}
+                  <div className="space-y-2">
+                    {linkedExperiences.map((experience) => (
+                      <ExperienceAddOnCard
+                        key={experience._id}
+                        experience={experience}
+                        isAdded={addedExperiences.has(experience._id)}
+                        onAdd={handleAddExperience}
+                        onRemove={() => handleRemoveExperience(experience._id)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             {/* Cultural Practices */}
             {abode.culturalPractices.length > 0 && (
               <motion.div
@@ -561,11 +738,28 @@ export default function AbodeDetailPage() {
                 transition={{ delay: 0.2 }}
                 className="sticky top-24 bg-white rounded-3xl shadow-xl p-8 border border-gray-200"
               >
+              {/* Room Variant Selector */}
+              {abode.roomVariants && abode.roomVariants.length > 0 && (
+                <div className="mb-8">
+                  <h3 className="text-xl font-bold text-gray-900 mb-4">Select Room Type</h3>
+                  <RoomVariantSelector
+                    variants={abode.roomVariants}
+                    defaultVariantId={abode.defaultVariantId}
+                    selectedVariantId={selectedVariantId}
+                    onSelect={setSelectedVariantId}
+                    currency={abode.pricing.currency || 'USD'}
+                  />
+                </div>
+              )}
+
               {/* Price */}
               <div className="mb-8 pb-8 border-b border-gray-200">
                 <div className="flex items-baseline gap-2 mb-2">
+                  {showFromPrefix && (
+                    <span className="text-lg text-gray-600 font-medium">from</span>
+                  )}
                   <span className="text-4xl font-bold text-gray-900">
-                    {formatPrice(abode.pricing.pricePerNight, abode.pricing.currency || 'INR')}
+                    {formatPrice(pricePerNight, abode.pricing.currency || 'INR')}
                   </span>
                   <span className="text-lg text-gray-600">/night</span>
                 </div>
@@ -674,13 +868,34 @@ export default function AbodeDetailPage() {
               {nights > 0 && (
                 <div className="mb-8 p-6 bg-gradient-to-br from-heritage-gold/5 to-cream-500/10 rounded-2xl border border-heritage-gold/20 space-y-3">
                   <div className="flex justify-between text-sm text-gray-700">
-                    <span>{formatPrice(abode.pricing.pricePerNight, abode.pricing.currency || 'INR')} × {nights} nights</span>
+                    <span>{formatPrice(pricePerNight, abode.pricing.currency || 'INR')} × {nights} nights</span>
                     <span className="font-semibold">{formatPrice(basePrice, abode.pricing.currency || 'INR')}</span>
                   </div>
                   {discount > 0 && (
                     <div className="flex justify-between text-sm text-emerald-600 font-semibold">
                       <span>Discount</span>
                       <span>-{formatPrice(discount, abode.pricing.currency || 'INR')}</span>
+                    </div>
+                  )}
+                  {addedExperiences.size > 0 && (
+                    <div className="space-y-1 pt-2 border-t border-gray-300">
+                      {Array.from(addedExperiences.entries()).map(([expId, expData]) => {
+                        const experience = linkedExperiences.find(e => e._id === expId);
+                        if (!experience) return null;
+                        let expPrice = experience.price;
+                        if (experience.isAddOn && experience.addOnPricing?.price) {
+                          expPrice = experience.addOnPricing.price;
+                          if (experience.addOnPricing.discount) {
+                            expPrice *= (1 - experience.addOnPricing.discount / 100);
+                          }
+                        }
+                        return (
+                          <div key={expId} className="flex justify-between text-sm text-gray-700">
+                            <span>{experience.title} ({expData.participants} ×)</span>
+                            <span className="font-semibold">{formatPrice(expPrice * expData.participants, experience.currency || 'USD')}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                   <div className="border-t border-gray-300 pt-3 flex justify-between font-bold text-lg text-gray-900">
@@ -690,23 +905,23 @@ export default function AbodeDetailPage() {
                 </div>
               )}
 
-              {/* Book Button */}
+              {/* Add to Cart Button */}
               <motion.button
-                onClick={handleBooking}
-                disabled={!checkIn || !checkOut || booking}
+                onClick={handleAddToCart}
+                disabled={!checkIn || !checkOut || addingToCart}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className="w-full px-6 py-4 bg-gradient-to-r from-heritage-gold to-heritage-gold-dark text-white font-bold text-lg rounded-xl shadow-xl hover:shadow-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {booking ? (
+                {addingToCart ? (
                   <>
                     <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                    <span>Booking...</span>
+                    <span>Adding to Cart...</span>
                   </>
                 ) : (
                   <>
-                    <Calendar className="w-5 h-5" />
-                    Reserve Now
+                    <ShoppingCart className="w-5 h-5" />
+                    Add to Cart
                   </>
                 )}
               </motion.button>
@@ -727,6 +942,9 @@ export default function AbodeDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Cart Sidebar */}
+      <CartSidebar isOpen={showCartSidebar} onClose={() => setShowCartSidebar(false)} />
     </div>
   );
 }

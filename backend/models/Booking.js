@@ -25,6 +25,10 @@ const bookingSchema = new mongoose.Schema({
       ref: 'LocalHost',
       required: function() { return this.bookingType === 'ABODE_STAY'; }
     },
+    variantId: {
+      type: String,
+      default: null // Room variant ID, null for legacy bookings
+    },
     checkIn: {
       type: Date,
       required: function() { return this.bookingType === 'ABODE_STAY'; }
@@ -40,7 +44,35 @@ const bookingSchema = new mongoose.Schema({
     },
     specialRequests: {
       type: String
-    }
+    },
+    // Linked experiences booked with this stay
+    linkedExperiences: [{
+      experienceId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Experience',
+        required: true
+      },
+      date: {
+        type: Date,
+        required: true
+      },
+      startTime: {
+        type: String, // Format: "HH:mm"
+        required: true
+      },
+      numberOfParticipants: {
+        type: Number,
+        min: 1,
+        default: 1
+      },
+      price: {
+        type: Number,
+        min: 0
+      },
+      specialRequests: {
+        type: String
+      }
+    }]
   },
   
   // Experience booking

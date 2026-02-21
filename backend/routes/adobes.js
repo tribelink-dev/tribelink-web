@@ -93,14 +93,66 @@ router.get('/', async (req, res) => {
     const baseUrl = getBaseUrlFromRequest(req);
     const normalizedHosts = localHosts.map(host => {
       const hostObj = host.toObject();
+      
+      // Normalize main images
       if (hostObj.images && hostObj.images.length > 0) {
         hostObj.images = hostObj.images.map(img => ({
           ...img,
           url: img.url.startsWith('http') ? img.url : `${baseUrl}${img.url}`
         }));
       }
+      
+      // Ensure room variants are included and properly formatted
+      if (hostObj.roomVariants && hostObj.roomVariants.length > 0) {
+        hostObj.roomVariants = hostObj.roomVariants.map((variant) => {
+          const normalizedVariant = {
+            variantId: variant.variantId || variant._id?.toString(),
+            name: variant.name || '',
+            description: variant.description || '',
+            pricePerNight: Number(variant.pricePerNight) || 0,
+            capacity: Number(variant.capacity) || 1,
+            bedrooms: Number(variant.bedrooms) || 1,
+            bathrooms: Number(variant.bathrooms) || 1,
+            amenities: Array.isArray(variant.amenities) ? variant.amenities : [],
+            images: variant.images ? variant.images.map((img) => ({
+              ...img,
+              url: img.url.startsWith('http') ? img.url : `${baseUrl}${img.url}`
+            })) : [],
+            availability: Array.isArray(variant.availability) ? variant.availability : []
+          };
+          return normalizedVariant;
+        });
+      }
+      
+      // Ensure defaultVariantId is included
+      if (hostObj.defaultVariantId) {
+        hostObj.defaultVariantId = hostObj.defaultVariantId;
+      }
+      
+      // Include linkedExperiences count for listing (full details available in detail view)
+      if (hostObj.linkedExperiences) {
+        hostObj.linkedExperiences = Array.isArray(hostObj.linkedExperiences) 
+          ? hostObj.linkedExperiences.map((exp) => ({
+              _id: typeof exp === 'string' ? exp : exp._id || exp,
+              title: typeof exp === 'object' && exp.title ? exp.title : undefined
+            }))
+          : [];
+      }
+      
       return hostObj;
     });
+
+    // Debug: Log room variants in development
+    if (process.env.NODE_ENV !== 'production') {
+      const hostsWithVariants = normalizedHosts.filter((h) => h.roomVariants && h.roomVariants.length > 0);
+      console.log(`[GET /abodes] Returning ${normalizedHosts.length} abodes, ${hostsWithVariants.length} have room variants`);
+      if (hostsWithVariants.length > 0) {
+        hostsWithVariants.forEach((host) => {
+          console.log(`[GET /abodes] Abode ${host._id} has ${host.roomVariants.length} variants:`, 
+            host.roomVariants.map((v) => ({ name: v.name, price: v.pricePerNight })));
+        });
+      }
+    }
 
     res.json({
       success: true,
@@ -121,11 +173,21 @@ router.get('/', async (req, res) => {
 // Get abode details by ID
 router.get('/:id', async (req, res) => {
   try {
+    const Experience = require('../models/Experience');
     const localHost = await LocalHost.findById(req.params.id)
       .populate('providerId', 'name email phoneNumber profilePicture rating ratingCount');
 
     if (!localHost) {
       return res.status(404).json({ message: 'Local host not found' });
+    }
+
+    // Populate linked experiences
+    let linkedExperiences = [];
+    if (localHost.linkedExperiences && localHost.linkedExperiences.length > 0) {
+      linkedExperiences = await Experience.find({
+        _id: { $in: localHost.linkedExperiences },
+        isArchived: { $ne: true }
+      }).populate('provider', 'name rating');
     }
 
     // Normalize image URLs
@@ -138,12 +200,96 @@ router.get('/:id', async (req, res) => {
       }));
     }
 
+    // Normalize variant images
+    if (hostObj.roomVariants && hostObj.roomVariants.length > 0) {
+      hostObj.roomVariants = hostObj.roomVariants.map(variant => ({
+        ...variant,
+        images: variant.images ? variant.images.map(img => ({
+          ...img,
+          url: img.url.startsWith('http') ? img.url : `${baseUrl}${img.url}`
+        })) : []
+      }));
+    }
+
+    // Normalize experience images
+    const normalizedExperiences = linkedExperiences.map(exp => {
+      const expObj = exp.toObject();
+      if (expObj.imageUrl && !expObj.imageUrl.startsWith('http')) {
+        expObj.imageUrl = `${baseUrl}${expObj.imageUrl}`;
+      }
+      return expObj;
+    });
+
     res.json({
       success: true,
-      localHost: hostObj
+      localHost: hostObj,
+      linkedExperiences: normalizedExperiences
     });
   } catch (error) {
     console.error('Error fetching local host:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get room variants for an abode
+router.get('/:id/variants', async (req, res) => {
+  try {
+    const localHost = await LocalHost.findById(req.params.id);
+    if (!localHost) {
+      return res.status(404).json({ message: 'Local host not found' });
+    }
+
+    const baseUrl = getBaseUrlFromRequest(req);
+    const variants = (localHost.roomVariants || []).map(variant => ({
+      ...variant.toObject(),
+      images: variant.images ? variant.images.map(img => ({
+        ...img,
+        url: img.url.startsWith('http') ? img.url : `${baseUrl}${img.url}`
+      })) : []
+    }));
+
+    res.json({
+      success: true,
+      variants
+    });
+  } catch (error) {
+    console.error('Error fetching variants:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get linked experiences for an abode
+router.get('/:id/experiences', async (req, res) => {
+  try {
+    const Experience = require('../models/Experience');
+    const localHost = await LocalHost.findById(req.params.id);
+    if (!localHost) {
+      return res.status(404).json({ message: 'Local host not found' });
+    }
+
+    let linkedExperiences = [];
+    if (localHost.linkedExperiences && localHost.linkedExperiences.length > 0) {
+      linkedExperiences = await Experience.find({
+        _id: { $in: localHost.linkedExperiences },
+        isArchived: { $ne: true }
+      }).populate('provider', 'name rating');
+    }
+
+    const baseUrl = getBaseUrlFromRequest(req);
+    const normalizedExperiences = linkedExperiences.map(exp => {
+      const expObj = exp.toObject();
+      if (expObj.imageUrl && !expObj.imageUrl.startsWith('http')) {
+        expObj.imageUrl = `${baseUrl}${expObj.imageUrl}`;
+      }
+      return expObj;
+    });
+
+    res.json({
+      success: true,
+      experiences: normalizedExperiences
+    });
+  } catch (error) {
+    console.error('Error fetching linked experiences:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -162,7 +308,7 @@ router.post('/register', authenticate, requireHost, upload.array('images'), asyn
     }
 
     // Parse JSON strings from FormData (multipart/form-data sends JSON as strings)
-    let abodeDetails, culturalPractices, nearbyPlaces, availability, pricing, languages, familyInfo, location;
+    let abodeDetails, culturalPractices, nearbyPlaces, availability, pricing, languages, familyInfo, location, roomVariants, defaultVariantId, linkedExperiences;
     
     try {
       abodeDetails = typeof req.body.abodeDetails === 'string' 
@@ -196,6 +342,24 @@ router.post('/register', authenticate, requireHost, upload.array('images'), asyn
       location = typeof req.body.location === 'string'
         ? JSON.parse(req.body.location)
         : req.body.location;
+      
+      if (req.body.roomVariants) {
+        roomVariants = typeof req.body.roomVariants === 'string'
+          ? JSON.parse(req.body.roomVariants)
+          : req.body.roomVariants;
+      }
+      
+      if (req.body.defaultVariantId !== undefined) {
+        defaultVariantId = typeof req.body.defaultVariantId === 'string' && req.body.defaultVariantId.startsWith('{')
+          ? JSON.parse(req.body.defaultVariantId)
+          : req.body.defaultVariantId;
+      }
+      
+      if (req.body.linkedExperiences) {
+        linkedExperiences = typeof req.body.linkedExperiences === 'string'
+          ? JSON.parse(req.body.linkedExperiences)
+          : req.body.linkedExperiences;
+      }
     } catch (parseError) {
       console.error('Error parsing JSON fields:', parseError);
       return res.status(400).json({ 
@@ -229,6 +393,20 @@ router.post('/register', authenticate, requireHost, upload.array('images'), asyn
     if (!location?.district || !location.district.trim()) {
       return res.status(400).json({ message: 'District is required' });
     }
+
+    // Prepare room variants with proper structure
+    const preparedRoomVariants = Array.isArray(roomVariants) ? roomVariants.map(variant => ({
+      variantId: variant.variantId || `variant-${Date.now()}-${Math.random()}`,
+      name: variant.name || '',
+      description: variant.description || '',
+      pricePerNight: Number(variant.pricePerNight) || 0,
+      capacity: Number(variant.capacity) || 1,
+      bedrooms: Number(variant.bedrooms) || 1,
+      bathrooms: Number(variant.bathrooms) || 1,
+      amenities: Array.isArray(variant.amenities) ? variant.amenities : [],
+      images: Array.isArray(variant.images) ? variant.images : [],
+      availability: Array.isArray(variant.availability) ? variant.availability : []
+    })) : [];
 
     const localHost = new LocalHost({
       providerId,
@@ -264,10 +442,19 @@ router.post('/register', authenticate, requireHost, upload.array('images'), asyn
           lng: Number(location?.coordinates?.lng) || 0
         },
         nearbyLandmarks: Array.isArray(location?.nearbyLandmarks) ? location.nearbyLandmarks : []
-      }
+      },
+      roomVariants: preparedRoomVariants,
+      defaultVariantId: defaultVariantId || (preparedRoomVariants.length > 0 ? preparedRoomVariants[0].variantId : null),
+      linkedExperiences: Array.isArray(linkedExperiences) ? linkedExperiences : []
     });
 
+    console.log('[Register Abode] Room variants being saved:', JSON.stringify(preparedRoomVariants, null, 2));
+    console.log('[Register Abode] Linked experiences being saved:', linkedExperiences);
+
     await localHost.save();
+    
+    console.log('[Register Abode] Abode saved with ID:', localHost._id);
+    console.log('[Register Abode] Saved room variants count:', localHost.roomVariants?.length || 0);
 
     res.status(201).json({
       success: true,
@@ -295,7 +482,7 @@ router.put('/:id', authenticate, requireHost, upload.array('images'), async (req
     }
 
     // Parse JSON strings from FormData (multipart/form-data sends JSON as strings)
-    let abodeDetails, culturalPractices, nearbyPlaces, availability, pricing, languages, familyInfo, location;
+    let abodeDetails, culturalPractices, nearbyPlaces, availability, pricing, languages, familyInfo, location, roomVariants, defaultVariantId, linkedExperiences;
     
     try {
       if (req.body.abodeDetails) {
@@ -345,6 +532,24 @@ router.put('/:id', authenticate, requireHost, upload.array('images'), async (req
           ? JSON.parse(req.body.location)
           : req.body.location;
       }
+      
+      if (req.body.roomVariants) {
+        roomVariants = typeof req.body.roomVariants === 'string'
+          ? JSON.parse(req.body.roomVariants)
+          : req.body.roomVariants;
+      }
+      
+      if (req.body.defaultVariantId !== undefined) {
+        defaultVariantId = typeof req.body.defaultVariantId === 'string' && req.body.defaultVariantId.startsWith('{')
+          ? JSON.parse(req.body.defaultVariantId)
+          : req.body.defaultVariantId;
+      }
+      
+      if (req.body.linkedExperiences) {
+        linkedExperiences = typeof req.body.linkedExperiences === 'string'
+          ? JSON.parse(req.body.linkedExperiences)
+          : req.body.linkedExperiences;
+      }
     } catch (parseError) {
       console.error('Error parsing JSON fields:', parseError);
       return res.status(400).json({ 
@@ -362,6 +567,25 @@ router.put('/:id', authenticate, requireHost, upload.array('images'), async (req
     if (languages) localHost.languages = Array.isArray(languages) ? languages : localHost.languages;
     if (familyInfo) localHost.familyInfo = { ...localHost.familyInfo, ...familyInfo };
     if (location) localHost.location = { ...localHost.location, ...location };
+    
+    // Update room variants if provided
+    if (roomVariants !== undefined) {
+      if (Array.isArray(roomVariants)) {
+        localHost.roomVariants = roomVariants;
+      }
+    }
+    
+    // Update default variant ID if provided
+    if (defaultVariantId !== undefined) {
+      localHost.defaultVariantId = defaultVariantId || null;
+    }
+    
+    // Update linked experiences if provided
+    if (linkedExperiences !== undefined) {
+      if (Array.isArray(linkedExperiences)) {
+        localHost.linkedExperiences = linkedExperiences;
+      }
+    }
 
     // Handle images: keep existing ones that weren't removed, and add new ones
     let existingImagesToKeep = [];
