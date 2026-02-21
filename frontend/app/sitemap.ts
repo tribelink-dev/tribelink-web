@@ -34,21 +34,36 @@ function isBlockedRoute(path: string): boolean {
 /**
  * Fetch public abodes for sitemap
  * Only includes published/verified abodes
+ * Gracefully handles timeouts and API unavailability during build
  */
 async function fetchPublicAbodes(): Promise<Array<{ id: string; updatedAt?: string }>> {
+  // Skip API call during build if API URL is not available or points to localhost
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  
+  // During build, if API is not configured or is localhost, skip fetching
+  if (!apiUrl || apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1')) {
+    // In production builds, this should be set, but gracefully handle if not
+    return [];
+  }
+
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    // Use a shorter timeout and better error handling
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+
     const response = await fetch(`${apiUrl}/abodes?limit=1000&page=1`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
-      // Add timeout to prevent hanging
-      signal: AbortSignal.timeout(5000), // 5 second timeout
+      signal: controller.signal,
+      // Add cache revalidation for build time
+      next: { revalidate: 3600 }, // Cache for 1 hour
     });
 
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
-      console.warn('Failed to fetch abodes for sitemap:', response.status);
       return [];
     }
 
@@ -69,9 +84,12 @@ async function fetchPublicAbodes(): Promise<Array<{ id: string; updatedAt?: stri
         id: abode._id,
         updatedAt: abode.updatedAt || abode.createdAt,
       }));
-  } catch (error) {
-    // Silently fail - don't expose errors in sitemap
-    console.warn('Error fetching abodes for sitemap:', error);
+  } catch (error: any) {
+    // Silently fail - don't break build or expose errors
+    // Only log in development
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('Sitemap: Could not fetch abodes (this is OK during build):', error?.message || 'Timeout or API unavailable');
+    }
     return [];
   }
 }
@@ -89,31 +107,39 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   // Add individual abode pages
+  // This will gracefully fail if API is unavailable during build
+  // The sitemap will still work with just static routes
   try {
     const abodes = await fetchPublicAbodes();
     
-    for (const abode of abodes) {
-      // Double-check ID is valid before adding
-      if (!isValidObjectId(abode.id)) {
-        continue;
+    // Only add abodes if we successfully fetched them
+    if (abodes && abodes.length > 0) {
+      for (const abode of abodes) {
+        // Double-check ID is valid before adding
+        if (!isValidObjectId(abode.id)) {
+          continue;
+        }
+        
+        // Ensure path doesn't contain blocked routes
+        const abodePath = `/adobes/${abode.id}`;
+        if (isBlockedRoute(abodePath)) {
+          continue;
+        }
+        
+        routes.push({
+          url: `${baseUrl}${abodePath}`,
+          lastModified: abode.updatedAt || now,
+          changeFrequency: 'weekly',
+          priority: 0.7,
+        });
       }
-      
-      // Ensure path doesn't contain blocked routes
-      const abodePath = `/adobes/${abode.id}`;
-      if (isBlockedRoute(abodePath)) {
-        continue;
-      }
-      
-      routes.push({
-        url: `${baseUrl}${abodePath}`,
-        lastModified: abode.updatedAt || now,
-        changeFrequency: 'weekly',
-        priority: 0.7,
-      });
     }
-  } catch (error) {
-    // Silently continue - don't break sitemap generation
-    console.warn('Error adding abodes to sitemap:', error);
+  } catch (error: any) {
+    // Silently continue - sitemap works fine with just static routes
+    // This is expected during build if API is unavailable
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('Sitemap: Skipping dynamic abode pages (API unavailable during build)');
+    }
   }
 
   return routes;
