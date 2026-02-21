@@ -103,7 +103,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const baseUrl = getBaseUrl();
   
   // Validate ID
-  if (!params.id || !isValidObjectId(params.id)) {
+  if (!id || !isValidObjectId(id)) {
     // Return generic metadata for invalid IDs
     return {
       title: 'Abode Not Found | Triberoutes',
@@ -115,7 +115,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     };
   }
 
-  const abode = await fetchAbodeData(params.id);
+  const abode = await fetchAbodeData(id);
 
   // If abode not found or not verified, return noindex metadata
   if (!abode) {
@@ -147,7 +147,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
   const mainImage = abode.images?.find(img => img.isMain) || abode.images?.[0];
   const ogImage = mainImage ? validateImageUrl(mainImage.url) : validateImageUrl('/assets/logo.jpg') || `${baseUrl}/assets/logo.jpg`;
-  const canonicalUrl = `${baseUrl}/adobes/${params.id}`;
+  const canonicalUrl = `${baseUrl}/adobes/${id}`;
 
   return {
     title: metadataTitle,
