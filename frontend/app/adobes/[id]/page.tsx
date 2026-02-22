@@ -254,7 +254,7 @@ export default function AbodeDetailPage() {
         if (cartResponse.data.success && cartResponse.data.cart.items.length > 0) {
           const cartItemId = cartResponse.data.cart.items[cartResponse.data.cart.items.length - 1]._id;
           
-          for (const [experienceId, expData] of addedExperiences.entries()) {
+          for (const [experienceId, expData] of Array.from(addedExperiences.entries())) {
             try {
               // Ensure participants is a valid number (between 1 and 50)
               const participants = Math.max(1, Math.min(50, Number(expData.participants) || 1));
@@ -360,7 +360,7 @@ export default function AbodeDetailPage() {
   
   // Add experience prices
   let experienceTotal = 0;
-  for (const [expId, expData] of addedExperiences.entries()) {
+  for (const [expId, expData] of Array.from(addedExperiences.entries())) {
     const experience = linkedExperiences.find(e => e._id === expId);
     if (experience) {
       let expPrice = experience.price;
