@@ -2,13 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { motion } from 'framer-motion';
 import api from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { useCurrency } from '@/lib/CurrencyContext';
+import { ArrowLeft, CreditCard, Wallet, Calendar, User } from 'lucide-react';
 
 export default function BookingPaymentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
+  const { formatPrice } = useCurrency();
   const [bookingId, setBookingId] = useState('');
   const [booking, setBooking] = useState<any>(null);
   const [wallet, setWallet] = useState({ balance: 0, currency: 'USD' });
@@ -20,13 +24,13 @@ export default function BookingPaymentPage() {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    const id = searchParams.get('id') || sessionStorage.getItem('bookingId');
+    const id = searchParams.get('id') || (typeof window !== 'undefined' ? sessionStorage.getItem('bookingId') : null);
     if (!id) {
       router.push('/bookings');
       return;
     }
     setBookingId(id);
-    sessionStorage.setItem('bookingId', id);
+    if (typeof window !== 'undefined') sessionStorage.setItem('bookingId', id);
   }, [searchParams, router]);
 
   useEffect(() => {
@@ -38,7 +42,6 @@ export default function BookingPaymentPage() {
 
   const fetchBooking = async () => {
     if (!bookingId) return;
-    
     try {
       setLoading(true);
       const response = await api.get(`/bookings/${bookingId}`);
@@ -47,9 +50,7 @@ export default function BookingPaymentPage() {
     } catch (err: any) {
       console.error('Error fetching booking:', err);
       setError(err.response?.data?.message || 'Failed to load booking');
-      if (err.response?.status === 404) {
-        setTimeout(() => router.push('/bookings'), 2000);
-      }
+      if (err.response?.status === 404) setTimeout(() => router.push('/bookings'), 2000);
     } finally {
       setLoading(false);
     }
@@ -71,17 +72,15 @@ export default function BookingPaymentPage() {
       setError('Please enter a valid amount');
       return;
     }
-
     setProcessing(true);
     setError('');
     setMessage('');
-
     try {
       await api.post('/trips/wallet/fund', {
         amount: parseFloat(fundAmount),
-        currency: fundCurrency
+        currency: fundCurrency,
       });
-      setMessage('Wallet funded successfully!');
+      setMessage('Wallet funded successfully.');
       setFundAmount('');
       await fetchWallet();
     } catch (err: any) {
@@ -96,45 +95,22 @@ export default function BookingPaymentPage() {
       setError('Booking information is missing. Please try again.');
       return;
     }
-
     setProcessing(true);
     setError('');
     setMessage('');
-
     try {
-      console.log('Processing payment for booking:', bookingId);
       const response = await api.post(`/bookings/${bookingId}/pay`);
-      
-      console.log('Payment response:', response.data);
-      
       const remainingBalance = response.data.remainingBalance;
-      
-      // Update wallet balance
       if (remainingBalance !== undefined) {
-        setWallet(prev => ({ ...prev, balance: remainingBalance }));
+        setWallet((prev) => ({ ...prev, balance: remainingBalance }));
       }
-      
-      // Refresh wallet to get updated balance
       await fetchWallet();
-      
-      // Clear bookingId from session storage
-      sessionStorage.removeItem('bookingId');
-      
-      setMessage('Payment successful! Your booking is confirmed.');
-      
-      // Redirect to bookings page after a short delay
-      setTimeout(() => {
-        router.push('/bookings');
-      }, 2000);
+      if (typeof window !== 'undefined') sessionStorage.removeItem('bookingId');
+      setMessage('Payment successful. Your booking is confirmed.');
+      setTimeout(() => router.push('/bookings'), 2000);
     } catch (err: any) {
-      console.error('Payment error:', err);
       const errorMessage = err.response?.data?.message || err.message || 'Payment failed';
-      setError(errorMessage);
-      
-      // If insufficient balance, suggest funding wallet
-      if (err.response?.status === 400 && errorMessage.includes('balance')) {
-        setError(`${errorMessage}. Please add funds to your wallet.`);
-      }
+      setError(err.response?.status === 400 && errorMessage.includes('balance') ? `${errorMessage} Add funds to your wallet below.` : errorMessage);
     } finally {
       setProcessing(false);
     }
@@ -156,175 +132,161 @@ export default function BookingPaymentPage() {
 
   const getBookingDetails = () => {
     if (!booking) return null;
-    
     switch (booking.bookingType) {
       case 'ABODE_STAY':
         return {
           type: 'Abode Stay',
           icon: '🏠',
           details: [
-            {
-              label: 'Check-in',
-              value: booking.abodeStay?.checkIn 
-                ? new Date(booking.abodeStay.checkIn).toLocaleDateString()
-                : 'N/A'
-            },
-            {
-              label: 'Check-out',
-              value: booking.abodeStay?.checkOut 
-                ? new Date(booking.abodeStay.checkOut).toLocaleDateString()
-                : 'N/A'
-            },
-            {
-              label: 'Guests',
-              value: booking.abodeStay?.numberOfGuests || 1
-            }
-          ]
+            { label: 'Check-in', value: booking.abodeStay?.checkIn ? new Date(booking.abodeStay.checkIn).toLocaleDateString() : 'N/A' },
+            { label: 'Check-out', value: booking.abodeStay?.checkOut ? new Date(booking.abodeStay.checkOut).toLocaleDateString() : 'N/A' },
+            { label: 'Guests', value: booking.abodeStay?.numberOfGuests ?? 1 },
+          ],
         };
       case 'EXPERIENCE':
         return {
           type: 'Experience',
           icon: '🎯',
           details: [
-            {
-              label: 'Date',
-              value: booking.experience?.date 
-                ? new Date(booking.experience.date).toLocaleDateString()
-                : 'N/A'
-            },
-            {
-              label: 'Time',
-              value: booking.experience?.startTime || 'N/A'
-            },
-            {
-              label: 'Participants',
-              value: booking.experience?.numberOfParticipants || 1
-            }
-          ]
+            { label: 'Date', value: booking.experience?.date ? new Date(booking.experience.date).toLocaleDateString() : 'N/A' },
+            { label: 'Time', value: booking.experience?.startTime || 'N/A' },
+            { label: 'Participants', value: booking.experience?.numberOfParticipants ?? 1 },
+          ],
         };
       case 'EVENT':
         return {
           type: 'Event',
           icon: '🎪',
           details: [
-            {
-              label: 'Tickets',
-              value: booking.event?.ticketCount || 1
-            },
-            {
-              label: 'Tier',
-              value: booking.event?.ticketTier || 'General'
-            }
-          ]
+            { label: 'Tickets', value: booking.event?.ticketCount ?? 1 },
+            { label: 'Tier', value: booking.event?.ticketTier || 'General' },
+          ],
         };
       default:
         return null;
     }
   };
 
+  const bookingDetails = getBookingDetails();
+  const priceInWalletCurrency = booking?.totalPrice ?? 0;
+  const currency = booking?.currency || 'USD';
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-tourism">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-white border-t-transparent mb-6"></div>
-          <div className="text-2xl font-semibold text-white">Loading payment details...</div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pt-24 pb-16">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-heritage-gold border-t-transparent" />
+          </div>
+          <p className="text-center text-charcoal-600 font-medium">Loading payment details…</p>
         </div>
       </div>
     );
   }
 
-  const bookingDetails = getBookingDetails();
-  const bookingTitle = getBookingTitle();
-  const priceInWalletCurrency = booking?.totalPrice || 0;
-
   return (
-    <div className="page-container">
-      <div className="section-container max-w-4xl">
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-primary-500 rounded-2xl mb-6 shadow-medium">
-            <span className="text-4xl">💳</span>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pt-24 pb-16">
+      <div className="max-w-4xl mx-auto px-6">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <button
+            onClick={() => router.push('/bookings')}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors mb-6"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span className="font-medium">Back to Bookings</span>
+          </button>
+
+          <div className="flex items-center gap-4">
+            <div className="bg-heritage-gold/10 p-4 rounded-2xl">
+              <CreditCard className="w-8 h-8 text-heritage-gold" />
+            </div>
+            <div>
+              <h1 className="text-4xl font-bold text-charcoal-700">Secure Payment</h1>
+              <p className="text-charcoal-600 mt-1">Pay with your Tribelink wallet</p>
+            </div>
           </div>
-          <h1 className="heading-primary text-gray-900">
-            Secure Payment
-          </h1>
-          <p className="text-subtitle text-gray-600 mb-0">
-            Complete your booking payment
-          </p>
-          <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary-50 border border-primary-200 rounded-lg">
-            <span className="text-primary-600">💳</span>
-            <span className="text-sm font-semibold text-primary-700">Payment via Tribelink Wallet</span>
-          </div>
-        </div>
+        </motion.div>
 
         {error && (
-          <div className="alert-error mb-6">
-            <span className="text-lg">⚠️</span>
-            <div className="flex-1 whitespace-pre-wrap">{error}</div>
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-center gap-3">
+            <span className="text-xl">⚠️</span>
+            <span className="flex-1 whitespace-pre-wrap">{error}</span>
           </div>
         )}
 
         {message && (
-          <div className="alert-success mb-6">
-            <span className="text-lg">✅</span>
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-800 rounded-xl flex items-center gap-3">
+            <span className="text-xl">✅</span>
             <span className="flex-1">{message}</span>
           </div>
         )}
 
         {booking && (
           <>
-            <div className="content-card mb-6">
-              <div className="flex items-center gap-3 mb-6">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="bg-white rounded-3xl shadow-xl border border-gray-200 p-6 md:p-8 mb-8"
+            >
+              <h2 className="text-xl font-bold text-charcoal-700 mb-6 flex items-center gap-3">
                 <span className="text-3xl">{bookingDetails?.icon || '📋'}</span>
-                <h2 className="heading-secondary mb-0">Booking Summary</h2>
-              </div>
-              <div className="space-y-4 bg-gray-50 p-6 rounded-xl border border-gray-200">
+                Booking Summary
+              </h2>
+              <div className="space-y-4 bg-cream-50 rounded-2xl p-6 border border-cream-200">
                 <div className="flex items-center gap-3">
-                  <span className="text-xl">📝</span>
+                  <User className="w-5 h-5 text-heritage-gold" />
                   <div>
-                    <p className="text-xs text-gray-500 uppercase font-semibold">Booking Type</p>
-                    <p className="font-semibold text-gray-900 mt-1">{bookingDetails?.type || 'Booking'}</p>
+                    <p className="text-xs text-charcoal-500 uppercase font-semibold">Type</p>
+                    <p className="font-semibold text-charcoal-700">{bookingDetails?.type ?? 'Booking'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-xl">🏷️</span>
+                  <Calendar className="w-5 h-5 text-heritage-gold" />
                   <div>
-                    <p className="text-xs text-gray-500 uppercase font-semibold">Title</p>
-                    <p className="font-semibold text-gray-900 mt-1">{bookingTitle}</p>
+                    <p className="text-xs text-charcoal-500 uppercase font-semibold">Title</p>
+                    <p className="font-semibold text-charcoal-700">{getBookingTitle()}</p>
                   </div>
                 </div>
-                {bookingDetails?.details.map((detail: any, index: number) => (
-                  <div key={index} className="flex items-center gap-3">
-                    <span className="text-xl">📅</span>
-                    <div>
-                      <p className="text-xs text-gray-500 uppercase font-semibold">{detail.label}</p>
-                      <p className="font-semibold text-gray-900 mt-1">{detail.value}</p>
-                    </div>
+                {bookingDetails?.details.map((d: { label: string; value: string | number }, i: number) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <span className="text-charcoal-400">•</span>
+                    <span className="text-sm text-charcoal-600 font-medium">{d.label}:</span>
+                    <span className="text-charcoal-700">{d.value}</span>
                   </div>
                 ))}
-                <div className="pt-4 border-t border-gray-300 flex justify-between items-center">
-                  <span className="text-lg font-semibold text-gray-700">Total Amount</span>
-                  <span className="text-3xl font-bold text-primary-600">
-                    {booking.currency || 'USD'} {booking.totalPrice.toFixed(2)}
+                <div className="pt-4 border-t border-charcoal-200 flex justify-between items-center">
+                  <span className="text-lg font-semibold text-charcoal-700">Total</span>
+                  <span className="text-2xl font-bold text-heritage-gold">
+                    {formatPrice(booking.totalPrice, currency)}
                   </span>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
-            <div className="content-card mb-6">
-              <div className="flex items-center gap-3 mb-6">
-                <span className="text-3xl">💰</span>
-                <h2 className="heading-secondary mb-0">Your Trip Wallet</h2>
-              </div>
-              <div className="bg-primary-50 p-6 rounded-xl mb-6 border-2 border-primary-200">
-                <p className="text-sm text-gray-600 mb-2 font-semibold">Current Balance</p>
-                <p className="text-5xl font-bold text-primary-600">
-                  {wallet.balance.toFixed(2)} <span className="text-2xl text-gray-600">{wallet.currency}</span>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="bg-white rounded-3xl shadow-xl border border-gray-200 p-6 md:p-8 mb-8"
+            >
+              <h2 className="text-xl font-bold text-charcoal-700 mb-6 flex items-center gap-3">
+                <Wallet className="w-6 h-6 text-heritage-gold" />
+                Your Wallet
+              </h2>
+              <div className="bg-gradient-to-br from-heritage-gold/10 to-cream-100 rounded-2xl p-6 mb-6 border border-heritage-gold/20">
+                <p className="text-sm text-charcoal-600 font-medium mb-1">Current balance</p>
+                <p className="text-4xl font-bold text-heritage-gold">
+                  {formatPrice(wallet.balance, wallet.currency)}
                 </p>
               </div>
-
               <div className="border-t border-gray-200 pt-6">
-                <h3 className="heading-tertiary mb-4">Add Funds to Wallet</h3>
-                <div className="flex gap-3">
+                <h3 className="text-lg font-semibold text-charcoal-700 mb-4">Add funds</h3>
+                <div className="flex flex-wrap gap-3">
                   <input
                     type="number"
                     value={fundAmount}
@@ -332,76 +294,81 @@ export default function BookingPaymentPage() {
                     placeholder="Amount"
                     min="0"
                     step="0.01"
-                    className="input-field flex-1"
+                    className="flex-1 min-w-[120px] px-4 py-3 border border-charcoal-200 rounded-xl focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
                   />
                   <select
                     value={fundCurrency}
                     onChange={(e) => setFundCurrency(e.target.value)}
-                    className="px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-white font-semibold"
+                    className="px-4 py-3 border border-charcoal-200 rounded-xl focus:ring-2 focus:ring-heritage-gold bg-white font-medium"
                   >
                     <option value="USD">USD</option>
                     <option value="EUR">EUR</option>
                     <option value="INR">INR</option>
                     <option value="GBP">GBP</option>
                   </select>
-                  <button
+                  <motion.button
                     onClick={handleFundWallet}
                     disabled={processing}
-                    className="btn-accent px-8 disabled:opacity-50 disabled:cursor-not-allowed"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="px-6 py-3 bg-charcoal-600 text-white font-semibold rounded-xl hover:bg-charcoal-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {processing ? (
-                      <span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
+                      <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     ) : (
                       'Add Funds'
                     )}
-                  </button>
+                  </motion.button>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
-            <div className="bg-gradient-primary rounded-2xl shadow-large p-8 text-white">
-              <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-6">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="bg-gradient-to-r from-heritage-gold to-heritage-gold-dark rounded-3xl shadow-xl p-6 md:p-8 text-white"
+            >
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-6">
                 <div>
-                  <p className="text-white/90 mb-2 font-medium">Amount Due</p>
-                  <p className="text-5xl font-bold">{booking.currency || 'USD'} {booking.totalPrice.toFixed(2)}</p>
+                  <p className="text-white/90 text-sm font-medium mb-1">Amount due</p>
+                  <p className="text-4xl font-bold">{formatPrice(booking.totalPrice, currency)}</p>
                 </div>
-                <div className="text-center md:text-right">
-                  <p className="text-white/90 mb-2 font-medium">Wallet Balance</p>
-                  <p className="text-3xl font-bold">{wallet.balance.toFixed(2)} {wallet.currency}</p>
+                <div className="md:text-right">
+                  <p className="text-white/90 text-sm font-medium mb-1">Wallet balance</p>
+                  <p className="text-2xl font-bold">{formatPrice(wallet.balance, wallet.currency)}</p>
                 </div>
               </div>
-
-              {wallet.balance < priceInWalletCurrency && (
-                <div className="alert-warning mb-6 bg-yellow-400/20 border-yellow-300 text-yellow-100">
-                  <span className="text-2xl">⚠️</span>
-                  <div className="flex-1">
-                    <p className="font-semibold mb-1">Insufficient Balance</p>
-                    <p className="text-sm">Please add {wallet.currency} {(priceInWalletCurrency - wallet.balance).toFixed(2)} more to your wallet</p>
-                  </div>
+              {currency === wallet.currency && wallet.balance < priceInWalletCurrency && (
+                <div className="mb-6 p-4 bg-amber-500/20 border border-amber-400/50 rounded-xl text-amber-100">
+                  <p className="font-semibold">Insufficient balance</p>
+                  <p className="text-sm mt-1">
+                    Add {formatPrice(priceInWalletCurrency - wallet.balance, wallet.currency)} to your wallet.
+                  </p>
                 </div>
               )}
-
-              <button
+              <motion.button
                 onClick={handlePayment}
-                disabled={processing || wallet.balance < priceInWalletCurrency || booking.paymentStatus === 'Completed'}
-                className="w-full bg-white text-primary-600 py-4 rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg shadow-xl transition-all disabled:hover:bg-white"
+                disabled={processing || booking.paymentStatus === 'Completed'}
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+                className="w-full py-4 bg-white text-heritage-gold font-bold text-lg rounded-xl shadow-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-all"
               >
                 {processing ? (
                   <span className="flex items-center justify-center gap-2">
-                    <span className="animate-spin inline-block w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full"></span>
-                    Processing Payment...
+                    <span className="inline-block w-5 h-5 border-2 border-heritage-gold border-t-transparent rounded-full animate-spin" />
+                    Processing…
                   </span>
                 ) : booking.paymentStatus === 'Completed' ? (
-                  'Payment Already Completed'
+                  'Already paid'
                 ) : (
-                  'Complete Payment & Confirm Booking'
+                  'Complete payment & confirm booking'
                 )}
-              </button>
-            </div>
+              </motion.button>
+            </motion.div>
           </>
         )}
       </div>
     </div>
   );
 }
-

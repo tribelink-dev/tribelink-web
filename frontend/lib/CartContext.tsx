@@ -94,7 +94,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       console.error('Error fetching cart:', err);
       // Don't set error for 404 (cart doesn't exist yet)
       if (err.response?.status !== 404) {
-        setError(err.response?.data?.message || 'Failed to load cart');
+        setError(err.response?.data?.message || 'Failed to load bucket');
       } else {
         setCart(null);
       }
@@ -111,7 +111,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Add abode stay to cart
   const addAbodeToCart = useCallback(async (abodeData: CartAbodeStay) => {
     if (!user) {
-      throw new Error('Please log in to add items to cart');
+      throw new Error('Please log in to add items to bucket');
     }
 
     try {
@@ -136,7 +136,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (err: any) {
       console.error('Error adding abode to cart:', err);
-      const errorMessage = err.response?.data?.message || 'Failed to add to cart';
+      const errorMessage = err.response?.data?.message || 'Failed to add to bucket';
       setError(errorMessage);
       throw new Error(errorMessage);
     }
@@ -179,7 +179,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Update cart item
   const updateCartItem = useCallback(async (itemId: string, updates: Partial<CartAbodeStay>) => {
     if (!user) {
-      throw new Error('Please log in to update cart');
+      throw new Error('Please log in to update bucket');
     }
 
     try {
@@ -208,7 +208,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (err: any) {
       console.error('Error updating cart item:', err);
-      const errorMessage = err.response?.data?.message || 'Failed to update cart item';
+      const errorMessage = err.response?.data?.message || 'Failed to update bucket item';
       setError(errorMessage);
       throw new Error(errorMessage);
     }
@@ -217,7 +217,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Remove cart item
   const removeCartItem = useCallback(async (itemId: string) => {
     if (!user) {
-      throw new Error('Please log in to remove items');
+      throw new Error('Please log in to remove items from bucket');
     }
 
     try {
@@ -235,7 +235,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (err: any) {
       console.error('Error removing cart item:', err);
-      const errorMessage = err.response?.data?.message || 'Failed to remove item';
+      const errorMessage = err.response?.data?.message || 'Failed to remove item from bucket';
       setError(errorMessage);
       throw new Error(errorMessage);
     }
@@ -271,7 +271,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Clear cart
   const clearCart = useCallback(async () => {
     if (!user) {
-      throw new Error('Please log in to clear cart');
+      throw new Error('Please log in to clear bucket');
     }
 
     try {
@@ -289,7 +289,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (err: any) {
       console.error('Error clearing cart:', err);
-      const errorMessage = err.response?.data?.message || 'Failed to clear cart';
+      const errorMessage = err.response?.data?.message || 'Failed to clear bucket';
       setError(errorMessage);
       throw new Error(errorMessage);
     }
@@ -307,7 +307,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (!cart || cart.items.length === 0) {
-      throw new Error('Cart is empty');
+      throw new Error('Bucket is empty');
     }
 
     try {

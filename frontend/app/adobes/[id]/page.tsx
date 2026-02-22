@@ -275,7 +275,7 @@ export default function AbodeDetailPage() {
       }, 500);
     } catch (err: any) {
       console.error('Error adding to cart:', err);
-      alert(err.message || 'Failed to add to cart');
+      alert(err.message || 'Failed to add to bucket');
       setAddingToCart(false);
     }
   };
@@ -916,12 +916,12 @@ export default function AbodeDetailPage() {
                 {addingToCart ? (
                   <>
                     <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                    <span>Adding to Cart...</span>
+                    <span>Adding to Bucket...</span>
                   </>
                 ) : (
                   <>
                     <ShoppingCart className="w-5 h-5" />
-                    Add to Cart
+                    Add to Bucket
                   </>
                 )}
               </motion.button>

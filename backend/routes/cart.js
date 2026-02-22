@@ -16,7 +16,7 @@ const router = express.Router();
 router.get('/', authenticate, requireUser, async (req, res) => {
   try {
     let cart = await Cart.findOne({ user: req.user._id })
-      .populate('items.abodeStay.localHostId', 'abodeDetails pricing images location providerId')
+      .populate('items.abodeStay.localHostId', 'abodeDetails pricing images location providerId roomVariants')
       .populate('items.experiences.experienceId', 'title price duration imageUrl')
       .populate('items.experience.experienceId', 'title price duration imageUrl');
 
@@ -113,7 +113,7 @@ router.post('/abode', authenticate, requireUser, async (req, res) => {
     await cart.save();
 
     // Populate for response
-    await cart.populate('items.abodeStay.localHostId', 'abodeDetails pricing images location providerId');
+    await cart.populate('items.abodeStay.localHostId', 'abodeDetails pricing images location providerId roomVariants');
 
     res.json({
       success: true,
@@ -295,9 +295,23 @@ router.delete('/item/:itemId', authenticate, requireUser, async (req, res) => {
       return res.status(404).json({ message: 'Cart not found' });
     }
 
-    cart.items.id(itemId).remove();
+    // Remove item - check if it exists first
+    const itemToRemove = cart.items.id(itemId);
+    if (!itemToRemove) {
+      return res.status(404).json({ message: 'Item not found in cart' });
+    }
+
+    // Remove the item from the array using filter (most reliable method)
+    cart.items = cart.items.filter(
+      item => item._id.toString() !== itemId.toString()
+    );
     await cart.calculateTotal();
     await cart.save();
+
+    // Populate for response
+    await cart.populate('items.abodeStay.localHostId', 'abodeDetails pricing images location providerId roomVariants');
+    await cart.populate('items.experiences.experienceId', 'title price duration imageUrl');
+    await cart.populate('items.experience.experienceId', 'title price duration imageUrl');
 
     res.json({
       success: true,

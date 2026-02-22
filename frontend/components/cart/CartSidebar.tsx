@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ShoppingCart, ChevronRight } from 'lucide-react';
+import { X, ShoppingCart, ChevronRight, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/lib/CartContext';
 import { useCurrency } from '@/lib/CurrencyContext';
@@ -14,17 +14,31 @@ interface CartSidebarProps {
 }
 
 export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
-  const { cart, loading } = useCart();
+  const { cart, loading, clearCart } = useCart();
   const { formatPrice } = useCurrency();
   const router = useRouter();
 
   const itemCount = cart?.items?.length || 0;
   const totalPrice = cart?.totalPrice || 0;
-  const currency = cart?.currency || 'USD';
+  // Get currency from cart, or fallback to first item's currency, or USD
+  let currency = cart?.currency || 'USD';
+  if (cart?.items?.length > 0 && cart.items[0]?.abodeStay?.localHostId?.pricing?.currency) {
+    currency = cart.items[0].abodeStay.localHostId.pricing.currency;
+  }
 
   const handleCheckout = () => {
     onClose();
     router.push('/cart');
+  };
+
+  const handleClearCart = async () => {
+    if (confirm('Are you sure you want to clear your bucket?')) {
+      try {
+        await clearCart();
+      } catch (error: any) {
+        alert(error.message || 'Failed to clear bucket');
+      }
+    }
   };
 
   return (
@@ -58,19 +72,30 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <div className="flex items-center gap-3">
                 <ShoppingCart className="w-6 h-6 text-heritage-gold" />
-                <h2 className="text-2xl font-bold text-gray-900">Your Cart</h2>
+                <h2 className="text-2xl font-bold text-gray-900">Your Bucket</h2>
                 {itemCount > 0 && (
                   <span className="bg-heritage-gold text-white text-sm font-bold px-2.5 py-1 rounded-full">
                     {itemCount}
                   </span>
                 )}
               </div>
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="w-6 h-6 text-gray-600" />
-              </button>
+              <div className="flex items-center gap-2">
+                {itemCount > 0 && (
+                  <button
+                    onClick={handleClearCart}
+                    className="p-2 hover:bg-red-50 rounded-full transition-colors"
+                    title="Clear Bucket"
+                  >
+                    <Trash2 className="w-5 h-5 text-red-600" />
+                  </button>
+                )}
+                <button
+                  onClick={onClose}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X className="w-6 h-6 text-gray-600" />
+                </button>
+              </div>
             </div>
 
             {/* Cart Items */}
@@ -82,13 +107,13 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
               ) : itemCount === 0 ? (
                 <div className="flex flex-col items-center justify-center h-64 text-center">
                   <ShoppingCart className="w-16 h-16 text-gray-300 mb-4" />
-                  <h3 className="text-xl font-semibold text-gray-700 mb-2">Your cart is empty</h3>
+                  <h3 className="text-xl font-semibold text-gray-700 mb-2">Your bucket is empty</h3>
                   <p className="text-gray-500">Add abodes and experiences to get started</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {cart?.items.map((item) => (
-                    <CartItem key={item._id} item={item} compact />
+                    <CartItem key={item._id} item={item} compact currency={currency} />
                   ))}
                 </div>
               )}
@@ -116,7 +141,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                   onClick={onClose}
                   className="w-full mt-3 text-center text-gray-600 hover:text-gray-900 font-medium"
                 >
-                  Continue Shopping
+                  Explore More Abodes
                 </button>
               </div>
             )}

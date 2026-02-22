@@ -35,11 +35,15 @@ export default function CartPage() {
 
   const itemCount = cart?.items?.length || 0;
   const totalPrice = cart?.totalPrice || 0;
-  const currency = cart?.currency || 'USD';
+  // Get currency from cart, or fallback to first item's currency, or USD
+  let currency = cart?.currency || 'USD';
+  if (cart?.items?.length > 0 && cart.items[0]?.abodeStay?.localHostId?.pricing?.currency) {
+    currency = cart.items[0].abodeStay.localHostId.pricing.currency;
+  }
 
   const handleCheckout = async () => {
     if (!cart || cart.items.length === 0) {
-      alert('Your cart is empty');
+      alert('Your bucket is empty');
       return;
     }
 
@@ -57,11 +61,11 @@ export default function CartPage() {
   };
 
   const handleClearCart = async () => {
-    if (confirm('Are you sure you want to clear your cart?')) {
+    if (confirm('Are you sure you want to clear your bucket?')) {
       try {
         await clearCart();
       } catch (error: any) {
-        alert(error.message || 'Failed to clear cart');
+        alert(error.message || 'Failed to clear bucket');
       }
     }
   };
@@ -89,7 +93,7 @@ export default function CartPage() {
                 <ShoppingCart className="w-8 h-8 text-heritage-gold" />
               </div>
               <div>
-                <h1 className="text-4xl font-bold text-gray-900">Shopping Cart</h1>
+                <h1 className="text-4xl font-bold text-gray-900">My Bucket</h1>
                 <p className="text-gray-600 mt-1">
                   {itemCount} {itemCount === 1 ? 'item' : 'items'}
                 </p>
@@ -101,7 +105,7 @@ export default function CartPage() {
                 className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2"
               >
                 <Trash2 className="w-4 h-4" />
-                Clear Cart
+                Clear Bucket
               </button>
             )}
           </div>
@@ -114,8 +118,8 @@ export default function CartPage() {
             className="bg-white rounded-3xl shadow-xl p-16 text-center"
           >
             <ShoppingCart className="w-24 h-24 text-gray-300 mx-auto mb-6" />
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Your cart is empty</h2>
-            <p className="text-gray-600 mb-8">Start adding abodes and experiences to your cart</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Your bucket is empty</h2>
+            <p className="text-gray-600 mb-8">Start adding abodes and experiences to your bucket</p>
             <motion.button
               onClick={() => router.push('/adobes')}
               whileHover={{ scale: 1.05 }}
@@ -130,7 +134,7 @@ export default function CartPage() {
             {/* Cart Items */}
             <div className="lg:col-span-2 space-y-6">
               {cart?.items.map((item) => (
-                <CartItem key={item._id} item={item} />
+                <CartItem key={item._id} item={item} currency={currency} />
               ))}
             </div>
 

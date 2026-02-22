@@ -158,6 +158,12 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
     // If same currency, no conversion needed
     if (fromCurrencyUpper === currencyUpper) return amount;
     
+    // Safety check: if amount seems unreasonably large, it might be a currency mismatch
+    // Log a warning if amount > 1,000,000 (likely a conversion error)
+    if (amount > 1000000) {
+      console.warn(`[Currency Conversion] Large amount detected: ${amount} ${fromCurrency}. This might indicate a currency mismatch.`);
+    }
+    
     // Exchange rates API returns: rates[targetCurrency] = how many targetCurrency units per 1 baseCurrency unit
     // where baseCurrency is the user's selected currency (currency variable)
     

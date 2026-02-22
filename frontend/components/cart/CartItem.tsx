@@ -19,6 +19,10 @@ interface CartItemProps {
           title?: string;
         };
         images?: Array<{ url: string; isMain?: boolean }>;
+        roomVariants?: Array<{
+          variantId: string;
+          name: string;
+        }>;
       };
       variantId?: string | null;
       checkIn: Date | string;
@@ -40,11 +44,18 @@ interface CartItemProps {
   compact?: boolean;
 }
 
-export default function CartItem({ item, compact = false }: CartItemProps) {
+interface CartItemPropsWithCurrency extends CartItemProps {
+  currency?: string;
+}
+
+export default function CartItem({ item, compact = false, currency }: CartItemPropsWithCurrency) {
   const { removeCartItem, removeExperienceFromItem } = useCart();
   const { formatPrice } = useCurrency();
   const router = useRouter();
   const [isRemoving, setIsRemoving] = useState(false);
+  
+  // Get currency from prop, or fallback to abode's currency, or USD
+  const itemCurrency = currency || item.abodeStay?.localHostId?.pricing?.currency || 'USD';
 
   if (item.type === 'ABODE_STAY' && item.abodeStay) {
     const abode = item.abodeStay.localHostId;
@@ -52,6 +63,12 @@ export default function CartItem({ item, compact = false }: CartItemProps) {
     const checkOut = new Date(item.abodeStay.checkOut);
     const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
     const mainImage = abode?.images?.find(img => img.isMain) || abode?.images?.[0];
+    
+    // Find the variant name if variantId exists
+    const variant = item.abodeStay.variantId 
+      ? abode?.roomVariants?.find(v => v.variantId === item.abodeStay.variantId)
+      : null;
+    const variantName = variant?.name || null;
 
     const handleRemove = async () => {
       if (!item._id) return;
@@ -108,8 +125,8 @@ export default function CartItem({ item, compact = false }: CartItemProps) {
                 <h3 className="font-bold text-gray-900 mb-1 truncate">
                   {abode?.abodeDetails?.title || 'Abode Stay'}
                 </h3>
-                {item.abodeStay.variantId && (
-                  <p className="text-sm text-gray-600 mb-2">Room Variant: {item.abodeStay.variantId}</p>
+                {variantName && (
+                  <p className="text-sm text-gray-600 mb-2">Room: {variantName}</p>
                 )}
                 <div className="space-y-1 text-sm text-gray-600">
                   <div className="flex items-center gap-2">
@@ -131,8 +148,8 @@ export default function CartItem({ item, compact = false }: CartItemProps) {
               </div>
 
               {/* Actions */}
-              {!compact && (
-                <div className="flex items-start gap-2">
+              <div className="flex items-start gap-2">
+                {!compact && (
                   <button
                     onClick={handleEdit}
                     className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -140,16 +157,16 @@ export default function CartItem({ item, compact = false }: CartItemProps) {
                   >
                     <Edit2 className="w-4 h-4 text-gray-600" />
                   </button>
-                  <button
-                    onClick={handleRemove}
-                    disabled={isRemoving}
-                    className="p-2 hover:bg-red-50 rounded-lg transition-colors"
-                    title="Remove"
-                  >
-                    <Trash2 className="w-4 h-4 text-red-600" />
-                  </button>
-                </div>
-              )}
+                )}
+                <button
+                  onClick={handleRemove}
+                  disabled={isRemoving}
+                  className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                  title="Remove from bucket"
+                >
+                  <Trash2 className="w-4 h-4 text-red-600" />
+                </button>
+              </div>
             </div>
 
             {/* Linked Experiences */}
@@ -177,14 +194,13 @@ export default function CartItem({ item, compact = false }: CartItemProps) {
                           at {exp.startTime} • {exp.participants} participant{exp.participants !== 1 ? 's' : ''}
                         </p>
                       </div>
-                      {!compact && (
-                        <button
-                          onClick={() => handleRemoveExperience(exp.experienceId?._id || '')}
-                          className="ml-2 p-1 hover:bg-red-50 rounded transition-colors"
-                        >
-                          <Trash2 className="w-3 h-3 text-red-600" />
-                        </button>
-                      )}
+                      <button
+                        onClick={() => handleRemoveExperience(exp.experienceId?._id || '')}
+                        className="ml-2 p-1 hover:bg-red-50 rounded transition-colors"
+                        title="Remove experience"
+                      >
+                        <Trash2 className="w-3 h-3 text-red-600" />
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -196,7 +212,7 @@ export default function CartItem({ item, compact = false }: CartItemProps) {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Item Total</span>
                 <span className="text-lg font-bold text-heritage-gold">
-                  {formatPrice(item.itemPrice || 0, item.abodeStay?.localHostId?.pricing?.currency || 'USD')}
+                  {formatPrice(item.itemPrice || 0, itemCurrency)}
                 </span>
               </div>
             </div>

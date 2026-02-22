@@ -226,6 +226,40 @@ cartSchema.methods.calculateTotal = async function() {
   
   // Ensure total is a valid number (round to 2 decimal places)
   this.totalPrice = Math.max(0, Math.round((total || 0) * 100) / 100);
+  
+  // Set cart currency based on the first item's currency (all items should use same currency)
+  // This ensures the cart currency matches the actual prices being calculated
+  // CRITICAL: This must be set correctly to avoid currency conversion errors
+  if (this.items.length > 0) {
+    const firstItem = this.items[0];
+    if (firstItem.type === 'ABODE_STAY') {
+      const localHost = await LocalHost.findById(firstItem.abodeStay.localHostId);
+      if (localHost && localHost.pricing?.currency) {
+        const newCurrency = localHost.pricing.currency;
+        if (this.currency !== newCurrency) {
+          console.log(`[Cart] Setting cart currency from ${this.currency} to ${newCurrency} based on abode pricing`);
+          this.currency = newCurrency;
+        }
+      } else if (localHost) {
+        // Fallback: if no currency specified, default to INR for Indian abodes
+        const fallbackCurrency = localHost.location?.country === 'India' ? 'INR' : 'USD';
+        if (this.currency !== fallbackCurrency) {
+          console.log(`[Cart] Setting cart currency from ${this.currency} to ${fallbackCurrency} (fallback based on location)`);
+          this.currency = fallbackCurrency;
+        }
+      }
+    } else if (firstItem.type === 'EXPERIENCE') {
+      const experience = await Experience.findById(firstItem.experience.experienceId);
+      if (experience && experience.currency) {
+        const newCurrency = experience.currency;
+        if (this.currency !== newCurrency) {
+          console.log(`[Cart] Setting cart currency from ${this.currency} to ${newCurrency} based on experience`);
+          this.currency = newCurrency;
+        }
+      }
+    }
+  }
+  
   return this.totalPrice;
 };
 
