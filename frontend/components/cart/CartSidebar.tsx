@@ -18,13 +18,9 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
   const { formatPrice } = useCurrency();
   const router = useRouter();
 
-  const itemCount = cart?.items?.length || 0;
-  const totalPrice = cart?.totalPrice || 0;
-  // Get currency from cart, or fallback to first item's currency, or USD
-  let currency = cart?.currency || 'USD';
-  if (cart?.items?.length > 0 && cart.items[0]?.abodeStay?.localHostId?.pricing?.currency) {
-    currency = cart.items[0].abodeStay.localHostId.pricing.currency;
-  }
+  const itemCount = cart?.items?.length ?? 0;
+  const totalPrice = cart?.totalPrice ?? 0;
+  const currency = cart?.currency ?? 'USD';
 
   const handleCheckout = () => {
     onClose();

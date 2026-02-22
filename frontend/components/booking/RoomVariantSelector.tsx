@@ -95,7 +95,7 @@ export default function RoomVariantSelector({
               {variantImage && (
                 <div className="relative w-full h-40 rounded-t-2xl overflow-hidden flex-shrink-0">
                   <img
-                    src={getImageUrl(variantImage.url)}
+                    src={getImageUrl(variantImage.url) ?? undefined}
                     alt={variant.name}
                     className="w-full h-full object-cover"
                   />
@@ -172,7 +172,7 @@ export default function RoomVariantSelector({
             <div className="mb-6">
               <div className="relative w-full h-64 rounded-xl overflow-hidden bg-gray-200 mb-3">
                 <img
-                  src={getImageUrl(currentImage.url)}
+                  src={getImageUrl(currentImage.url) ?? undefined}
                   alt={currentImage.caption || selectedVariant.name}
                   className="w-full h-full object-cover"
                 />
@@ -227,7 +227,7 @@ export default function RoomVariantSelector({
                       }`}
                     >
                       <img
-                        src={getImageUrl(img.url)}
+                        src={getImageUrl(img.url) ?? undefined}
                         alt={img.caption || `Image ${idx + 1}`}
                         className="w-full h-full object-cover"
                       />

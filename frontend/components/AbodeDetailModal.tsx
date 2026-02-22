@@ -846,7 +846,7 @@ export default function AbodeDetailModal({
                                   {experience.imageUrl && (
                                     <div className="relative w-full h-48 rounded-xl overflow-hidden mb-4">
                                       <img
-                                        src={getImageUrl(experience.imageUrl)}
+                                        src={getImageUrl(experience.imageUrl) ?? undefined}
                                         alt={experience.title}
                                         className="w-full h-full object-cover"
                                       />

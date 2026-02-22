@@ -33,16 +33,14 @@ export default function CartPage() {
     );
   }
 
-  const itemCount = cart?.items?.length || 0;
-  const totalPrice = cart?.totalPrice || 0;
-  // Get currency from cart, or fallback to first item's currency, or USD
-  let currency = cart?.currency || 'USD';
-  if (cart?.items?.length > 0 && cart.items[0]?.abodeStay?.localHostId?.pricing?.currency) {
-    currency = cart.items[0].abodeStay.localHostId.pricing.currency;
-  }
+  const itemCount = cart?.items?.length ?? 0;
+  const totalPrice = cart?.totalPrice ?? 0;
+  const items = cart?.items;
+  // Currency is set by backend from first item's abode; fallback to USD
+  const currency = cart?.currency ?? 'USD';
 
   const handleCheckout = async () => {
-    if (!cart || cart.items.length === 0) {
+    if (!cart || !cart.items?.length) {
       alert('Your bucket is empty');
       return;
     }
@@ -133,7 +131,7 @@ export default function CartPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Cart Items */}
             <div className="lg:col-span-2 space-y-6">
-              {cart?.items.map((item) => (
+              {(items ?? []).map((item) => (
                 <CartItem key={item._id} item={item} currency={currency} />
               ))}
             </div>

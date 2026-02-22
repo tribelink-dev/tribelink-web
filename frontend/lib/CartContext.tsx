@@ -12,8 +12,17 @@ interface CartExperience {
   specialRequests?: string;
 }
 
+/** Populated abode as returned by API on cart items */
+interface CartAbodeStayLocalHost {
+  _id?: string;
+  abodeDetails?: { title?: string };
+  images?: Array<{ url: string; isMain?: boolean }>;
+  roomVariants?: Array<{ variantId: string; name: string }>;
+  pricing?: { currency?: string };
+}
+
 interface CartAbodeStay {
-  localHostId: string;
+  localHostId: string | CartAbodeStayLocalHost;
   variantId: string | null;
   checkIn: Date | string;
   checkOut: Date | string;

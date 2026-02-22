@@ -8,33 +8,33 @@ import { useCart } from '@/lib/CartContext';
 import { useCurrency } from '@/lib/CurrencyContext';
 import { getImageUrl } from '@/lib/imageUtils';
 
+/** Populated abode (object) or id (string) as returned by API */
+type LocalHostInItem =
+  | {
+      _id?: string;
+      abodeDetails?: { title?: string };
+      images?: Array<{ url: string; isMain?: boolean }>;
+      roomVariants?: Array<{ variantId: string; name: string }>;
+      pricing?: { currency?: string };
+    }
+  | string;
+
+/** Populated (object) or id (string) as returned by API */
+type ExperienceIdInItem = string | { _id?: string; title?: string; imageUrl?: string };
+
 interface CartItemProps {
   item: {
     _id?: string;
     type: 'ABODE_STAY' | 'EXPERIENCE';
     abodeStay?: {
-      localHostId: {
-        _id?: string;
-        abodeDetails?: {
-          title?: string;
-        };
-        images?: Array<{ url: string; isMain?: boolean }>;
-        roomVariants?: Array<{
-          variantId: string;
-          name: string;
-        }>;
-      };
+      localHostId: LocalHostInItem;
       variantId?: string | null;
       checkIn: Date | string;
       checkOut: Date | string;
       guests: number;
     };
     experiences?: Array<{
-      experienceId: {
-        _id?: string;
-        title?: string;
-        imageUrl?: string;
-      };
+      experienceId: ExperienceIdInItem;
       date: Date | string;
       startTime: string;
       participants: number;
@@ -54,11 +54,14 @@ export default function CartItem({ item, compact = false, currency }: CartItemPr
   const router = useRouter();
   const [isRemoving, setIsRemoving] = useState(false);
   
-  // Get currency from prop, or fallback to abode's currency, or USD
-  const itemCurrency = currency || item.abodeStay?.localHostId?.pricing?.currency || 'USD';
+  // Get currency from prop, or fallback to abode's currency (when populated), or USD
+  const lh = item.abodeStay?.localHostId;
+  const currencyFromAbode = typeof lh === 'object' && lh !== null && 'pricing' in lh ? lh.pricing?.currency : undefined;
+  const itemCurrency = currency || currencyFromAbode || 'USD';
 
   if (item.type === 'ABODE_STAY' && item.abodeStay) {
-    const abode = item.abodeStay.localHostId;
+    const abodeRaw = item.abodeStay.localHostId;
+    const abode = typeof abodeRaw === 'object' && abodeRaw !== null ? abodeRaw : null;
     const checkIn = new Date(item.abodeStay.checkIn);
     const checkOut = new Date(item.abodeStay.checkOut);
     const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
@@ -66,7 +69,7 @@ export default function CartItem({ item, compact = false, currency }: CartItemPr
     
     // Find the variant name if variantId exists
     const variant = item.abodeStay.variantId 
-      ? abode?.roomVariants?.find(v => v.variantId === item.abodeStay.variantId)
+      ? abode?.roomVariants?.find(v => v.variantId === item.abodeStay!.variantId)
       : null;
     const variantName = variant?.name || null;
 
@@ -111,7 +114,7 @@ export default function CartItem({ item, compact = false, currency }: CartItemPr
           {mainImage && (
             <div className="relative w-24 h-24 rounded-lg overflow-hidden flex-shrink-0">
               <img
-                src={getImageUrl(mainImage.url)}
+                src={getImageUrl(mainImage.url) ?? undefined}
                 alt={abode?.abodeDetails?.title || 'Abode'}
                 className="w-full h-full object-cover"
               />
@@ -184,7 +187,7 @@ export default function CartItem({ item, compact = false, currency }: CartItemPr
                     >
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">
-                          {exp.experienceId?.title || 'Experience'}
+                          {(typeof exp.experienceId === 'object' && exp.experienceId?.title) || 'Experience'}
                         </p>
                         <p className="text-xs text-gray-600">
                           {new Date(exp.date).toLocaleDateString('en-US', {
@@ -195,7 +198,7 @@ export default function CartItem({ item, compact = false, currency }: CartItemPr
                         </p>
                       </div>
                       <button
-                        onClick={() => handleRemoveExperience(exp.experienceId?._id || '')}
+                        onClick={() => handleRemoveExperience(typeof exp.experienceId === 'string' ? exp.experienceId : (exp.experienceId as { _id?: string })?._id ?? '')}
                         className="ml-2 p-1 hover:bg-red-50 rounded transition-colors"
                         title="Remove experience"
                       >
