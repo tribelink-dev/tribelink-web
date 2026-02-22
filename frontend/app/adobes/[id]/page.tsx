@@ -361,7 +361,7 @@ export default function AbodeDetailPage() {
   // Add experience prices
   let experienceTotal = 0;
   for (const [expId, expData] of Array.from(addedExperiences.entries())) {
-    const experience = linkedExperiences.find(e => e._id === expId);
+    const experience = (linkedExperiences ?? []).find(e => e._id === expId);
     if (experience) {
       let expPrice = experience.price;
       if (experience.isAddOn && experience.addOnPricing?.price) {
@@ -880,7 +880,7 @@ export default function AbodeDetailPage() {
                   {addedExperiences.size > 0 && (
                     <div className="space-y-1 pt-2 border-t border-gray-300">
                       {Array.from(addedExperiences.entries()).map(([expId, expData]) => {
-                        const experience = linkedExperiences.find(e => e._id === expId);
+                        const experience = (linkedExperiences ?? []).find(e => e._id === expId);
                         if (!experience) return null;
                         let expPrice = experience.price;
                         if (experience.isAddOn && experience.addOnPricing?.price) {
