@@ -226,7 +226,7 @@ const Experiences = () => {
                         viewport={{ once: true }}
                         className="text-terracotta tracking-wide sm:tracking-widest text-xs sm:text-sm font-medium uppercase mb-4 sm:mb-6 inline-block px-3 sm:px-5 py-1.5 sm:py-2.5 bg-terracotta/10 rounded-full border border-terracotta/20"
                     >
-                        The Tribelink Experience
+                        The Triberoutes Experience
                     </motion.p>
                     <h2 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-serif text-deep-jungle mb-4 sm:mb-8 leading-tight px-2">
                         More Than Travelers.
@@ -329,7 +329,7 @@ const Experiences = () => {
                                 "We don't just take you places. We take you home—to places that feel like home, even when you've never been there before."
                             </blockquote>
                             <p className="text-white/80 text-sm sm:text-lg font-light">
-                                — The Tribelink Promise
+                                — The Triberoutes Promise
                             </p>
                         </div>
                     </div>

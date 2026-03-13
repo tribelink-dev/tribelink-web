@@ -8,8 +8,13 @@ async function sendSMS(phoneNumber, otpCode) {
   try {
     // Check if Twilio is configured
     if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_PHONE_NUMBER) {
-      console.log(`[SMS] Twilio not configured. OTP for ${phoneNumber}: ${otpCode}`);
-      console.log('To enable SMS, set: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER');
+      // In production, avoid logging full OTP codes
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[SMS] Twilio not configured. OTP for ${phoneNumber}: ${otpCode}`);
+        console.log('To enable SMS, set: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER');
+      } else {
+        console.warn('[SMS] Twilio not configured. SMS OTP cannot be sent.');
+      }
       return { success: false, message: 'SMS service not configured' };
     }
 
@@ -18,7 +23,7 @@ async function sendSMS(phoneNumber, otpCode) {
     const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
     const message = await client.messages.create({
-      body: `Your Tribelink verification code is: ${otpCode}. Valid for 10 minutes.`,
+      body: `Your Triberoutes verification code is: ${otpCode}. Valid for 10 minutes.`,
       from: process.env.TWILIO_PHONE_NUMBER,
       to: phoneNumber
     });
@@ -37,8 +42,12 @@ async function sendEmail(email, otpCode, phoneNumber) {
   try {
     // Check if email service is configured
     if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
-      console.log(`[Email] SMTP not configured. OTP for ${email}: ${otpCode}`);
-      console.log('To enable email, set: SMTP_HOST, SMTP_USER, SMTP_PASS, SMTP_PORT');
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[Email] SMTP not configured. OTP for ${email}: ${otpCode}`);
+        console.log('To enable email, set: SMTP_HOST, SMTP_USER, SMTP_PASS, SMTP_PORT');
+      } else {
+        console.warn('[Email] SMTP not configured. Email OTP cannot be sent.');
+      }
       return { success: false, message: 'Email service not configured' };
     }
 
@@ -72,12 +81,12 @@ async function sendEmail(email, otpCode, phoneNumber) {
 
     // Email content
     const mailOptions = {
-      from: `"Tribelink" <${process.env.SMTP_USER}>`,
+      from: `"Triberoutes" <${process.env.SMTP_USER}>`,
       to: email,
-      subject: 'Your Tribelink Verification Code',
+      subject: 'Your Triberoutes Verification Code',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #2563eb;">Tribelink Verification</h2>
+          <h2 style="color: #2563eb;">Triberoutes Verification</h2>
           <p>Hello,</p>
           <p>Your verification code is:</p>
           <div style="background-color: #f3f4f6; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
@@ -89,7 +98,7 @@ async function sendEmail(email, otpCode, phoneNumber) {
           <p style="color: #6b7280; font-size: 12px;">This is an automated message. Please do not reply.</p>
         </div>
       `,
-      text: `Your Tribelink verification code is: ${otpCode}. Valid for 10 minutes.`
+      text: `Your Triberoutes verification code is: ${otpCode}. Valid for 10 minutes.`
     };
 
     // Verify SMTP connection first with timeout
@@ -248,7 +257,7 @@ async function sendEmergencyEmail(email, subject, message, htmlMessage = null) {
     });
 
     const mailOptions = {
-      from: `"Tribelink Emergency" <${process.env.SMTP_USER}>`,
+      from: `"Triberoutes Emergency" <${process.env.SMTP_USER}>`,
       to: email,
       subject: subject,
       text: message,

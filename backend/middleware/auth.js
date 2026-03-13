@@ -3,16 +3,25 @@ const User = require('../models/User');
 const Host = require('../models/Host');
 const Provider = require('../models/Provider');
 
+// Load and validate JWT secret once at startup
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  // Fail fast in all environments if JWT_SECRET is missing
+  // so we never fall back to a weak, hardcoded secret.
+  throw new Error('JWT_SECRET environment variable is required but not set.');
+}
+
 const authenticate = async (req, res, next) => {
+  let token; // ensure token is in scope for error logging
   try {
     const authHeader = req.header('Authorization');
-    const token = authHeader ? authHeader.replace('Bearer ', '') : null;
+    token = authHeader ? authHeader.replace('Bearer ', '') : null;
     
     if (!token) {
       return res.status(401).json({ message: 'Access denied. No token provided.' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret-key');
+    const decoded = jwt.verify(token, JWT_SECRET);
     
     // Try to find user first
     const user = await User.findById(decoded.userId);

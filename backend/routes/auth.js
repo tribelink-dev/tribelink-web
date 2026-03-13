@@ -9,6 +9,20 @@ const OTP = require('../models/OTP');
 const { sendOTPViaSMS, sendOTPViaEmail } = require('../services/otpService');
 const oauthService = require('../services/oauthService');
 
+const isDev = process.env.NODE_ENV !== 'production';
+const logDebug = (...args) => {
+  if (isDev) {
+    // eslint-disable-next-line no-console
+    console.log(...args);
+  }
+};
+
+// Load and validate JWT secret once at startup
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required but not set.');
+}
+
 const router = express.Router();
 
 // Helper function to normalize phone numbers consistently
@@ -127,8 +141,8 @@ router.post('/otp/generate/email', async (req, res) => {
     // In production, only return if email service is not configured (fallback)
     const shouldReturnOTP = process.env.NODE_ENV === 'development' || !emailResult.success;
 
-    // Log the result for debugging
-    console.log('[Auth] Email OTP result:', {
+    // Log the result for debugging (dev only, and without OTP)
+    logDebug('[Auth] Email OTP result:', {
       success: emailResult.success,
       message: emailResult.message,
       error: emailResult.error,
@@ -264,23 +278,23 @@ router.post('/signup', async (req, res) => {
     }
 
     // Check if user already exists by email or phone
-    console.log('Checking for existing user:', { normalizedEmail, normalizedPhone });
+    logDebug('Checking for existing user:', { normalizedEmail, normalizedPhone });
     const existingUserByEmail = await User.findOne({ email: normalizedEmail });
     if (existingUserByEmail) {
-      console.log('Found existing user by email:', existingUserByEmail.email);
+      logDebug('Found existing user by email:', existingUserByEmail.email);
       return res.status(400).json({ message: 'User with this email already exists' });
     }
 
     const existingUserByPhone = await User.findOne({ phoneNumber: normalizedPhone });
     if (existingUserByPhone) {
-      console.log('Found existing user by phone:', existingUserByPhone.phoneNumber);
+      logDebug('Found existing user by phone:', existingUserByPhone.phoneNumber);
       return res.status(400).json({ message: 'User with this phone number already exists' });
     }
     
     // Note: Users can now have accounts even if email/phone is registered as Host/Provider
     // This allows dual accounts (hosts can also be travelers)
     
-    console.log('No existing user found, proceeding with creation...');
+    logDebug('No existing user found, proceeding with creation...');
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -297,12 +311,12 @@ router.post('/signup', async (req, res) => {
     });
 
     await user.save();
-    console.log('User created successfully:', user._id);
+    logDebug('User created successfully:', user._id);
 
     // Generate token
     const token = jwt.sign(
       { userId: user._id },
-      process.env.JWT_SECRET || 'fallback-secret-key',
+      JWT_SECRET,
       { expiresIn: '7d' }
     );
 
@@ -410,7 +424,7 @@ router.post('/login', async (req, res) => {
       user = await User.findOne({ phoneNumber: normalizedPhone });
     }
 
-    console.log('Login attempt:', {
+    logDebug('Login attempt:', {
       providedEmail: hasEmail ? email : null,
       providedPhone: hasPhone ? phoneNumber : null,
       normalizedEmail: normalizedEmail,
@@ -420,7 +434,7 @@ router.post('/login', async (req, res) => {
     });
       
     if (!user) {
-      console.log('User not found:', {
+      logDebug('User not found:', {
         searchedEmail: normalizedEmail,
         searchedPhone: normalizedPhone,
         hasEmail,
@@ -433,16 +447,16 @@ router.post('/login', async (req, res) => {
     if (user.googleId) {
       // OAuth user - allow login without password if email and phone match
       // In production, you might want to add additional verification
-      console.log('OAuth user login - skipping password verification');
+      logDebug('OAuth user login - skipping password verification');
     } else {
       // Regular user - verify password
       if (!user.password) {
-        console.log('User has no password set');
+        logDebug('User has no password set');
         return res.status(401).json({ message: 'Invalid credentials. Password not set.' });
       }
       
       const isValidPassword = await bcrypt.compare(password, user.password);
-      console.log('Password verification:', {
+      logDebug('Password verification:', {
         isValid: isValidPassword,
         userId: user._id
       });
@@ -455,7 +469,7 @@ router.post('/login', async (req, res) => {
     // Generate token
     const token = jwt.sign(
       { userId: user._id },
-      process.env.JWT_SECRET || 'fallback-secret-key',
+      JWT_SECRET,
       { expiresIn: '7d' }
     );
 
@@ -508,7 +522,7 @@ router.post('/host/signup', async (req, res) => {
 
     // Check if provider already exists by email or phone
     // Note: Email field has lowercase: true in schema, so Mongoose will auto-lowercase
-    console.log('Checking for existing provider:', { 
+    logDebug('Checking for existing provider:', { 
       normalizedEmail, 
       normalizedPhone,
       originalEmail: email,
@@ -517,7 +531,7 @@ router.post('/host/signup', async (req, res) => {
     
     const existingProviderByEmail = await Provider.findOne({ email: normalizedEmail });
     if (existingProviderByEmail) {
-      console.log('Found existing provider by email:', {
+      logDebug('Found existing provider by email:', {
         existingEmail: existingProviderByEmail.email,
         searchingFor: normalizedEmail,
         existingId: existingProviderByEmail._id
@@ -530,7 +544,7 @@ router.post('/host/signup', async (req, res) => {
 
     const existingProviderByPhone = await Provider.findOne({ phoneNumber: normalizedPhone });
     if (existingProviderByPhone) {
-      console.log('Found existing provider by phone:', {
+      logDebug('Found existing provider by phone:', {
         existingPhone: existingProviderByPhone.phoneNumber,
         searchingFor: normalizedPhone,
         existingId: existingProviderByPhone._id
@@ -544,7 +558,7 @@ router.post('/host/signup', async (req, res) => {
     // Also check legacy Host model
     const existingHostByEmail = await Host.findOne({ email: normalizedEmail });
     if (existingHostByEmail) {
-      console.log('Found existing host by email (legacy model)');
+      logDebug('Found existing host by email (legacy model)');
       return res.status(400).json({ 
         message: 'Host with this email already exists',
         details: 'An account with this email address is already registered'
@@ -553,7 +567,7 @@ router.post('/host/signup', async (req, res) => {
     
     const existingHostByPhone = await Host.findOne({ phoneNumber: normalizedPhone });
     if (existingHostByPhone) {
-      console.log('Found existing host by phone (legacy model)');
+      logDebug('Found existing host by phone (legacy model)');
       return res.status(400).json({ 
         message: 'Host with this phone number already exists',
         details: 'An account with this phone number is already registered'
@@ -563,7 +577,7 @@ router.post('/host/signup', async (req, res) => {
     // Note: Hosts can now have accounts even if email/phone is registered as User
     // This allows dual accounts (hosts can also be travelers)
     
-    console.log('No existing provider found, proceeding with creation...');
+    logDebug('No existing provider found, proceeding with creation...');
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -585,7 +599,7 @@ router.post('/host/signup', async (req, res) => {
       providerData.role = finalRole;
     }
 
-    console.log('Creating provider:', { 
+    logDebug('Creating provider:', { 
       email: normalizedEmail, 
       phoneNumber: normalizedPhone,
       name: name.trim(),
@@ -598,12 +612,12 @@ router.post('/host/signup', async (req, res) => {
 
     await provider.save();
     
-    console.log('Provider created successfully:', provider._id);
+    logDebug('Provider created successfully:', provider._id);
 
     // Generate token
     const token = jwt.sign(
       { userId: provider._id },
-      process.env.JWT_SECRET || 'fallback-secret-key',
+      JWT_SECRET,
       { expiresIn: '7d' }
     );
 
@@ -733,7 +747,7 @@ router.post('/host/login', async (req, res) => {
           host = await Provider.findOne({ phoneNumber: phoneWithoutPlus });
         }
         if (host) {
-          console.log('Found host using phone without + prefix');
+          logDebug('Found host using phone without + prefix');
         }
       }
       // If not found and phone doesn't start with +, try with +
@@ -744,13 +758,13 @@ router.post('/host/login', async (req, res) => {
           host = await Provider.findOne({ phoneNumber: phoneWithPlus });
         }
         if (host) {
-          console.log('Found host using phone with + prefix');
+          logDebug('Found host using phone with + prefix');
           normalizedPhone = phoneWithPlus; // Update normalized phone for consistency
         }
       }
     }
 
-    console.log('Host login attempt:', {
+    logDebug('Host login attempt:', {
       providedEmail: hasEmail ? email : null,
       providedPhone: hasPhone ? phoneNumber : null,
       normalizedEmail: normalizedEmail,
@@ -778,7 +792,7 @@ router.post('/host/login', async (req, res) => {
     // Generate token
     const token = jwt.sign(
       { userId: host._id },
-      process.env.JWT_SECRET || 'fallback-secret-key',
+      JWT_SECRET,
       { expiresIn: '7d' }
     );
 

@@ -94,7 +94,7 @@ export default function HostSidebar() {
                 <span className="text-xl font-bold text-white">T</span>
               </div>
               <div>
-                <h2 className="text-lg font-bold text-gray-900">Tribelink</h2>
+                <h2 className="text-lg font-bold text-gray-900">Triberoutes</h2>
                 <p className="text-gray-500 text-xs">Host Portal</p>
               </div>
             </div>

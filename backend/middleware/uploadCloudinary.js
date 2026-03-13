@@ -8,7 +8,7 @@
 
 const multer = require('multer');
 const cloudinary = require('../config/cloudinary');
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cloudinaryStorage = require('multer-storage-cloudinary');
 const path = require('path');
 
 // File filter - same as original upload.js
@@ -82,35 +82,31 @@ let upload;
 
 if (isCloudinaryConfigured) {
   // Use Cloudinary storage
-  // IMPORTANT: Use minimal params to avoid signature issues
-  // multer-storage-cloudinary automatically generates signatures, and adding
-  // format/quality/transformation params can cause mismatches
-  storage = new CloudinaryStorage({
+  // For multer-storage-cloudinary v2.x, the default export is a factory function
+  // (cloudinaryStorage(options)) rather than a class constructor.
+  storage = cloudinaryStorage({
     cloudinary: cloudinary,
     params: async (req, file) => {
       // Determine folder based on route
-      let folder = 'tribelink/experiences';
+      let folder = 'triberoutes/experiences';
       if (req.originalUrl?.includes('/abodes') || req.originalUrl?.includes('/adobes')) {
-        folder = 'tribelink/abodes';
+        folder = 'triberoutes/abodes';
       } else if (req.originalUrl?.includes('/hotels')) {
-        folder = 'tribelink/hotels';
+        folder = 'triberoutes/hotels';
       } else if (req.originalUrl?.includes('/drivers')) {
-        folder = 'tribelink/drivers';
+        folder = 'triberoutes/drivers';
       }
 
       // Generate unique public_id
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
       const publicId = `${folder}/${uniqueSuffix}`;
 
-      // Return ONLY essential params - no format, quality, or transformation
-      // These cause signature mismatches because multer-storage-cloudinary
-      // handles signature generation internally and expects specific param formats
+      // Return ONLY essential params - no format, quality, or transformation.
+      // Apply transformations at serve-time, not upload-time.
       return {
         folder: folder,
         public_id: publicId,
-        resource_type: 'auto' // Automatically detect image/video
-        // NOTE: Apply format/quality transformations when SERVING images, not during upload
-        // Example: imageUrl + '?f=webp&q=auto:good' when displaying
+        resource_type: 'auto', // Automatically detect image/video
       };
     },
   });

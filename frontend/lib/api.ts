@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { type AxiosError } from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
@@ -33,17 +33,23 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+interface AppError extends Error {
+  isAuthError?: boolean;
+  isNetworkError?: boolean;
+  status?: number;
+}
+
 // Handle response errors
 api.interceptors.response.use(
   (response) => response,
-  (error: any) => {
+  (error: AxiosError | any) => {
     // Enhanced error logging
     const apiUrl = API_URL;
     const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'unknown';
     
     // Safely log error details (only for non-public pages or non-401 errors)
     const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
-    const publicPages = ['/', '/explore', '/abodes', '/trips/experiences', '/events'];
+    const publicPages = ['/', '/explore', '/abodes', '/trips/select', '/trips/abodes', '/trips/experiences', '/events'];
     const isPublicPage = publicPages.some(page => currentPath === page || currentPath.startsWith(page + '/'));
     
     // Only log detailed errors if:
@@ -89,7 +95,7 @@ api.interceptors.response.use(
         
         // Only redirect if we're not on a public page and not already on a login page
         const currentPath = window.location.pathname;
-        const publicPages = ['/', '/explore', '/abodes', '/trips/experiences', '/events'];
+        const publicPages = ['/', '/explore', '/abodes', '/trips/select', '/trips/abodes', '/trips/experiences', '/events'];
         const isPublicPage = publicPages.some(page => currentPath === page || currentPath.startsWith(page + '/'));
         
         if (!isPublicPage && !currentPath.includes('/login') && !currentPath.includes('/signup')) {
@@ -101,9 +107,9 @@ api.interceptors.response.use(
         }
       }
       
-      const authError = new Error(errorMessage);
-      (authError as any).isAuthError = true;
-      (authError as any).status = 401;
+      const authError: AppError = new Error(errorMessage);
+      authError.isAuthError = true;
+      authError.status = 401;
       return Promise.reject(authError);
     }
     
@@ -118,8 +124,10 @@ api.interceptors.response.use(
       
       // Show user-friendly error
       if (typeof window !== 'undefined') {
-        const userError = new Error(`Cannot connect to server at ${apiUrl}. Please check:\n1. Backend is running\n2. CORS is configured\n3. Environment variables are set correctly`);
-        (userError as any).isNetworkError = true;
+        const userError: AppError = new Error(
+          `Cannot connect to server at ${apiUrl}. Please check:\n1. Backend is running\n2. CORS is configured\n3. Environment variables are set correctly`
+        );
+        userError.isNetworkError = true;
         return Promise.reject(userError);
       }
     }

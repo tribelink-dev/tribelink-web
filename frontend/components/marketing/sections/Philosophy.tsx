@@ -171,7 +171,7 @@ const Philosophy = () => {
                             <blockquote className="font-serif text-lg sm:text-2xl md:text-3xl text-white leading-relaxed italic mb-4 sm:mb-6">
                                 "Travel is not about the destination. It's about the people you meet, the stories you hear, and the wisdom you carry home."
                             </blockquote>
-                            <p className="text-white/80 text-sm sm:text-lg">— The Tribelink Philosophy</p>
+                            <p className="text-white/80 text-sm sm:text-lg">— The Triberoutes Philosophy</p>
                         </div>
                     </div>
                 </motion.div>

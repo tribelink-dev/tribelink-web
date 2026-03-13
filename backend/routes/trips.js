@@ -16,6 +16,13 @@ const { canExperienceBeScheduledForTrip } = require('../services/scheduler/avail
 const { normalizeExperiences, normalizeExperience, normalizeHotels, normalizeHotel, getBaseUrlFromRequest } = require('../utils/imageUtils');
 
 const router = express.Router();
+const isDev = process.env.NODE_ENV !== 'production';
+const logDebug = (...args) => {
+  if (isDev) {
+    // eslint-disable-next-line no-console
+    console.log(...args);
+  }
+};
 
 // Search experiences by location and date
 router.get('/search', async (req, res) => {
@@ -488,6 +495,130 @@ router.get('/experiences/:district/ai-filtered', authenticate, requireUser, asyn
   }
 });
 
+// Prompt-based AI refinement for experiences by district
+// Allows a free-text prompt to influence AI curation while keeping hard filters (location, dates) intact
+router.post('/experiences/:district/ai-refine', authenticate, requireUser, async (req, res) => {
+  try {
+    const { district } = req.params;
+    const { country, state, from, to, prompt } = req.body;
+    const userId = req.user._id;
+
+    const decodedDistrict = decodeURIComponent(district).trim();
+    if (!decodedDistrict) {
+      return res.status(400).json({ message: 'District parameter is required' });
+    }
+
+    // Build query similar to regular endpoint
+    const query = {
+      'location.district': {
+        $regex: new RegExp(`^${decodedDistrict.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+      }
+    };
+
+    if (country) {
+      query['location.country'] = {
+        $regex: new RegExp(`^${country.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+      };
+    }
+
+    if (state) {
+      query['location.state'] = {
+        $regex: new RegExp(`^${state.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+      };
+    }
+
+    // Add date filtering if provided (hard constraint)
+    if (from && to) {
+      const fromDate = new Date(from);
+      const toDate = new Date(to);
+      query.availableDates = {
+        $elemMatch: {
+          date: { $gte: fromDate, $lte: toDate },
+          available: true
+        }
+      };
+    }
+
+    // Fetch all candidate experiences
+    let allExperiences = await Experience.find(query)
+      .populate('provider', 'name rating')
+      .sort({ _id: 1 })
+      .lean();
+
+    if (allExperiences.length === 0) {
+      return res.json({
+        experiences: [],
+        aiFiltered: true,
+        message: 'No experiences found for this location'
+      });
+    }
+
+    // Use AI agent to refine based on prompt + context
+    const filteredExperiences = await filterExperiencesAI(userId, allExperiences, {
+      location: { district: decodedDistrict, state, country },
+      dateRange: from && to ? { from, to } : null,
+      prompt
+    });
+
+    // Get reviews for filtered experiences
+    const experiencesWithReviews = await Promise.all(
+      filteredExperiences.map(async (exp) => {
+        const reviews = await Review.find({ experience: exp._id })
+          .populate('user', 'name email')
+          .sort({ createdAt: -1 })
+          .limit(3)
+          .lean();
+
+        // Check availability for selected dates if provided
+        let availabilityStatus = {
+          available: true,
+          reason: null
+        };
+
+        if (from && to) {
+          const isSchedulable = canExperienceBeScheduledForTrip(exp, from, to, 1);
+          availabilityStatus = {
+            available: isSchedulable,
+            reason: isSchedulable ? null : 'Not available for selected dates'
+          };
+        }
+
+        return {
+          ...exp,
+          recentReviews: reviews,
+          provider: exp.provider
+            ? {
+                name: exp.provider.name || 'Unknown',
+                rating: exp.provider.rating || 0
+              }
+            : {
+                name: 'Unknown',
+                rating: 0
+              },
+          availabilityStatus
+        };
+      })
+    );
+
+    const baseUrl = getBaseUrlFromRequest(req);
+    const normalizedExperiences = normalizeExperiences(experiencesWithReviews, baseUrl);
+
+    res.json({
+      experiences: normalizedExperiences,
+      aiFiltered: true,
+      totalAvailable: allExperiences.length,
+      filteredTo: normalizedExperiences.length,
+      insights: filteredExperiences[0]?.aiInsights || 'AI-refined experiences based on your preferences'
+    });
+  } catch (error) {
+    console.error('Error in prompt-based AI refinement:', error);
+    res.status(500).json({
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
+
 // Automatic planning endpoint - Uses Pathfinder to select personalized experiences
 router.post('/plan/automatic', authenticate, requireUser, async (req, res) => {
   try {
@@ -528,7 +659,7 @@ router.post('/plan/automatic', authenticate, requireUser, async (req, res) => {
     const from = new Date(fromDate);
     const to = new Date(toDate);
     
-    console.log('[Automatic Planning] Searching experiences for:', {
+    logDebug('[Automatic Planning] Searching experiences for:', {
       locations: tripLocations,
       country,
       fromDate,
@@ -556,7 +687,7 @@ router.post('/plan/automatic', authenticate, requireUser, async (req, res) => {
       return query;
     });
 
-    console.log('[Automatic Planning] Location queries:', JSON.stringify(locationQueries, null, 2));
+    logDebug('[Automatic Planning] Location queries:', JSON.stringify(locationQueries, null, 2));
 
     // First, try to find experiences with date filter
     const queriesWithDates = locationQueries.map(query => ({
@@ -576,11 +707,11 @@ router.post('/plan/automatic', authenticate, requireUser, async (req, res) => {
       .sort({ _id: 1 })
       .lean();
 
-    console.log(`[Automatic Planning] Found ${allExperiences.length} experiences with date filter`);
+    logDebug(`[Automatic Planning] Found ${allExperiences.length} experiences with date filter`);
 
     // If no experiences match date filter, try without date filter (experiences might not have availableDates set)
     if (allExperiences.length === 0) {
-      console.log('[Automatic Planning] No experiences with date filter, trying without date filter...');
+      logDebug('[Automatic Planning] No experiences with date filter, trying without date filter...');
       allExperiences = await Experience.find({
         $or: locationQueries
       })
@@ -588,12 +719,12 @@ router.post('/plan/automatic', authenticate, requireUser, async (req, res) => {
         .sort({ _id: 1 })
         .lean();
       
-      console.log(`[Automatic Planning] Found ${allExperiences.length} experiences without date filter`);
+      logDebug(`[Automatic Planning] Found ${allExperiences.length} experiences without date filter`);
     }
 
     // If still no results, try with just state (if district was provided) or just country
     if (allExperiences.length === 0) {
-      console.log('[Automatic Planning] Still no experiences, trying broader search...');
+      logDebug('[Automatic Planning] Still no experiences, trying broader search...');
       const broaderQueries = tripLocations.map(loc => {
         const query = {
           'location.country': { $regex: new RegExp(country.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }
@@ -613,12 +744,12 @@ router.post('/plan/automatic', authenticate, requireUser, async (req, res) => {
         .limit(100) // Limit to prevent too many results
         .lean();
       
-      console.log(`[Automatic Planning] Found ${allExperiences.length} experiences with broader search`);
+      logDebug(`[Automatic Planning] Found ${allExperiences.length} experiences with broader search`);
     }
 
     // Final fallback: if still no results, try searching just by country (most permissive)
     if (allExperiences.length === 0) {
-      console.log('[Automatic Planning] Final fallback: searching by country only...');
+      logDebug('[Automatic Planning] Final fallback: searching by country only...');
       allExperiences = await Experience.find({
         'location.country': { $regex: new RegExp(country.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }
       })
@@ -627,20 +758,20 @@ router.post('/plan/automatic', authenticate, requireUser, async (req, res) => {
         .limit(50) // Limit to prevent too many results
         .lean();
       
-      console.log(`[Automatic Planning] Found ${allExperiences.length} experiences with country-only search`);
+      logDebug(`[Automatic Planning] Found ${allExperiences.length} experiences with country-only search`);
     }
     
     // Debug: If still no results, check what's actually in the database
     if (allExperiences.length === 0) {
       const totalExperiences = await Experience.countDocuments({});
-      console.log(`[Automatic Planning] Total experiences in database: ${totalExperiences}`);
+      logDebug(`[Automatic Planning] Total experiences in database: ${totalExperiences}`);
       
       if (totalExperiences > 0) {
         const sampleExperiences = await Experience.find({})
           .select('title location')
           .limit(5)
           .lean();
-        console.log('[Automatic Planning] Sample experiences in database:', sampleExperiences.map(e => ({
+        logDebug('[Automatic Planning] Sample experiences in database:', sampleExperiences.map(e => ({
           title: e.title,
           location: e.location
         })));
@@ -664,7 +795,7 @@ router.post('/plan/automatic', authenticate, requireUser, async (req, res) => {
             .limit(50)
             .lean();
           
-          console.log(`[Automatic Planning] Found ${allExperiences.length} experiences with loose state matching`);
+          logDebug(`[Automatic Planning] Found ${allExperiences.length} experiences with loose state matching`);
         }
       }
     }
@@ -680,14 +811,14 @@ router.post('/plan/automatic', authenticate, requireUser, async (req, res) => {
     // Final last resort: if still no experiences, return ANY experiences (limit to 20)
     // This ensures the user sees something rather than an error
     if (allExperiences.length === 0) {
-      console.log('[Automatic Planning] Last resort: returning any available experiences...');
+      logDebug('[Automatic Planning] Last resort: returning any available experiences...');
       allExperiences = await Experience.find({})
         .populate('provider', 'name rating')
         .sort({ _id: 1 })
         .limit(20)
         .lean();
       
-      console.log(`[Automatic Planning] Found ${allExperiences.length} experiences (last resort - any location)`);
+      logDebug(`[Automatic Planning] Found ${allExperiences.length} experiences (last resort - any location)`);
       
       // Ensure all experiences have valid provider data
       allExperiences = allExperiences.map(exp => {
@@ -708,7 +839,7 @@ router.post('/plan/automatic', authenticate, requireUser, async (req, res) => {
         
         // Debug: Check what locations exist in the database
         const totalCount = await Experience.countDocuments({});
-        console.log(`[Automatic Planning] Database is empty. Total experiences: ${totalCount}`);
+        logDebug(`[Automatic Planning] Database is empty. Total experiences: ${totalCount}`);
         
         return res.status(404).json({ 
           message: `No experiences available for ${locationDescription}. The database appears to be empty. Please contact support or try again later.`,
@@ -738,8 +869,8 @@ router.post('/plan/automatic', authenticate, requireUser, async (req, res) => {
     // For long trips (6+ days), aim for 12+ experiences
     const targetCount = Math.min(maxExperiences, allExperiences.length);
     
-    console.log(`[Automatic Planning] Trip: ${tripDays} days, Pace: ${pace}, Max experiences: ${maxExperiences}, Target: ${targetCount}`);
-    console.log(`[Automatic Planning] Filtering ${allExperiences.length} experiences to maximize ${targetCount} experiences using Pathfinder`);
+    logDebug(`[Automatic Planning] Trip: ${tripDays} days, Pace: ${pace}, Max experiences: ${maxExperiences}, Target: ${targetCount}`);
+    logDebug(`[Automatic Planning] Filtering ${allExperiences.length} experiences to maximize ${targetCount} experiences using Pathfinder`);
     
     let filteredExperiences;
     try {
@@ -755,12 +886,12 @@ router.post('/plan/automatic', authenticate, requireUser, async (req, res) => {
           maxExperiences: maxExperiences
         }
       );
-      console.log(`[Automatic Planning] Pathfinder returned ${filteredExperiences.length} experiences`);
+      logDebug(`[Automatic Planning] Pathfinder returned ${filteredExperiences.length} experiences`);
     } catch (filterError) {
       console.error('[Automatic Planning] Pathfinder error:', filterError);
       // Fallback: return top experiences by basic criteria
       filteredExperiences = allExperiences.slice(0, targetCount);
-      console.log(`[Automatic Planning] Using fallback: ${filteredExperiences.length} experiences`);
+      logDebug(`[Automatic Planning] Using fallback: ${filteredExperiences.length} experiences`);
     }
 
     // Normalize experiences
@@ -874,14 +1005,14 @@ router.post('/schedule', authenticate, requireUser, async (req, res) => {
     experienceIds = (user.bucketlist || []).map(id => id.toString());
 
     if (experienceIds.length === 0) {
-      console.log('[Schedule Endpoint] Bucketlist is empty for user:', req.user._id);
+      logDebug('[Schedule Endpoint] Bucketlist is empty for user:', req.user._id);
       return res.status(400).json({ 
         message: 'Bucketlist is empty. Please add experiences to your bucketlist before scheduling a trip.',
         bucketlistCount: 0
       });
     }
     
-    console.log('[Schedule Endpoint] User bucketlist:', {
+    logDebug('[Schedule Endpoint] User bucketlist:', {
       experienceIdsCount: experienceIds.length,
       experienceIds: experienceIds.slice(0, 5) // Log first 5 for debugging
     });
@@ -904,7 +1035,7 @@ router.post('/schedule', authenticate, requireUser, async (req, res) => {
     // Schedule trip using AI-powered scheduler (Gumo.ai-like)
     let scheduleResult;
     try {
-      console.log('[Schedule Endpoint] Calling scheduler with:', {
+      logDebug('[Schedule Endpoint] Calling scheduler with:', {
         experienceIdsCount: experienceIds.length,
         fromDate,
         toDate,
@@ -927,7 +1058,7 @@ router.post('/schedule', authenticate, requireUser, async (req, res) => {
         userId: req.user._id.toString()
       });
       
-      console.log('[Schedule Endpoint] Scheduler returned successfully:', {
+      logDebug('[Schedule Endpoint] Scheduler returned successfully:', {
         scheduleDays: scheduleResult?.schedule?.length || 0,
         totalPrice: scheduleResult?.totalPrice,
         experiencesCount: scheduleResult?.selectedExperiencesCount
@@ -942,7 +1073,7 @@ router.post('/schedule', authenticate, requireUser, async (req, res) => {
         throw new Error('Scheduler returned an empty schedule. Please ensure you have experiences in your bucketlist that match your trip dates and location.');
       }
       
-      console.log('[Schedule Endpoint] Schedule validation passed');
+      logDebug('[Schedule Endpoint] Schedule validation passed');
     } catch (scheduleError) {
       console.error('[Schedule Endpoint] Scheduler error:', scheduleError);
       console.error('[Schedule Endpoint] Error stack:', scheduleError.stack);

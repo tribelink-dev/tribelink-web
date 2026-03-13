@@ -46,11 +46,11 @@ const Footer = () => {
                         className="md:col-span-2 max-w-md"
                     >
                         <div className="font-serif text-4xl font-bold mb-6 bg-gradient-to-r from-white to-terracotta bg-clip-text text-transparent">
-                            Tribelink
+                            Triberoutes
                         </div>
                         <p className="text-xl mb-6 text-white/90 font-light">Connect Deeply. Travel Authentically.</p>
                         <p className="text-white/70 leading-relaxed mb-6">
-                            Come Back to What Matters. Tribelink is an invitation to step through the screen and into the scenery.
+                            Come Back to What Matters. Triberoutes is an invitation to step through the screen and into the scenery.
                             To hold the clay, to taste the spice, to shake the hand.
                         </p>
                         
@@ -58,7 +58,7 @@ const Footer = () => {
                         <div className="space-y-3 mt-8">
                             <div className="flex items-center gap-3 text-white/80">
                                 <Mail size={18} className="text-terracotta" />
-                                <span>info@tribelink.com</span>
+                                <span>info@triberoutes.com</span>
                             </div>
                             <div className="flex items-center gap-3 text-white/80">
                                 <Phone size={18} className="text-terracotta" />
@@ -229,7 +229,7 @@ const Footer = () => {
                     className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4"
                 >
                     <p className="text-white/50 text-sm">
-                        © {currentYear} Tribelink. Built with intention, designed for connection.
+                        © {currentYear} Triberoutes. Built with intention, designed for connection.
                     </p>
                     <div className="flex items-center gap-2 text-white/50 text-sm">
                         <span>Made with</span>

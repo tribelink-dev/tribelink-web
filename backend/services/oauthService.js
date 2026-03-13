@@ -9,6 +9,12 @@ const User = require('../models/User');
 const Host = require('../models/Host');
 const bcrypt = require('bcryptjs');
 
+// Load and validate JWT secret once at startup
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required but not set.');
+}
+
 // In-memory state store (in production, use Redis or database)
 const oauthStates = new Map();
 
@@ -355,7 +361,7 @@ async function completeHostRegistration(data) {
 function generateJWT(userId, userType) {
   return jwt.sign(
     { userId, userType },
-    process.env.JWT_SECRET || 'fallback-secret-key',
+    JWT_SECRET,
     { expiresIn: '7d' }
   );
 }

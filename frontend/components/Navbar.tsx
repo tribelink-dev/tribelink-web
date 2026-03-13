@@ -8,18 +8,24 @@ import { useEffect, useState } from 'react';
 import { LOGO_PATH, LOGO_ALT_TEXT } from '@/lib/constants';
 import SearchBar from './SearchBar';
 import CurrencySelectorButton from './CurrencySelectorButton';
+import { useCart } from '@/lib/CartContext';
 import api from '@/lib/api';
+import { ShoppingCart } from 'lucide-react';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const { cart } = useCart();
   const [isHost, setIsHost] = useState(false);
   const [hostDashboard, setHostDashboard] = useState('/host/dashboard');
   const [hostName, setHostName] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isViewingOwnAbode, setIsViewingOwnAbode] = useState(false);
+
+  const cartItemCount = cart?.items?.length ?? 0;
+  const showCart = (user || isHost) && !isHost; // Travelers only
 
   useEffect(() => {
     // Check if user is a host
@@ -99,7 +105,7 @@ export default function Navbar() {
     if (isHost) {
       router.push(hostDashboard);
     } else {
-      router.push('/');
+      router.push('/explore');
     }
   };
 
@@ -137,8 +143,8 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <a 
-            href={isHost ? hostDashboard : "/"}
+          <a
+            href={isHost ? hostDashboard : "/explore"}
             onClick={handleLogoClick}
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
@@ -152,7 +158,7 @@ export default function Navbar() {
               />
             </div>
             <span className="text-lg font-semibold text-gray-900">
-                TRIBELINK
+                TRIBEROUTES
               </span>
           </a>
 
@@ -167,11 +173,36 @@ export default function Navbar() {
           <div className="flex items-center gap-3">
             {/* Currency Selector */}
             <CurrencySelectorButton />
-            
+
+            {/* Bucket (cart) - travelers can access from anywhere */}
+            {showCart && (
+              <button
+                onClick={() => router.push('/cart')}
+                className="relative p-2 rounded-full text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                title="Your bucket"
+                aria-label={`Bucket${cartItemCount > 0 ? ` (${cartItemCount} items)` : ''}`}
+              >
+                <ShoppingCart className="w-5 h-5" />
+                {cartItemCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[1.25rem] h-5 px-1 flex items-center justify-center bg-heritage-gold text-white text-xs font-bold rounded-full">
+                    {cartItemCount > 99 ? '99+' : cartItemCount}
+                  </span>
+                )}
+              </button>
+            )}
 
             {!(user || isHost) ? (
-              /* Sign In / Sign Up Buttons for logged-out users */
+              /* Sign In / Sign Up + Plan trip for logged-out users */
               <div className="flex items-center gap-3">
+                {!isTripPage && (
+                  <button
+                    onClick={() => router.push('/trips/select')}
+                    className="px-4 py-2 text-sm font-medium text-charcoal-800 border border-gray-200 rounded-full hover:border-heritage-gold/60 hover:bg-cream-100/80 transition-colors hidden md:block"
+                    title="Plan a trip with local abodes and experiences"
+                  >
+                    Plan trip
+                  </button>
+                )}
                 <button
                   onClick={() => router.push('/login?returnTo=/explore')}
                   className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
@@ -193,6 +224,15 @@ export default function Navbar() {
                     className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-full transition-colors hidden md:block"
                   >
                     Explore
+                  </button>
+                )}
+                {!isTripPage && (
+                  <button
+                    onClick={() => router.push('/trips/select')}
+                    className="px-4 py-2 text-sm font-medium text-charcoal-800 border border-gray-200 rounded-full hover:border-heritage-gold/60 hover:bg-cream-100/80 transition-colors hidden md:block"
+                    title="Plan a trip with local abodes and experiences"
+                  >
+                    Plan trip
                   </button>
                 )}
                 

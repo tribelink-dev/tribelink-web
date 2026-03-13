@@ -252,7 +252,7 @@ router.post('/sos', authenticate, requireUser, async (req, res) => {
           ${message ? `<p><strong>Message:</strong> ${message}</p>` : ''}
         </div>
         <p style="color: #dc2626; font-weight: bold;">⚠️ Please contact the user immediately or local emergency services.</p>
-        <p style="color: #6b7280; font-size: 12px; margin-top: 20px;">This is an automated emergency alert from Tribelink.</p>
+        <p style="color: #6b7280; font-size: 12px; margin-top: 20px;">This is an automated emergency alert from Triberoutes.</p>
       </div>
     `;
 

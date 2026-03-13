@@ -73,6 +73,11 @@ export default function ExperiencesPage() {
   const [useAIFiltering, setUseAIFiltering] = useState(false);
   const [aiInsights, setAiInsights] = useState<string>('');
   const [totalAvailable, setTotalAvailable] = useState<number>(0);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiPromptApplied, setAiPromptApplied] = useState(false);
+
+  const enablePromptRefine =
+    process.env.NEXT_PUBLIC_ENABLE_EXPERIENCE_PROMPT_REFINE !== 'false';
 
   const country = searchParams.get('country') || '';
   const from = searchParams.get('from') || '';
@@ -170,7 +175,7 @@ export default function ExperiencesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locationsKey, country, user]);
 
-  const fetchExperiences = async (forceAIFiltering?: boolean) => {
+  const fetchExperiences = async (forceAIFiltering?: boolean, refinePrompt?: string) => {
     try {
       setLoading(true);
       setError('');
@@ -186,10 +191,18 @@ export default function ExperiencesPage() {
       if (shouldUseAI && user) {
         try {
           const validLocations = locations.filter(loc => loc.district);
+          const promptToUse = (refinePrompt || '').trim();
           const aiPromises = validLocations.map(loc =>
-            api.get('/trips/experiences/' + encodeURIComponent(loc.district) + '/ai-filtered', {
-              params: { country, state: loc.state, from, to }
-            })
+            api.post(
+              '/trips/experiences/' + encodeURIComponent(loc.district) + '/ai-refine',
+              {
+                country,
+                state: loc.state,
+                from,
+                to,
+                prompt: promptToUse || undefined
+              }
+            )
           );
           
           const aiResponses = await Promise.all(aiPromises);
@@ -221,10 +234,12 @@ export default function ExperiencesPage() {
           if (firstInsight) {
             setAiInsights(firstInsight);
           }
+          setAiPromptApplied(!!promptToUse);
           
           return;
-        } catch (aiErr: any) {
+        } catch (aiErr: unknown) {
           console.warn('AI filtering failed, falling back to regular:', aiErr);
+          setAiPromptApplied(false);
         }
       }
       
@@ -255,6 +270,7 @@ export default function ExperiencesPage() {
       setExperiences(uniqueExperiences);
       setTotalAvailable(totalAvailableCount || uniqueExperiences.length);
       setAiInsights('');
+      setAiPromptApplied(false);
     } catch (err: any) {
       console.error('Error fetching experiences:', err);
       const errorMessage = err.response?.data?.message || err.response?.data?.error || 'Failed to load experiences';
@@ -270,11 +286,13 @@ export default function ExperiencesPage() {
   const fetchBucketlist = async () => {
     try {
       const response = await api.get('/user/bucketlist');
-      const bucketlistIds = response.data.bucketlist?.map((e: any) => {
-        return e._id ? e._id.toString() : e.toString();
-      }) || [];
+      const bucketlistRaw = response.data.bucketlist as Array<string | { _id: string }> | undefined;
+      const bucketlistIds =
+        bucketlistRaw?.map((entry) =>
+          typeof entry === 'string' ? entry : entry._id?.toString()
+        ) || [];
       setBucketlist(bucketlistIds);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching bucketlist:', err);
       setBucketlist([]);
     }
@@ -470,15 +488,50 @@ export default function ExperiencesPage() {
                         </span>
                       )}
                     </div>
-                    <p className={`text-sm leading-relaxed ${
-                      useAIFiltering ? 'text-indigo-700' : 'text-slate-600'
-                    }`}>
-                      {useAIFiltering 
+                    <p
+                      className={`text-sm leading-relaxed ${
+                        useAIFiltering ? 'text-indigo-700' : 'text-slate-600'
+                      }`}
+                    >
+                      {useAIFiltering
                         ? `Curated ${experiences.length} personalized matches from ${totalAvailable} available experiences`
                         : 'Get AI-powered personalized recommendations based on your preferences'}
                     </p>
                     {useAIFiltering && aiInsights && (
                       <p className="text-xs text-indigo-600 italic mt-2">"{aiInsights}"</p>
+                    )}
+                    {useAIFiltering && enablePromptRefine && (
+                      <div className="mt-4 space-y-2">
+                        <label className="block text-xs font-semibold text-slate-700">
+                          Refine these AI picks with a prompt{' '}
+                          <span className="font-normal text-slate-500">
+                            (optional, e.g. “more kid-friendly, avoid late nights”)
+                          </span>
+                        </label>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <input
+                            type="text"
+                            value={aiPrompt}
+                            onChange={(e) => setAiPrompt(e.target.value)}
+                            placeholder="Describe what you have in mind..."
+                            className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!aiPrompt.trim()) {
+                                setAiPromptApplied(false);
+                                fetchExperiences(true, '');
+                                return;
+                              }
+                              fetchExperiences(true, aiPrompt);
+                            }}
+                            className="inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-semibold shadow-sm hover:bg-indigo-700 transition-colors whitespace-nowrap"
+                          >
+                            Apply prompt
+                          </button>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -515,15 +568,59 @@ export default function ExperiencesPage() {
 
         {/* Results Summary */}
         {experiences.length > 0 && (
-          <div className="mb-6 flex items-center justify-between">
-            <div className="text-slate-600">
-              <span className="font-semibold text-slate-900">{experiences.length}</span> {experiences.length === 1 ? 'experience' : 'experiences'} found
-              {from && to && (
-                <span className="ml-2 text-sm">
-                  for {new Date(from).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(to).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                </span>
-              )}
+          <div className="mb-6 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <div className="text-slate-600">
+                <span className="font-semibold text-slate-900">{experiences.length}</span>{' '}
+                {experiences.length === 1 ? 'experience' : 'experiences'} found
+                {from && to && (
+                  <span className="ml-2 text-sm">
+                    for{' '}
+                    {new Date(from).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric'
+                    })}{' '}
+                    -{' '}
+                    {new Date(to).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric'
+                    })}
+                  </span>
+                )}
+              </div>
             </div>
+            {useAIFiltering && enablePromptRefine && aiPromptApplied && (
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 font-semibold border border-indigo-100">
+                    AI refine on
+                  </span>
+                  <span className="text-slate-500">
+                    Matching your prompt:{' '}
+                    <span className="italic text-slate-700">
+                      “
+                      {aiPrompt.length > 80
+                        ? `${aiPrompt.slice(0, 77)}...`
+                        : aiPrompt}
+                      ”
+                    </span>
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAiPrompt('');
+                    setAiPromptApplied(false);
+                    if (useAIFiltering) {
+                      fetchExperiences(true, '');
+                    }
+                  }}
+                  className="text-xs font-semibold text-slate-500 hover:text-slate-800 underline underline-offset-2"
+                >
+                  Reset AI refine
+                </button>
+              </div>
+            )}
           </div>
         )}
 

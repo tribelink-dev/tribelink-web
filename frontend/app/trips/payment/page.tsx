@@ -215,7 +215,7 @@ export default function PaymentPage() {
           </p>
           <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary-50 border border-primary-200 rounded-lg">
             <span className="text-primary-600">💳</span>
-            <span className="text-sm font-semibold text-primary-700">Payment via Tribelink Wallet</span>
+            <span className="text-sm font-semibold text-primary-700">Payment via Triberoutes Wallet</span>
           </div>
         </div>
 

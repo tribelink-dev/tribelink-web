@@ -451,12 +451,12 @@ async function createKeralaExperiences() {
     console.log('✅ Connected to database\n');
 
     // Find or create a provider for Kerala experiences
-    let provider = await Provider.findOne({ email: 'kerala.experiences@tribelink.com' });
+    let provider = await Provider.findOne({ email: 'kerala.experiences@triberoutes.com' });
     
     if (!provider) {
       const hashedPassword = await bcrypt.hash('kerala123', 10);
       provider = new Provider({
-        email: 'kerala.experiences@tribelink.com',
+        email: 'kerala.experiences@triberoutes.com',
         phoneNumber: '+919876543210',
         password: hashedPassword,
         name: 'Kerala Authentic Experiences',

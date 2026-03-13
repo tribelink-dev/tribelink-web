@@ -116,6 +116,30 @@ export default function BookingPaymentPage() {
     }
   };
 
+  const handlePayWithCard = async () => {
+    if (!booking || !bookingId) {
+      setError('Booking information is missing. Please try again.');
+      return;
+    }
+    setProcessing(true);
+    setError('');
+    setMessage('');
+    try {
+      const response = await api.post(`/bookings/${bookingId}/create-payment-session`);
+      const url = response.data?.url;
+      if (url && typeof window !== 'undefined') {
+        window.location.href = url;
+        return;
+      }
+      setError('Could not start payment. Please try again.');
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || 'Payment could not be started';
+      setError(err.response?.status === 503 ? 'Card payment is not configured. Please pay with wallet.' : msg);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const getBookingTitle = () => {
     if (!booking) return 'Booking';
     switch (booking.bookingType) {
@@ -206,7 +230,7 @@ export default function BookingPaymentPage() {
             </div>
             <div>
               <h1 className="text-4xl font-bold text-charcoal-700">Secure Payment</h1>
-              <p className="text-charcoal-600 mt-1">Pay with your Tribelink wallet</p>
+              <p className="text-charcoal-600 mt-1">Pay with card or Triberoutes wallet</p>
             </div>
           </div>
         </motion.div>
@@ -347,24 +371,36 @@ export default function BookingPaymentPage() {
                   </p>
                 </div>
               )}
-              <motion.button
-                onClick={handlePayment}
-                disabled={processing || booking.paymentStatus === 'Completed'}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-                className="w-full py-4 bg-white text-heritage-gold font-bold text-lg rounded-xl shadow-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-all"
-              >
-                {processing ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <span className="inline-block w-5 h-5 border-2 border-heritage-gold border-t-transparent rounded-full animate-spin" />
-                    Processing…
-                  </span>
-                ) : booking.paymentStatus === 'Completed' ? (
-                  'Already paid'
-                ) : (
-                  'Complete payment & confirm booking'
-                )}
-              </motion.button>
+              <div className="flex flex-col gap-3">
+                <motion.button
+                  onClick={handlePayWithCard}
+                  disabled={processing || booking.paymentStatus === 'Completed'}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                  className="w-full py-4 bg-white text-heritage-gold font-bold text-lg rounded-xl shadow-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-all flex items-center justify-center gap-2"
+                >
+                  <CreditCard className="w-5 h-5" />
+                  {processing ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="inline-block w-5 h-5 border-2 border-heritage-gold border-t-transparent rounded-full animate-spin" />
+                      Redirecting…
+                    </span>
+                  ) : booking.paymentStatus === 'Completed' ? (
+                    'Already paid'
+                  ) : (
+                    'Pay with card'
+                  )}
+                </motion.button>
+                <motion.button
+                  onClick={handlePayment}
+                  disabled={processing || booking.paymentStatus === 'Completed'}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                  className="w-full py-3 bg-white/20 text-white font-semibold text-base rounded-xl border-2 border-white/50 hover:bg-white/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  {booking.paymentStatus === 'Completed' ? 'Already paid' : 'Pay with wallet'}
+                </motion.button>
+              </div>
             </motion.div>
           </>
         )}

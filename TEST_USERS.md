@@ -1,6 +1,6 @@
 # Test Users Documentation
 
-This document contains sample test user credentials for all account types in the Tribelink Platform.
+This document contains sample test user credentials for all account types in the Triberoutes Platform.
 
 ## How to Create Test Users
 

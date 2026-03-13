@@ -1,4 +1,4 @@
-# 🌍 Tribelink - AI Tourism Platform
+# 🌍 Triberoutes - AI Tourism Platform
 
 **A comprehensive tourism platform connecting travelers with authentic local experiences, accommodations, guides, and transportation services powered by AI-driven trip planning.**
 
@@ -26,7 +26,7 @@
 
 ## 🎯 Overview
 
-Tribelink is a full-stack tourism platform that enables:
+Triberoutes is a full-stack tourism platform that enables:
 - **Travelers** to discover and book unique experiences, accommodations, guided tours, and transportation
 - **Service Providers** (Hosts, Guides, Hotel Owners, Drivers) to list and manage their services
 - **AI-powered trip planning** with personalized recommendations and intelligent scheduling
@@ -636,7 +636,7 @@ PoC/
 │   │   ├── providerUtils.ts  # Provider utility functions
 │   │   └── safetyUtils.ts    # Safety utility functions
 │   └── public/                # Static assets
-│       └── tribelink-logo.svg
+│       └── triberoutes-logo.svg
 │
 ├── backend/                    # Express.js backend application
 │   ├── config/                # Configuration files
@@ -758,6 +758,18 @@ SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
 SMTP_PASS=your-app-password
+
+# Payment provider: razorpay (default, India) or stripe
+PAYMENT_PROVIDER=razorpay
+
+# Razorpay (when PAYMENT_PROVIDER=razorpay). Webhook URL: https://your-api/api/webhooks/razorpay, subscribe to payment.captured
+RAZORPAY_KEY_ID=rzp_test_your-key-id
+RAZORPAY_KEY_SECRET=your-key-secret
+RAZORPAY_WEBHOOK_SECRET=your-webhook-secret
+
+# Stripe (when PAYMENT_PROVIDER=stripe)
+STRIPE_SECRET_KEY=sk_test_your-stripe-secret-key
+STRIPE_WEBHOOK_SECRET=whsec_your-webhook-signing-secret
 ```
 
 ### Frontend Environment Variables
@@ -767,6 +779,9 @@ Create a `.env.local` file in the `frontend/` directory:
 ```env
 # Backend API URL
 NEXT_PUBLIC_API_URL=http://localhost:5000/api
+
+# Optional: Stripe publishable key only if using Stripe and need it on frontend
+# NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
 ```
 
 ---

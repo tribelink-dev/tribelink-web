@@ -295,7 +295,7 @@ export default function GoogleAuthSuccess() {
           className="flex items-center justify-center gap-2 text-heritage-gold"
         >
           <Sparkles className="w-5 h-5 animate-pulse" />
-          <span className="text-sm font-medium">Welcome to TribeLink!</span>
+          <span className="text-sm font-medium">Welcome to Triberoutes!</span>
         </motion.div>
       </motion.div>
     </div>

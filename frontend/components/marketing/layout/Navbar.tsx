@@ -11,8 +11,14 @@ const Navbar = () => {
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [scrollProgress, setScrollProgress] = useState(0);
+    const [isHost, setIsHost] = useState(false);
     const { scrollYProgress } = useScroll();
     const { user } = useAuth();
+
+    useEffect(() => {
+        if (typeof window === 'undefined' || !user) return;
+        setIsHost(localStorage.getItem('userType') === 'host' || !!localStorage.getItem('host'));
+    }, [user]);
 
     useMotionValueEvent(scrollYProgress, "change", (latest) => {
         setScrollProgress(latest);
@@ -58,7 +64,7 @@ const Navbar = () => {
                             className="flex items-center gap-2 group"
                         >
                             <div className="text-white font-serif text-2xl font-bold tracking-wider relative">
-                                Tribelink
+                                Triberoutes
                                 <motion.div
                                     className="absolute bottom-0 left-0 h-0.5 bg-terracotta"
                                     initial={{ width: 0 }}
@@ -90,8 +96,8 @@ const Navbar = () => {
                                 />
                             </motion.a>
                         ))}
-                        {user ? (
-                            <Link href="/dashboard">
+                        {user && isHost ? (
+                            <Link href="/host/dashboard">
                                 <motion.div
                                     className="bg-terracotta text-white px-6 py-2 rounded-full font-medium hover:bg-terracotta/90 transition-all relative overflow-hidden group shadow-lg"
                                     whileHover={{ scale: 1.05 }}
@@ -189,8 +195,8 @@ const Navbar = () => {
                                             {link.name}
                                         </motion.a>
                                     ))}
-                                    {user ? (
-                                        <Link href="/dashboard">
+                                    {user && isHost ? (
+                                        <Link href="/host/dashboard">
                                             <motion.div
                                                 className="bg-terracotta text-white text-center py-3 rounded-lg font-medium mt-4 shadow-lg"
                                                 onClick={() => setIsMobileMenuOpen(false)}

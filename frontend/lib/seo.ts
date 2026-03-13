@@ -7,7 +7,7 @@
 const ALLOWED_IMAGE_DOMAINS = [
   'triberoutes.com',
   'www.triberoutes.com',
-  'tribelink-app.vercel.app',
+  'triberoutes-app.vercel.app',
   'res.cloudinary.com', // Cloudinary CDN
   'localhost', // For development
 ];
@@ -103,7 +103,7 @@ export function validateCanonicalUrl(path: string): string {
       
       // Only allow our domains
       if (!hostname.includes('triberoutes.com') && 
-          !hostname.includes('tribelink-app.vercel.app') &&
+          !hostname.includes('triberoutes-app.vercel.app') &&
           hostname !== 'localhost') {
         // Return base URL if external domain detected
         return getBaseUrl();
@@ -208,7 +208,7 @@ export function generateOrganizationSchema() {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: 'Triberoutes',
-    alternateName: 'Tribelink',
+    alternateName: 'Triberoutes',
     url: baseUrl,
     logo: `${baseUrl}/assets/logo.jpg`,
     description: 'Authentic local experiences and cultural stays for travelers',

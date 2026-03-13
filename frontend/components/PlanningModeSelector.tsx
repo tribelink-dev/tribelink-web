@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion';
 
-export type PlanningMode = 'manual' | 'automatic';
+export type PlanningMode = 'manual' | 'automatic' | 'abode';
 
 interface PlanningModeSelectorProps {
   selectedMode: PlanningMode;
@@ -55,6 +55,20 @@ export default function PlanningModeSelector({
       accentColor: 'purple',
       iconBg: 'bg-gradient-to-br from-purple-500 to-purple-600',
       badge: 'AI Powered'
+    },
+    {
+      id: 'abode',
+      title: 'Plan with Abodes',
+      description: 'Stay-first trips with local hosts, food, and experiences',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 11l9-7 9 7M4 10v10a1 1 0 001 1h4m6 0h4a1 1 0 001-1V10M9 21V12h6v9" />
+        </svg>
+      ),
+      gradient: 'from-amber-600 via-amber-500 to-orange-500',
+      accentColor: 'amber',
+      iconBg: 'bg-gradient-to-br from-amber-500 to-amber-600',
+      badge: 'Local Abodes'
     }
   ];
 

@@ -14,8 +14,68 @@ import { getImageUrl } from '@/lib/imageUtils';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { useCurrency } from '@/lib/CurrencyContext';
-import { Sparkles, Home, Heart, Filter, ArrowDown, TrendingUp, Star, MapPin } from 'lucide-react';
+import { Sparkles, Home, Heart, Filter, ArrowDown, TrendingUp, Star, MapPin, X, Wand2, RotateCcw, ChevronDown } from 'lucide-react';
 import AuthPromptModal from '@/components/AuthPromptModal';
+
+/** Compact section header: one-line title + tagline, with optional "Learn more" expandable copy so listings appear sooner. */
+function SectionHeaderCompact({
+  icon,
+  iconBgClassName,
+  title,
+  tagline,
+  expandableTitle,
+  expandableContent,
+}: {
+  icon: React.ReactNode;
+  iconBgClassName: string;
+  title: string;
+  tagline: string;
+  expandableTitle: string;
+  expandableContent: string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.2 }}
+      className="mb-6"
+    >
+      <div className="flex flex-wrap items-center gap-3">
+        <div className={`w-12 h-12 rounded-2xl ${iconBgClassName} flex items-center justify-center shadow-lg shrink-0`}>
+          {icon}
+        </div>
+        <div className="min-w-0">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900">{title}</h2>
+          <p className="text-gray-600 text-sm md:text-base mt-0.5">{tagline}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setExpanded((e) => !e)}
+          className="ml-auto flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:border-heritage-gold/50 hover:text-heritage-gold-dark transition-colors"
+        >
+          {expanded ? 'Less' : 'Learn more'}
+          <ChevronDown className={`w-4 h-4 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+        </button>
+      </div>
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="overflow-hidden"
+          >
+            <p className="mt-4 text-gray-600 text-sm leading-relaxed max-w-2xl border-l-2 border-heritage-gold/40 pl-4">
+              {expandableContent}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
 
 export default function ExplorePage() {
   const router = useRouter();
@@ -81,6 +141,16 @@ export default function ExplorePage() {
   });
   
   const [experienceSort, setExperienceSort] = useState('rating');
+
+  // Secondary prompt-based refinement state
+  const [abodePrompt, setAbodePrompt] = useState('');
+  const [abodePromptApplied, setAbodePromptApplied] = useState(false);
+  const [experiencePrompt, setExperiencePrompt] = useState('');
+  const [experiencePromptApplied, setExperiencePromptApplied] = useState(false);
+
+  // Prompt panel visibility (opened via compact pill)
+  const [showAbodeRefine, setShowAbodeRefine] = useState(false);
+  const [showExperienceRefine, setShowExperienceRefine] = useState(false);
 
   // Scroll animations
   const { scrollY } = useScroll();
@@ -335,6 +405,7 @@ export default function ExplorePage() {
         pages: abodesData.pagination?.pages || 1
       });
       setAbodesPage(page);
+      setAbodePromptApplied(false);
     } catch (abodesError: any) {
       if (abodesError.response?.status !== 401) {
         console.warn('Could not fetch abodes:', abodesError.message);
@@ -527,7 +598,7 @@ export default function ExplorePage() {
       {/* Hero Section - Enhanced */}
       <motion.div 
         style={{ opacity: heroOpacity, scale: heroScale }}
-        className="relative bg-gradient-to-br from-heritage-gold/10 via-cream-50/80 to-heritage-gold-light/5 pb-20 pt-32 overflow-hidden"
+        className="relative bg-gradient-to-br from-heritage-gold/10 via-cream-50/80 to-heritage-gold-light/5 pb-12 pt-32 overflow-hidden"
       >
         {/* Animated Background Elements */}
         <div className="absolute inset-0 overflow-hidden">
@@ -669,7 +740,7 @@ export default function ExplorePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1 }}
-            className="flex flex-col items-center mt-16"
+            className="flex flex-col items-center mt-10"
           >
             <span className="text-sm text-gray-500 mb-2 font-medium">Scroll to explore</span>
             <motion.div
@@ -699,7 +770,7 @@ export default function ExplorePage() {
       </motion.div>
 
       {/* Content Sections */}
-      <div id="results-section" className="max-w-7xl mx-auto px-6 py-8">
+      <div id="results-section" className="max-w-7xl mx-auto px-6 py-6">
         <AnimatePresence mode="wait">
           {activeSection === 'abodes' && (
             <motion.div
@@ -710,74 +781,15 @@ export default function ExplorePage() {
               transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
               className="w-full"
             >
-              {/* Header Section - Redesigned */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="relative bg-gradient-to-br from-heritage-gold/10 via-cream-50/50 to-heritage-gold-light/5 rounded-3xl p-10 md:p-16 mb-12 overflow-hidden border border-heritage-gold/20"
-              >
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(212,175,55,0.1),transparent_50%)]"></div>
-                <div className="relative z-10">
-                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-6">
-                    <div className="flex items-center gap-6">
-                      <motion.div
-                        whileHover={{ scale: 1.1, rotate: 5 }}
-                        className="w-24 h-24 rounded-3xl bg-gradient-to-br from-heritage-gold to-heritage-gold-dark flex items-center justify-center shadow-2xl"
-                      >
-                        <Home className="w-12 h-12 text-white" />
-                      </motion.div>
-                      <div>
-                        <h2 className="text-4xl md:text-6xl font-bold text-gray-900 mb-3">
-                          Stay with Local Hosts
-                        </h2>
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-1 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg">
-                            <TrendingUp className="w-4 h-4 text-heritage-gold" />
-                            <span className="text-sm font-semibold text-gray-700">Cultural Immersion</span>
-                          </div>
-                          <div className="flex items-center gap-1 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg">
-                            <Star className="w-4 h-4 text-heritage-gold fill-heritage-gold" />
-                            <span className="text-sm font-semibold text-gray-700">Authentic Experience</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    {/* Advanced Search - Disabled */}
-                    {/* <Link 
-                      href="/adobes" 
-                      className="group flex items-center gap-3 px-8 py-4 bg-white hover:bg-gray-50 text-heritage-gold font-bold rounded-2xl transition-all shadow-xl hover:shadow-2xl border-2 border-heritage-gold/30 hover:border-heritage-gold"
-                    >
-                      <span>Advanced Search</span>
-                      <motion.svg
-                        animate={{ x: [0, 5, 0] }}
-                        transition={{ duration: 1.5, repeat: Infinity }}
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </motion.svg>
-                    </Link> */}
-                  </div>
-                  <p className="text-lg md:text-xl text-gray-700 leading-relaxed max-w-4xl">
-                    Experience authentic local life by staying with local families. Understand their traditions, 
-                    daily routines, and way of life. Your host can take you to nearby historical and cultural places, 
-                    giving you an immersive cultural experience.
-                  </p>
-                </div>
-              </motion.div>
-
-              {/* Category Icons */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="mb-12"
-              >
-                <CategoryIcons section="localHosts" />
-              </motion.div>
+              {/* Section Header — circle with gold Home icon (same as category style) */}
+              <SectionHeaderCompact
+                icon={<Home className="w-6 h-6 text-heritage-gold" />}
+                iconBgClassName="bg-white border-2 border-heritage-gold/30"
+                title="Abodes"
+                tagline="Stay with Local Hosts"
+                expandableTitle="Why stay with locals?"
+                expandableContent="Experience authentic local life by staying with local families. Understand their traditions, daily routines, and way of life. Your host can take you to nearby historical and cultural places, giving you an immersive cultural experience."
+              />
 
               {/* Results Section */}
               {loadingAbodes ? (
@@ -802,151 +814,305 @@ export default function ExplorePage() {
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-10 gap-4"
+                    className="flex flex-col gap-4 mb-10"
                   >
-                    <div>
-                      <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-                        All Abodes
-                      </h3>
-                      <p className="text-gray-600 text-lg">
-                        Showing <span className="font-bold text-gray-900">{allAbodes.length}</span> of{' '}
-                        <span className="font-bold text-gray-900">{abodesPagination.total}</span> abodes
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3 relative">
-                      {/* Filter Button and Dropdown */}
-                      <div className="filter-dropdown-container relative">
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => {
-                            setShowAbodeFilterDropdown(!showAbodeFilterDropdown);
-                            setShowAbodeSortDropdown(false);
-                          }}
-                          className="px-6 py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-heritage-gold hover:bg-heritage-gold/5 transition-all text-sm font-semibold text-gray-700 flex items-center gap-2 shadow-sm hover:shadow-md"
-                        >
-                          <Filter className="w-4 h-4" />
-                          Filters
-                        </motion.button>
-                        {showAbodeFilterDropdown && (
-                          <motion.div
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 p-6 z-50"
-                          >
-                            <h4 className="font-bold text-gray-900 mb-4">Filter Abodes</h4>
-                            <div className="space-y-4">
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Min Price (₹)</label>
-                                <input
-                                  type="number"
-                                  value={abodeFilters.minPrice}
-                                  onChange={(e) => handleAbodeFilterChange('minPrice', e.target.value)}
-                                  placeholder="0"
-                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Max Price (₹)</label>
-                                <input
-                                  type="number"
-                                  value={abodeFilters.maxPrice}
-                                  onChange={(e) => handleAbodeFilterChange('maxPrice', e.target.value)}
-                                  placeholder="10000"
-                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Min Rating</label>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="5"
-                                  step="0.1"
-                                  value={abodeFilters.minRating}
-                                  onChange={(e) => handleAbodeFilterChange('minRating', e.target.value)}
-                                  placeholder="0"
-                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Capacity</label>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  value={abodeFilters.capacity}
-                                  onChange={(e) => handleAbodeFilterChange('capacity', e.target.value)}
-                                  placeholder="2"
-                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
-                                />
-                              </div>
-                            </div>
-                            <div className="flex gap-2 mt-6">
-                              <button
-                                onClick={clearAbodeFilters}
-                                className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
-                              >
-                                Clear
-                              </button>
-                              <button
-                                onClick={applyAbodeFilters}
-                                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-heritage-gold rounded-lg hover:bg-heritage-gold-dark"
-                              >
-                                Apply
-                              </button>
-                            </div>
-                          </motion.div>
-                        )}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div>
+                        <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+                          All Abodes
+                        </h3>
+                        <p className="text-gray-600 text-lg">
+                          Showing <span className="font-bold text-gray-900">{allAbodes.length}</span> of{' '}
+                          <span className="font-bold text-gray-900">{abodesPagination.total}</span> abodes
+                        </p>
                       </div>
-                      
-                      {/* Sort Button and Dropdown */}
-                      <div className="sort-dropdown-container relative">
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => {
-                            setShowAbodeSortDropdown(!showAbodeSortDropdown);
-                            setShowAbodeFilterDropdown(false);
-                          }}
-                          className="px-6 py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-heritage-gold hover:bg-heritage-gold/5 transition-all text-sm font-semibold text-gray-700 flex items-center gap-2 shadow-sm hover:shadow-md"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                          </svg>
-                          Sort
-                        </motion.button>
-                        {showAbodeSortDropdown && (
-                          <motion.div
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50"
+                      <div className="flex items-center gap-3 relative">
+                        {/* Filter Button and Dropdown */}
+                        <div className="filter-dropdown-container relative">
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => {
+                              setShowAbodeFilterDropdown(!showAbodeFilterDropdown);
+                              setShowAbodeSortDropdown(false);
+                            }}
+                            className="px-6 py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-heritage-gold hover:bg-heritage-gold/5 transition-all text-sm font-semibold text-gray-700 flex items-center gap-2 shadow-sm hover:shadow-md"
                           >
-                            <h4 className="font-bold text-gray-900 mb-3">Sort By</h4>
-                            <div className="space-y-2">
-                              {[
-                                { value: 'rating', label: 'Highest Rated' },
-                                { value: 'price', label: 'Price: Low to High' },
-                                { value: 'newest', label: 'Newest First' },
-                              ].map((option) => (
+                            <Filter className="w-4 h-4" />
+                            Filters
+                          </motion.button>
+                          {showAbodeFilterDropdown && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -10 }}
+                              className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 p-6 z-50"
+                            >
+                              <h4 className="font-bold text-gray-900 mb-4">Filter Abodes</h4>
+                              <div className="space-y-4">
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">Min Price (₹)</label>
+                                  <input
+                                    type="number"
+                                    value={abodeFilters.minPrice}
+                                    onChange={(e) => handleAbodeFilterChange('minPrice', e.target.value)}
+                                    placeholder="0"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">Max Price (₹)</label>
+                                  <input
+                                    type="number"
+                                    value={abodeFilters.maxPrice}
+                                    onChange={(e) => handleAbodeFilterChange('maxPrice', e.target.value)}
+                                    placeholder="10000"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">Min Rating</label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="5"
+                                    step="0.1"
+                                    value={abodeFilters.minRating}
+                                    onChange={(e) => handleAbodeFilterChange('minRating', e.target.value)}
+                                    placeholder="0"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">Capacity</label>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={abodeFilters.capacity}
+                                    onChange={(e) => handleAbodeFilterChange('capacity', e.target.value)}
+                                    placeholder="2"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold"
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex gap-2 mt-6">
                                 <button
-                                  key={option.value}
-                                  onClick={() => handleAbodeSortChange(option.value)}
-                                  className={`w-full text-left px-4 py-2 rounded-lg transition-all ${
-                                    abodeSort === option.value
-                                      ? 'bg-heritage-gold text-white'
-                                      : 'hover:bg-gray-100 text-gray-700'
-                                  }`}
+                                  onClick={clearAbodeFilters}
+                                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
                                 >
-                                  {option.label}
+                                  Clear
                                 </button>
-                              ))}
-                            </div>
-                          </motion.div>
-                        )}
+                                <button
+                                  onClick={applyAbodeFilters}
+                                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-heritage-gold rounded-lg hover:bg-heritage-gold-dark"
+                                >
+                                  Apply
+                                </button>
+                              </div>
+                            </motion.div>
+                          )}
+                        </div>
+                        
+                        {/* Sort Button and Dropdown */}
+                        <div className="sort-dropdown-container relative">
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => {
+                              setShowAbodeSortDropdown(!showAbodeSortDropdown);
+                              setShowAbodeFilterDropdown(false);
+                            }}
+                            className="px-6 py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-heritage-gold hover:bg-heritage-gold/5 transition-all text-sm font-semibold text-gray-700 flex items-center gap-2 shadow-sm hover:shadow-md"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                            Sort
+                          </motion.button>
+                          {showAbodeSortDropdown && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -10 }}
+                              className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50"
+                            >
+                              <h4 className="font-bold text-gray-900 mb-3">Sort By</h4>
+                              <div className="space-y-2">
+                                {[
+                                  { value: 'rating', label: 'Highest Rated' },
+                                  { value: 'price', label: 'Price: Low to High' },
+                                  { value: 'newest', label: 'Newest First' },
+                                ].map((option) => (
+                                  <button
+                                    key={option.value}
+                                    onClick={() => handleAbodeSortChange(option.value)}
+                                    className={`w-full text-left px-4 py-2 rounded-lg transition-all ${
+                                      abodeSort === option.value
+                                        ? 'bg-heritage-gold text-white'
+                                        : 'hover:bg-gray-100 text-gray-700'
+                                    }`}
+                                  >
+                                    {option.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </motion.div>
+                          )}
+                        </div>
+                        {/* Compact prompt entry pill */}
+                        <motion.button
+                          type="button"
+                          whileHover={{ scale: 1.03 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => setShowAbodeRefine((open) => !open)}
+                          className={`hidden md:inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                            showAbodeRefine || abodePromptApplied
+                              ? 'border-heritage-gold/70 bg-heritage-gold/5 text-heritage-gold-dark'
+                              : 'border-gray-200 bg-white text-gray-700 hover:border-heritage-gold/60 hover:bg-heritage-gold/5'
+                          }`}
+                        >
+                          <Sparkles className="h-3.5 w-3.5" />
+                          <span>{abodePromptApplied ? 'Refined by prompt' : 'Refine stays'}</span>
+                        </motion.button>
                       </div>
                     </div>
+                    {/* Refine results — modern card, suggested chips, clear UX */}
+                    {showAbodeRefine && allAbodes.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="rounded-2xl border border-gray-200/90 bg-white/90 backdrop-blur-sm shadow-lg shadow-gray-200/40 p-4 md:p-5 max-w-2xl"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                          <div className="flex items-center gap-2">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-heritage-gold/10">
+                              <Wand2 className="h-4 w-4 text-heritage-gold" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-gray-900">Refine these stays</p>
+                              <p className="text-xs text-gray-500">Reorder by vibe — dates & location stay the same</p>
+                            </div>
+                          </div>
+                          {abodePromptApplied && (
+                            <AnimatePresence>
+                              <motion.span
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
+                                className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200/60"
+                              >
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                Applied
+                              </motion.span>
+                            </AnimatePresence>
+                          )}
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                          <div className="relative flex-1">
+                            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
+                              <Sparkles className="h-4 w-4" />
+                            </span>
+                            <input
+                              type="text"
+                              value={abodePrompt}
+                              onChange={(e) => setAbodePrompt(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  if (abodePrompt.trim()) document.getElementById('abode-refine-apply')?.click();
+                                }
+                                if (e.key === 'Escape') setAbodePrompt('');
+                              }}
+                              placeholder="e.g. quiet, near nature, strong Wi‑Fi…"
+                              aria-label="Refine stays by description"
+                              className="w-full rounded-xl border border-gray-200 bg-gray-50/80 py-2.5 pl-10 pr-10 text-sm text-gray-900 placeholder:text-gray-400 transition-colors focus:border-heritage-gold focus:bg-white focus:outline-none focus:ring-2 focus:ring-heritage-gold/20"
+                            />
+                            {abodePrompt.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => setAbodePrompt('')}
+                                aria-label="Clear prompt"
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-200/60 hover:text-gray-700"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <motion.button
+                              id="abode-refine-apply"
+                              type="button"
+                              disabled={!abodePrompt.trim() || allAbodes.length === 0}
+                              onClick={() => {
+                                const prompt = abodePrompt.toLowerCase().trim();
+                                if (!prompt) return;
+                                const terms = prompt.split(/\s+/).map((t) => t.trim()).filter(Boolean);
+                                const scored = allAbodes.map((abode) => {
+                                  let score = 0;
+                                  const title = (abode.abodeDetails?.title || '').toLowerCase();
+                                  const description = (abode.abodeDetails?.description || '').toLowerCase();
+                                  const extraParts: string[] = [];
+                                  if (abode.location) {
+                                    extraParts.push([abode.location.district, abode.location.state, abode.location.country].filter(Boolean).join(' '));
+                                  }
+                                  if (Array.isArray(abode.languages)) extraParts.push(abode.languages.join(' '));
+                                  const combined = extraParts.join(' ').toLowerCase();
+                                  terms.forEach((term) => {
+                                    if (!term) return;
+                                    const regex = new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+                                    if (regex.test(title)) score += 5;
+                                    if (regex.test(description)) score += 3;
+                                    if (regex.test(combined)) score += 2;
+                                  });
+                                  return { abode, score };
+                                });
+                                scored.sort((a, b) => b.score - a.score);
+                                setAllAbodes(scored.map((s) => s.abode));
+                                setAbodePromptApplied(true);
+                              }}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                              className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-heritage-gold px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-shadow hover:bg-heritage-gold-dark hover:shadow-lg disabled:pointer-events-none disabled:opacity-40"
+                            >
+                              <Wand2 className="h-4 w-4" />
+                              Apply
+                            </motion.button>
+                            {abodePromptApplied && (
+                              <motion.button
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                type="button"
+                                onClick={() => {
+                                  setAbodePrompt('');
+                                  setAbodePromptApplied(false);
+                                  setAllAbodes([]);
+                                  setAbodesPage(1);
+                                  fetchAllAbodes(1, searchFilters);
+                                }}
+                                className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
+                              >
+                                <RotateCcw className="h-3.5 w-3.5" />
+                                Clear
+                              </motion.button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          <span className="text-xs text-gray-500">Suggestions:</span>
+                          {['Quiet & nature', 'Strong Wi‑Fi', 'Family-friendly'].map((label) => (
+                            <button
+                              key={label}
+                              type="button"
+                              onClick={() => setAbodePrompt(label)}
+                              className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:border-heritage-gold/50 hover:bg-heritage-gold/5 hover:text-heritage-gold-dark"
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
                   </motion.div>
                   
                   {/* Abodes Grid */}
@@ -1038,70 +1204,22 @@ export default function ExplorePage() {
               transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
               className="w-full"
             >
-              {/* Header Section - Redesigned */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="relative bg-gradient-to-br from-indigo-50/80 via-purple-50/50 to-pink-50/80 rounded-3xl p-10 md:p-16 mb-12 overflow-hidden border border-indigo-200/30"
-              >
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(99,102,241,0.1),transparent_50%)]"></div>
-                <div className="relative z-10">
-                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-6">
-                    <div className="flex items-center gap-6">
-                      <motion.div
-                        whileHover={{ scale: 1.1, rotate: -5 }}
-                        className="w-24 h-24 rounded-3xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-2xl"
-                      >
-                        <Sparkles className="w-12 h-12 text-white" />
-                      </motion.div>
-                      <div>
-                        <h2 className="text-4xl md:text-6xl font-bold text-gray-900 mb-3">
-                          Book Experiences
-                        </h2>
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-1 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg">
-                            <Sparkles className="w-4 h-4 text-indigo-600" />
-                            <span className="text-sm font-semibold text-gray-700">Cultural Activities</span>
-                          </div>
-                          <div className="flex items-center gap-1 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg">
-                            <Star className="w-4 h-4 text-indigo-600 fill-indigo-600" />
-                            <span className="text-sm font-semibold text-gray-700">Live Events</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    {/* Advanced Search - Disabled */}
-                    {/* <Link 
-                      href="/trips/experiences" 
-                      className="group flex items-center gap-3 px-8 py-4 bg-white hover:bg-gray-50 text-indigo-600 font-bold rounded-2xl transition-all shadow-xl hover:shadow-2xl border-2 border-indigo-200 hover:border-indigo-400"
-                    >
-                      <span>Advanced Search</span>
-                      <motion.svg
-                        animate={{ x: [0, 5, 0] }}
-                        transition={{ duration: 1.5, repeat: Infinity }}
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </motion.svg>
-                    </Link> */}
-                  </div>
-                  <p className="text-lg md:text-xl text-gray-700 leading-relaxed max-w-4xl">
-                    Discover short experiences, live performances, and cultural events organized by local experience providers. 
-                    From artisan workshops to live concerts, immerse yourself in authentic cultural activities.
-                  </p>
-                </div>
-              </motion.div>
+              {/* Compact Section Header — content first */}
+              <SectionHeaderCompact
+                icon={<Sparkles className="w-6 h-6 text-white" />}
+                iconBgClassName="bg-gradient-to-br from-indigo-600 to-purple-600"
+                title="Book Experiences"
+                tagline="Cultural activities, live events & workshops by local providers."
+                expandableTitle="Why book experiences?"
+                expandableContent="Discover short experiences, live performances, and cultural events organized by local experience providers. From artisan workshops to live concerts, immerse yourself in authentic cultural activities."
+              />
 
-              {/* Category Icons */}
+              {/* Category Icons — compact spacing */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="mb-12"
+                className="mb-6"
               >
                 <CategoryIcons section="experiences" />
               </motion.div>
@@ -1129,140 +1247,299 @@ export default function ExplorePage() {
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-10 gap-4"
+                    className="flex flex-col gap-4 mb-10"
                   >
-                    <div>
-                      <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-                        All Experiences
-                      </h3>
-                      <p className="text-gray-600 text-lg">
-                        Showing <span className="font-bold text-gray-900">{allExperiences.length}</span> of{' '}
-                        <span className="font-bold text-gray-900">{experiencesPagination.total}</span> experiences
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3 relative">
-                      {/* Filter Button and Dropdown */}
-                      <div className="filter-dropdown-container relative">
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => {
-                            setShowExperienceFilterDropdown(!showExperienceFilterDropdown);
-                            setShowExperienceSortDropdown(false);
-                          }}
-                          className="px-6 py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-indigo-400 hover:bg-indigo-50/50 transition-all text-sm font-semibold text-gray-700 flex items-center gap-2 shadow-sm hover:shadow-md"
-                        >
-                          <Filter className="w-4 h-4" />
-                          Filters
-                        </motion.button>
-                        {showExperienceFilterDropdown && (
-                          <motion.div
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 p-6 z-50"
-                          >
-                            <h4 className="font-bold text-gray-900 mb-4">Filter Experiences</h4>
-                            <div className="space-y-4">
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Min Price (₹)</label>
-                                <input
-                                  type="number"
-                                  value={experienceFilters.minPrice}
-                                  onChange={(e) => handleExperienceFilterChange('minPrice', e.target.value)}
-                                  placeholder="0"
-                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Max Price (₹)</label>
-                                <input
-                                  type="number"
-                                  value={experienceFilters.maxPrice}
-                                  onChange={(e) => handleExperienceFilterChange('maxPrice', e.target.value)}
-                                  placeholder="10000"
-                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Min Rating</label>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="5"
-                                  step="0.1"
-                                  value={experienceFilters.minRating}
-                                  onChange={(e) => handleExperienceFilterChange('minRating', e.target.value)}
-                                  placeholder="0"
-                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                />
-                              </div>
-                            </div>
-                            <div className="flex gap-2 mt-6">
-                              <button
-                                onClick={clearExperienceFilters}
-                                className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
-                              >
-                                Clear
-                              </button>
-                              <button
-                                onClick={applyExperienceFilters}
-                                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
-                              >
-                                Apply
-                              </button>
-                            </div>
-                          </motion.div>
-                        )}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div>
+                        <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+                          All Experiences
+                        </h3>
+                        <p className="text-gray-600 text-lg">
+                          Showing <span className="font-bold text-gray-900">{allExperiences.length}</span> of{' '}
+                          <span className="font-bold text-gray-900">{experiencesPagination.total}</span> experiences
+                        </p>
                       </div>
-                      
-                      {/* Sort Button and Dropdown */}
-                      <div className="sort-dropdown-container relative">
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => {
-                            setShowExperienceSortDropdown(!showExperienceSortDropdown);
-                            setShowExperienceFilterDropdown(false);
-                          }}
-                          className="px-6 py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-indigo-400 hover:bg-indigo-50/50 transition-all text-sm font-semibold text-gray-700 flex items-center gap-2 shadow-sm hover:shadow-md"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                          </svg>
-                          Sort
-                        </motion.button>
-                        {showExperienceSortDropdown && (
-                          <motion.div
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50"
+                      <div className="flex items-center gap-3 relative">
+                        {/* Filter Button and Dropdown */}
+                        <div className="filter-dropdown-container relative">
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => {
+                              setShowExperienceFilterDropdown(!showExperienceFilterDropdown);
+                              setShowExperienceSortDropdown(false);
+                            }}
+                            className="px-6 py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-indigo-400 hover:bg-indigo-50/50 transition-all text-sm font-semibold text-gray-700 flex items-center gap-2 shadow-sm hover:shadow-md"
                           >
-                            <h4 className="font-bold text-gray-900 mb-3">Sort By</h4>
-                            <div className="space-y-2">
-                              {[
-                                { value: 'rating', label: 'Highest Rated' },
-                                { value: 'price', label: 'Price: Low to High' },
-                                { value: 'newest', label: 'Newest First' },
-                              ].map((option) => (
+                            <Filter className="w-4 h-4" />
+                            Filters
+                          </motion.button>
+                          {showExperienceFilterDropdown && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -10 }}
+                              className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 p-6 z-50"
+                            >
+                              <h4 className="font-bold text-gray-900 mb-4">Filter Experiences</h4>
+                              <div className="space-y-4">
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">Min Price (₹)</label>
+                                  <input
+                                    type="number"
+                                    value={experienceFilters.minPrice}
+                                    onChange={(e) => handleExperienceFilterChange('minPrice', e.target.value)}
+                                    placeholder="0"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">Max Price (₹)</label>
+                                  <input
+                                    type="number"
+                                    value={experienceFilters.maxPrice}
+                                    onChange={(e) => handleExperienceFilterChange('maxPrice', e.target.value)}
+                                    placeholder="10000"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">Min Rating</label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="5"
+                                    step="0.1"
+                                    value={experienceFilters.minRating}
+                                    onChange={(e) => handleExperienceFilterChange('minRating', e.target.value)}
+                                    placeholder="0"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex gap-2 mt-6">
                                 <button
-                                  key={option.value}
-                                  onClick={() => handleExperienceSortChange(option.value)}
-                                  className={`w-full text-left px-4 py-2 rounded-lg transition-all ${
-                                    experienceSort === option.value
-                                      ? 'bg-indigo-600 text-white'
-                                      : 'hover:bg-gray-100 text-gray-700'
-                                  }`}
+                                  onClick={clearExperienceFilters}
+                                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
                                 >
-                                  {option.label}
+                                  Clear
                                 </button>
-                              ))}
-                            </div>
-                          </motion.div>
-                        )}
+                                <button
+                                  onClick={applyExperienceFilters}
+                                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
+                                >
+                                  Apply
+                                </button>
+                              </div>
+                            </motion.div>
+                          )}
+                        </div>
+                        
+                        {/* Sort Button and Dropdown */}
+                        <div className="sort-dropdown-container relative">
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => {
+                              setShowExperienceSortDropdown(!showExperienceSortDropdown);
+                              setShowExperienceFilterDropdown(false);
+                            }}
+                            className="px-6 py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-indigo-400 hover:bg-indigo-50/50 transition-all text-sm font-semibold text-gray-700 flex items-center gap-2 shadow-sm hover:shadow-md"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                            Sort
+                          </motion.button>
+                          {showExperienceSortDropdown && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -10 }}
+                              className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50"
+                            >
+                              <h4 className="font-bold text-gray-900 mb-3">Sort By</h4>
+                              <div className="space-y-2">
+                                {[
+                                  { value: 'rating', label: 'Highest Rated' },
+                                  { value: 'price', label: 'Price: Low to High' },
+                                  { value: 'newest', label: 'Newest First' },
+                                ].map((option) => (
+                                  <button
+                                    key={option.value}
+                                    onClick={() => handleExperienceSortChange(option.value)}
+                                    className={`w-full text-left px-4 py-2 rounded-lg transition-all ${
+                                      experienceSort === option.value
+                                        ? 'bg-indigo-600 text-white'
+                                        : 'hover:bg-gray-100 text-gray-700'
+                                    }`}
+                                  >
+                                    {option.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </motion.div>
+                          )}
+                        </div>
+                        {/* Compact prompt entry pill */}
+                        <motion.button
+                          type="button"
+                          whileHover={{ scale: 1.03 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => setShowExperienceRefine((open) => !open)}
+                          className={`hidden md:inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                            showExperienceRefine || experiencePromptApplied
+                              ? 'border-indigo-400 bg-indigo-50 text-indigo-700'
+                              : 'border-gray-200 bg-white text-gray-700 hover:border-indigo-300 hover:bg-indigo-50/50'
+                          }`}
+                        >
+                          <Sparkles className="h-3.5 w-3.5" />
+                          <span>{experiencePromptApplied ? 'Refined by prompt' : 'Refine experiences'}</span>
+                        </motion.button>
                       </div>
                     </div>
+                    {/* Refine experiences — same premium card pattern */}
+                    {showExperienceRefine && allExperiences.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="rounded-2xl border border-indigo-100 bg-white/90 backdrop-blur-sm shadow-lg shadow-indigo-100/30 p-4 md:p-5 max-w-2xl"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                          <div className="flex items-center gap-2">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100">
+                              <Wand2 className="h-4 w-4 text-indigo-600" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-gray-900">Refine these experiences</p>
+                              <p className="text-xs text-gray-500">Reorder by what you want — location & filters stay the same</p>
+                            </div>
+                          </div>
+                          {experiencePromptApplied && (
+                            <AnimatePresence>
+                              <motion.span
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
+                                className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200/60"
+                              >
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                Applied
+                              </motion.span>
+                            </AnimatePresence>
+                          )}
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                          <div className="relative flex-1">
+                            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
+                              <Sparkles className="h-4 w-4" />
+                            </span>
+                            <input
+                              type="text"
+                              value={experiencePrompt}
+                              onChange={(e) => setExperiencePrompt(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  if (experiencePrompt.trim()) document.getElementById('experience-refine-apply')?.click();
+                                }
+                                if (e.key === 'Escape') setExperiencePrompt('');
+                              }}
+                              placeholder="e.g. evening music, small groups, cultural workshops…"
+                              aria-label="Refine experiences by description"
+                              className="w-full rounded-xl border border-gray-200 bg-gray-50/80 py-2.5 pl-10 pr-10 text-sm text-gray-900 placeholder:text-gray-400 transition-colors focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                            />
+                            {experiencePrompt.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => setExperiencePrompt('')}
+                                aria-label="Clear prompt"
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-200/60 hover:text-gray-700"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <motion.button
+                              id="experience-refine-apply"
+                              type="button"
+                              disabled={!experiencePrompt.trim() || allExperiences.length === 0}
+                              onClick={() => {
+                                const prompt = experiencePrompt.toLowerCase().trim();
+                                if (!prompt) return;
+                                const terms = prompt.split(/\s+/).map((t) => t.trim()).filter(Boolean);
+                                const scored = allExperiences.map((exp: any) => {
+                                  let score = 0;
+                                  const title = (exp.title || '').toLowerCase();
+                                  const description = (exp.description || '').toLowerCase();
+                                  const extraParts: string[] = [];
+                                  if (exp.location) {
+                                    extraParts.push([exp.location.district, exp.location.state, exp.location.country].filter(Boolean).join(' '));
+                                  }
+                                  if (Array.isArray(exp.tags)) extraParts.push(exp.tags.join(' '));
+                                  if (exp.culturalMetadata) {
+                                    if (exp.culturalMetadata.heritage) extraParts.push(exp.culturalMetadata.heritage);
+                                    if (Array.isArray(exp.culturalMetadata.traditions)) extraParts.push(exp.culturalMetadata.traditions.join(' '));
+                                    if (exp.culturalMetadata.experienceType) extraParts.push(exp.culturalMetadata.experienceType);
+                                  }
+                                  const combined = extraParts.join(' ').toLowerCase();
+                                  terms.forEach((term) => {
+                                    if (!term) return;
+                                    const regex = new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+                                    if (regex.test(title)) score += 5;
+                                    if (regex.test(description)) score += 3;
+                                    if (regex.test(combined)) score += 2;
+                                  });
+                                  return { exp, score };
+                                });
+                                scored.sort((a, b) => b.score - a.score);
+                                setAllExperiences(scored.map((s) => s.exp));
+                                setExperiencePromptApplied(true);
+                              }}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                              className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-shadow hover:bg-indigo-700 hover:shadow-lg disabled:pointer-events-none disabled:opacity-40"
+                            >
+                              <Wand2 className="h-4 w-4" />
+                              Apply
+                            </motion.button>
+                            {experiencePromptApplied && (
+                              <motion.button
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                type="button"
+                                onClick={() => {
+                                  setExperiencePrompt('');
+                                  setExperiencePromptApplied(false);
+                                  setAllExperiences([]);
+                                  setExperiencesPage(1);
+                                  fetchAllExperiences(1, searchFilters);
+                                }}
+                                className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
+                              >
+                                <RotateCcw className="h-3.5 w-3.5" />
+                                Clear
+                              </motion.button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          <span className="text-xs text-gray-500">Suggestions:</span>
+                          {['Evening events', 'Small groups', 'Cultural workshops'].map((label) => (
+                            <button
+                              key={label}
+                              type="button"
+                              onClick={() => setExperiencePrompt(label)}
+                              className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:border-indigo-300 hover:bg-indigo-50/50 hover:text-indigo-700"
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
                   </motion.div>
                   
                   {/* Experiences Grid - Optimized Layout for Best UX */}

@@ -105,7 +105,7 @@ export default function AbodeSidebar() {
                 </svg>
               </div>
               <div>
-                <h2 className="text-xl font-bold text-white">Tribelink</h2>
+                <h2 className="text-xl font-bold text-white">Triberoutes</h2>
                 <p className="text-white/80 text-xs font-medium">Abode Host Portal</p>
               </div>
             </div>

@@ -221,6 +221,24 @@ const localHostSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Experience'
   }],
+
+  // Optional bundle metadata for planner
+  // Lets us distinguish default (always-included) vs optional experiences
+  bundleMetadata: {
+    defaultCoreExperienceIds: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Experience'
+    }],
+    recommendedAddOnExperienceIds: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Experience'
+    }],
+    // Free-form rules to support richer planner logic without schema churn
+    bundleRules: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {}
+    }
+  },
   
   // Images of the abode
   images: [{

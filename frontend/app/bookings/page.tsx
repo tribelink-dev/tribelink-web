@@ -69,7 +69,9 @@ export default function BookingsPage() {
   }, [user, router]);
 
   useEffect(() => {
-    if (searchParams.get('success') === 'true') fetchBookings();
+    if (searchParams.get('success') === 'true' || searchParams.get('payment') === 'success') {
+      fetchBookings();
+    }
   }, [searchParams]);
 
   const fetchBookings = async () => {
@@ -221,6 +223,13 @@ export default function BookingsPage() {
             </div>
           </div>
         </motion.div>
+
+        {searchParams.get('payment') === 'success' && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-800 rounded-xl flex items-center gap-3">
+            <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
+            <span className="flex-1 font-medium">Payment successful. Your booking is confirmed.</span>
+          </div>
+        )}
 
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-center gap-3">

@@ -1,15 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import api from '@/lib/api';
 import { INDIAN_STATES, DISTRICTS_BY_STATE } from '@/lib/indianStates';
 import Image from 'next/image';
 import { useAuth } from '@/lib/auth';
 import { format } from 'date-fns';
-import PlanningModeSelector, { PlanningMode } from '@/components/PlanningModeSelector';
 import PremiumDatePicker from '@/components/PremiumDatePicker';
 import LocationSearch from '@/components/LocationSearch';
+import AuthPromptModal from '@/components/AuthPromptModal';
 
 interface Location {
   state: string;
@@ -26,7 +26,8 @@ export default function TripSelectPage() {
   const [error, setError] = useState('');
   const [hasNoTokens, setHasNoTokens] = useState(false);
   const [isClient, setIsClient] = useState(false);
-  const [planningMode, setPlanningMode] = useState<PlanningMode>('manual');
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     setIsClient(true);
@@ -133,6 +134,12 @@ export default function TripSelectPage() {
     setError('');
     setLoading(true);
 
+    if (!user) {
+      setAuthModalOpen(true);
+      setLoading(false);
+      return;
+    }
+
     // Check if user has tokens
     if (hasNoTokens || (user && (!user.tokens || user.tokens === 0))) {
       setError('You need at least 1 token to plan a new trip. Complete an existing trip to earn more tokens!');
@@ -171,27 +178,21 @@ export default function TripSelectPage() {
         toDate,
         country: 'India',
         locations: validLocations,
-        planningMode
       };
       
       sessionStorage.setItem('tripData', JSON.stringify(tripData));
       
-      // Route based on planning mode
-      if (planningMode === 'automatic') {
-        // Build query params for automatic planning page
-        // Include district even if empty (for state-only selections)
-        const locationParams = validLocations.map((loc, idx) => 
-          `state${idx}=${encodeURIComponent(loc.state)}&district${idx}=${encodeURIComponent(loc.district || '')}`
-        ).join('&');
-        router.push(`/trips/plan/automatic?country=India&from=${fromDate}&to=${toDate}&${locationParams}`);
-      } else {
-        // Build query params for experiences page (manual mode)
-        // Include district even if empty (for state-only selections)
-      const locationParams = validLocations.map((loc, idx) => 
-        `state${idx}=${encodeURIComponent(loc.state)}&district${idx}=${encodeURIComponent(loc.district || '')}`
-      ).join('&');
-      router.push(`/trips/experiences?country=India&from=${fromDate}&to=${toDate}&${locationParams}`);
-      }
+      // Single unified planner entry: pass context into the abodes + experiences planner
+      const locationParams = validLocations
+        .map((loc, idx) =>
+          `state${idx}=${encodeURIComponent(loc.state)}&district${idx}=${encodeURIComponent(
+            loc.district || ''
+          )}`
+        )
+        .join('&');
+      router.push(
+        `/trips/abodes/select?country=India&from=${fromDate}&to=${toDate}&${locationParams}`
+      );
     } catch (err: any) {
       setError('Failed to proceed. Please try again.');
       setLoading(false);
@@ -222,10 +223,10 @@ export default function TripSelectPage() {
             </div>
             
             <h1 className="heading-display text-5xl md:text-6xl lg:text-7xl text-white mb-6 animate-fade-in-up">
-              Plan Your Adventure
+              Plan Your Journey
             </h1>
             <p className="text-xl md:text-2xl text-white/80 font-light mb-12 max-w-2xl mx-auto leading-relaxed animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-              Discover authentic cultural experiences and create your perfect journey
+              Tell us when and where, and we&apos;ll craft a first-draft itinerary around local abodes and experiences you can tweak to feel just right.
             </p>
           </div>
         </div>
@@ -236,12 +237,14 @@ export default function TripSelectPage() {
         <div className="max-w-5xl mx-auto">
 
           <div className="content-card shadow-luxury-lg border-charcoal-100/50 mb-8">
-            {/* Planning Mode Selector */}
-            <div className="mb-10">
-              <PlanningModeSelector
-                selectedMode={planningMode}
-                onModeChange={setPlanningMode}
-              />
+            {/* Planner intro */}
+            <div className="mb-10 text-left">
+              <h2 className="text-2xl font-semibold text-charcoal-900 mb-2">
+                How this planner works
+              </h2>
+              <p className="text-sm text-charcoal-600 max-w-2xl">
+                You share your dates and the regions you&apos;re curious about. We combine local homes and on-ground experiences to suggest a balanced plan—like a thoughtful friend who knows the area well. You stay in control and can always adjust later.
+              </p>
             </div>
 
             {/* Token Warning - Premium Design */}
@@ -505,7 +508,7 @@ export default function TripSelectPage() {
                       <svg className="w-5 h-5 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                       </svg>
-                      <span>Continue to Experiences</span>
+                      <span>Plan my trip</span>
                       <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
@@ -513,13 +516,21 @@ export default function TripSelectPage() {
                   )}
                 </button>
                 <p className="text-center text-sm text-charcoal-500 mt-5 font-light">
-                  You'll be able to select experiences and customize your itinerary in the next step
+                  We&apos;ll propose a human-feeling first draft with stays and experiences; you can fine-tune or swap things out in the next steps.
                 </p>
               </div>
             </form>
           </div>
         </div>
       </div>
+      <AuthPromptModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        onSignIn={() => setAuthModalOpen(false)}
+        onSignUp={() => setAuthModalOpen(false)}
+        message="Sign in to plan your trip"
+        returnTo={pathname || '/trips/select'}
+      />
     </div>
   );
 }

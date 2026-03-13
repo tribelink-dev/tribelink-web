@@ -43,6 +43,12 @@ const tripSchema = new mongoose.Schema({
     pace: String,
     transport: String
   },
+  // How this trip was planned (manual / automatic / abodes-first, etc.)
+  planningMode: {
+    type: String,
+    enum: ['MANUAL', 'AUTOMATIC', 'ABODE_FIRST'],
+    default: 'MANUAL'
+  },
   schedule: [{
     date: {
       type: Date,
@@ -62,12 +68,30 @@ const tripSchema = new mongoose.Schema({
       provider: {
         _id: mongoose.Schema.Types.ObjectId,
         name: String
+      },
+      // Planner-level source tagging so we know if this came from
+      // an abode bundle or from standalone experiences
+      source: {
+        type: String,
+        enum: ['ABODE', 'PURE'],
+        default: 'PURE'
+      },
+      // Optional abode association for ABODE-sourced activities
+      abodeId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'LocalHost',
+        default: null
       }
     }],
     // Abode stay for this day (replaces hotel)
     abodeStay: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Provider', // LOCAL_HOST provider
+      default: null
+    },
+    // Optional segment identifier for multi-region trips
+    segmentId: {
+      type: String,
       default: null
     },
     // Events booked for this day

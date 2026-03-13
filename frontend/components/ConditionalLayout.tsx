@@ -12,8 +12,9 @@ export default function ConditionalLayout({
 }) {
   const pathname = usePathname();
   
-  // Marketing routes (homepage and marketing sections)
+  // Marketing routes (homepage-style and marketing sections)
   const isMarketingRoute = pathname === '/' || 
+    pathname === '/landing' ||
     pathname.startsWith('/#') ||
     pathname === '/about' ||
     pathname === '/experiences' ||

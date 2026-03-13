@@ -8,11 +8,18 @@ const mongoose = require('mongoose');
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const USE_AI = !!OPENAI_API_KEY;
+const isDev = process.env.NODE_ENV !== 'production';
+const logDebug = (...args) => {
+  if (isDev) {
+    // eslint-disable-next-line no-console
+    console.log(...args);
+  }
+};
 
 /**
  * Pathfinder - Revolutionary AI Agent for Personalized Filtering
  * 
- * Pathfinder is Tribelink's advanced AI-powered personalization system that
+ * Pathfinder is Triberoutes's advanced AI-powered personalization system that
  * filters hundreds of options to the best 2-3 matches based on comprehensive user profiling.
  * It analyzes cultural interests, booking history, preferences, and travel patterns
  * to curate the most authentic, personalized experiences for each traveler's journey.
@@ -236,12 +243,12 @@ async function filterExperiencesAI(userId, experiences, context = {}) {
   if (!USE_AI || experiences.length === 0) {
     // Fallback: return top experiences by basic scoring
     const targetCount = context.targetCount || Math.min(3, experiences.length);
-    console.log(`[Pathfinder] AI disabled or no experiences, using fallback (returning ${targetCount})`);
+    logDebug(`[Pathfinder] AI disabled or no experiences, using fallback (returning ${targetCount})`);
     return experiences.slice(0, targetCount);
   }
 
   try {
-    console.log(`[Pathfinder] Starting AI filtering for ${experiences.length} experiences`);
+    logDebug(`[Pathfinder] Starting AI filtering for ${experiences.length} experiences`);
     // Sort experiences consistently by _id to ensure deterministic ordering
     const sortedExperiences = [...experiences].sort((a, b) => {
       const idA = a._id?.toString() || a._id || '';
@@ -256,12 +263,13 @@ async function filterExperiencesAI(userId, experiences, context = {}) {
     const pace = context.pace || 'normal';
     const targetCount = context.targetCount || Math.min(3, sortedExperiences.length);
     const maxExperiences = context.maxExperiences || targetCount;
+    const userPrompt = context.prompt || null;
     
     // Calculate experiences per day based on pace
     const experiencesPerDay = pace === 'fast' ? 3.5 : 2.5;
     
     // Prepare context for AI
-    const prompt = `You are Pathfinder, Tribelink's intelligent travel curator and trip planner. Your PRIMARY GOAL is to maximize the number of high-quality experiences that can fit into the traveler's ${tripDays}-day trip, while ensuring each experience is personalized and culturally authentic.
+    const prompt = `You are Pathfinder, Triberoutes's intelligent travel curator and trip planner. Your PRIMARY GOAL is to maximize the number of high-quality experiences that can fit into the traveler's ${tripDays}-day trip, while ensuring each experience is personalized and culturally authentic.
 
 TRAVELER PROFILE:
 - KYT Preferences: ${JSON.stringify(userProfile.kytPreferences)}
@@ -276,6 +284,9 @@ TRIP DETAILS:
 - Target: Select up to ${targetCount} experiences (max ${maxExperiences} can fit)
 - Experiences per day: ~${experiencesPerDay.toFixed(1)} (based on ${pace} pace)
 - Goal: Fill all ${tripDays} days with as many quality experiences as possible
+
+USER'S FREE-TEXT PREFERENCES (if provided):
+${userPrompt ? userPrompt : 'None provided'}
 
 AVAILABLE EXPERIENCES (${sortedExperiences.length}):
 ${sortedExperiences.map((exp, idx) => `
@@ -338,7 +349,7 @@ Return ONLY valid JSON:
         messages: [
           {
             role: 'system',
-            content: 'You are Pathfinder, Tribelink\'s intelligent travel curator. You help travelers discover authentic cultural experiences through personalized curation. Always return valid JSON only. Select experiences that create authentic, culturally rich travel experiences. Provide helpful, conversational explanations as if personally recommending these experiences.'
+            content: 'You are Pathfinder, Triberoutes\'s intelligent travel curator. You help travelers discover authentic cultural experiences through personalized curation. Always return valid JSON only. Select experiences that create authentic, culturally rich travel experiences. Provide helpful, conversational explanations as if personally recommending these experiences.'
           },
           {
             role: 'user',
@@ -391,9 +402,9 @@ Return ONLY valid JSON:
     
     // Check if it's a timeout error
     if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
-      console.log('[Pathfinder] Request timeout, falling back to rule-based filtering');
+      logDebug('[Pathfinder] Request timeout, falling back to rule-based filtering');
     } else if (error.response?.status === 401 || error.response?.status === 403) {
-      console.log('[Pathfinder] API key issue, falling back to rule-based filtering');
+      logDebug('[Pathfinder] API key issue, falling back to rule-based filtering');
     }
     
     // Fallback to rule-based filtering
@@ -401,7 +412,7 @@ Return ONLY valid JSON:
       const userProfile = await buildUserProfile(userId);
       const targetCount = context.targetCount || Math.min(3, experiences.length);
       const fallbackResults = await filterExperiencesRuleBased(userId, experiences, userProfile, targetCount);
-      console.log(`[Pathfinder] Fallback returned ${fallbackResults.length} experiences`);
+      logDebug(`[Pathfinder] Fallback returned ${fallbackResults.length} experiences`);
       return fallbackResults;
     } catch (fallbackError) {
       console.error('[Pathfinder] Fallback filtering also failed:', fallbackError);
@@ -468,7 +479,7 @@ async function filterHotelsAI(userId, hotels, context = {}) {
   try {
     const userProfile = await buildUserProfile(userId);
 
-    const prompt = `You are Pathfinder, Tribelink's intelligent travel curator. Filter ${hotels.length} hotels to the TOP 2-3 BEST matches for this traveler.
+    const prompt = `You are Pathfinder, Triberoutes's intelligent travel curator. Filter ${hotels.length} hotels to the TOP 2-3 BEST matches for this traveler.
 
 TRAVELER PROFILE:
 - Average Hotel Spending: $${userProfile.bookingHistory.averageSpending.hotels.toFixed(2)}/night
@@ -510,7 +521,7 @@ Return JSON:
       {
         model: 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: 'You are Pathfinder, Tribelink\'s intelligent travel curator specializing in hotel recommendations. Return valid JSON only.' },
+          { role: 'system', content: 'You are Pathfinder, Triberoutes\'s intelligent travel curator specializing in hotel recommendations. Return valid JSON only.' },
           { role: 'user', content: prompt }
         ],
         temperature: 0.3,

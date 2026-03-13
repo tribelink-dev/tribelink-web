@@ -2,12 +2,13 @@
 
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { useState, useRef } from 'react';
+import { useState, useRef, type ReactNode } from 'react';
+import { Home } from 'lucide-react';
 
 interface Category {
   id: string;
   label: string;
-  icon: string;
+  icon: ReactNode;
   description: string;
   route: string;
 }
@@ -20,8 +21,8 @@ const localHostCategories: Category[] = [
   {
     id: 'abodes',
     label: 'Abodes',
-    icon: '🏠',
-    description: 'Stay with locals',
+    icon: <Home className="w-6 h-6 text-heritage-gold" />,
+    description: 'Hosted stays',
     route: '/abodes'
   },
 ];

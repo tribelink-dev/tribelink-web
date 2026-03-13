@@ -11,6 +11,8 @@ interface AuthPromptModalProps {
   onSignUp: () => void;
   message: string;
   actionType?: 'save' | 'book' | 'view';
+  /** After login/signup redirect here (e.g. /trips/select). Defaults to /explore. */
+  returnTo?: string;
 }
 
 export default function AuthPromptModal({
@@ -19,17 +21,19 @@ export default function AuthPromptModal({
   onSignIn,
   onSignUp,
   message,
-  actionType = 'save'
+  actionType = 'save',
+  returnTo = '/explore'
 }: AuthPromptModalProps) {
   const router = useRouter();
+  const redirect = returnTo ? encodeURIComponent(returnTo) : '';
 
   const handleSignIn = () => {
-    router.push('/login?returnTo=/explore');
+    router.push(redirect ? `/login?returnTo=${redirect}` : '/login');
     onSignIn();
   };
 
   const handleSignUp = () => {
-    router.push('/signup?returnTo=/explore');
+    router.push(redirect ? `/signup?returnTo=${redirect}` : '/signup');
     onSignUp();
   };
 

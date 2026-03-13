@@ -423,12 +423,12 @@ async function createKeralaHotels() {
     console.log('✅ Connected to database\n');
 
     // Find or create a provider for Kerala hotels
-    let provider = await Provider.findOne({ email: 'kerala.hotels@tribelink.com' });
+    let provider = await Provider.findOne({ email: 'kerala.hotels@triberoutes.com' });
     
     if (!provider) {
       const hashedPassword = await bcrypt.hash('kerala123', 10);
       provider = new Provider({
-        email: 'kerala.hotels@tribelink.com',
+        email: 'kerala.hotels@triberoutes.com',
         phoneNumber: '+919876543211',
         password: hashedPassword,
         name: 'Kerala Hotels & Resorts',

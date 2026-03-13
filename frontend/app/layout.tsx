@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     "local homestays",
     "cultural tourism",
     "tribe routes",
-    "tribelink",
+    "triberoutes",
     "authentic local experiences",
     "cultural homestays",
     "local hosts",

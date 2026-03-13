@@ -12,6 +12,7 @@ const Trip = require('../models/Trip');
 const User = require('../models/User');
 const { authenticate, requireUser } = require('../middleware/auth');
 const { convertCurrency } = require('../services/currency');
+const paymentService = require('../services/payment');
 
 const router = express.Router();
 
@@ -386,6 +387,60 @@ router.post('/event', authenticate, requireUser, async (req, res) => {
     });
   } catch (error) {
     console.error('Error booking event:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Create payment session (redirect URL) for booking. Provider from PAYMENT_PROVIDER (razorpay|stripe).
+router.post('/:id/create-payment-session', authenticate, requireUser, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+    if (booking.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+    if (booking.paymentStatus === 'Completed') {
+      return res.status(400).json({ message: 'Booking already paid' });
+    }
+    const { url } = await paymentService.createPaymentSession(booking, req.user);
+    if (!url) {
+      return res.status(503).json({ message: 'Payment provider did not return a URL.' });
+    }
+    res.json({ url });
+  } catch (error) {
+    console.error('Error creating payment session:', error);
+    if (error.message && error.message.includes('not configured')) {
+      return res.status(503).json({ message: 'Card payment is not configured. Please pay with wallet.' });
+    }
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Alias for backward compatibility (same behavior as create-payment-session)
+router.post('/:id/create-checkout-session', authenticate, requireUser, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+    if (booking.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+    if (booking.paymentStatus === 'Completed') {
+      return res.status(400).json({ message: 'Booking already paid' });
+    }
+    const { url } = await paymentService.createPaymentSession(booking, req.user);
+    if (!url) {
+      return res.status(503).json({ message: 'Payment provider did not return a URL.' });
+    }
+    res.json({ url });
+  } catch (error) {
+    console.error('Error creating payment session:', error);
+    if (error.message && error.message.includes('not configured')) {
+      return res.status(503).json({ message: 'Card payment is not configured. Please pay with wallet.' });
+    }
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

@@ -4,6 +4,7 @@ const cors = require('cors');
 const session = require('express-session');
 const passport = require('./config/passport');
 const connectDB = require('./config/database');
+const { checkEnv } = require('./config/envCheck');
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -24,6 +25,9 @@ const app = express();
   await connectDB();
 })();
 
+// Basic env sanity check (logs warnings, does not crash)
+checkEnv();
+
 // Middleware
 // CORS Configuration - Allow multiple origins for development and production
 const allowedOrigins = [
@@ -31,7 +35,7 @@ const allowedOrigins = [
   'http://127.0.0.1:3000',
   'http://172.16.68.100:3000',
   process.env.FRONTEND_URL,
-  'https://tribelink-app.vercel.app', // Explicitly allow Vercel frontend
+  'https://triberoutes-app.vercel.app', // Explicitly allow Vercel frontend
   'https://triberoutes.com', // Custom domain
   'https://www.triberoutes.com', // Custom domain with www
   process.env.FRONTEND_RENDER_URL,
@@ -71,13 +75,8 @@ app.use(cors({
     }
     
     // Production: check allowed origins with more flexible matching
-    console.log('[CORS] Checking origin:', origin);
-    console.log('[CORS] Allowed origins:', allowedOrigins);
-    console.log('[CORS] NODE_ENV:', process.env.NODE_ENV);
-    
     // Check exact match first
     if (allowedOrigins.indexOf(origin) !== -1) {
-      console.log('[CORS] Allowed: exact match');
       callback(null, true);
       return;
     }
@@ -124,14 +123,6 @@ app.use(cors({
       return;
     }
     
-    // Allow any HTTPS origin in production (more permissive for deployment flexibility)
-    // This is safer than blocking everything, but you can restrict this if needed
-    if (origin.startsWith('https://')) {
-      console.log('[CORS] Allowed: HTTPS origin (production permissive mode)');
-      callback(null, true);
-      return;
-    }
-    
     // Log blocked origin for debugging
     console.error('[CORS] ❌ Blocked origin:', origin);
     console.error('[CORS] Allowed origins:', allowedOrigins);
@@ -154,12 +145,22 @@ app.use(cors({
   preflightContinue: false,
   optionsSuccessStatus: 204
 }));
+
+// Payment webhooks must receive raw body for signature verification (before express.json)
+app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }), require('./routes/stripeWebhooks'));
+app.use('/api/webhooks/razorpay', express.raw({ type: 'application/json' }), require('./routes/razorpayWebhooks'));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Session configuration for OAuth
+const SESSION_SECRET = process.env.SESSION_SECRET;
+if (!SESSION_SECRET) {
+  throw new Error('SESSION_SECRET environment variable is required but not set.');
+}
+
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'fallback-session-secret',
+  secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: { secure: process.env.NODE_ENV === 'production' }
@@ -186,7 +187,7 @@ app.options('*', (req, res) => {
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
-    message: 'Tribelink Platform API is running',
+    message: 'Triberoutes Platform API is running',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
     port: process.env.PORT || 5000
@@ -202,6 +203,7 @@ app.use('/api/reviews', reviewRoutes); // Moved from /api/experiences
 app.use('/api/experiences', require('./routes/experiences')); // New experiences endpoint
 // app.use('/api/hotels', hotelRoutes); // Deprecated - will be replaced by abode stays
 app.use('/api/abodes', require('./routes/adobes')); // Local hosts (abode stays)
+app.use('/api/planner', require('./routes/plannerAbodes')); // Abodes-first trip planner APIs
 app.use('/api/events', require('./routes/events')); // Events/concerts
 app.use('/api/bookings', require('./routes/bookings')); // Unified bookings
 app.use('/api/cart', require('./routes/cart')); // Shopping cart
