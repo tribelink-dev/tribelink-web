@@ -1,6 +1,29 @@
 import axios, { type AxiosError } from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+function normalizeApiBaseUrl(raw: string | undefined): string {
+  const fallback = 'http://localhost:5000/api';
+  if (raw == null || !String(raw).trim()) return fallback;
+  const trimmed = String(raw).trim();
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed.replace(/\/+$/, '') || fallback;
+  }
+  const hostPart = trimmed.replace(/^\/+/, '');
+  const isLocal =
+    /^localhost\b/i.test(hostPart) ||
+    /^127\.0\.0\.1\b/.test(hostPart) ||
+    /^192\.168\./.test(hostPart) ||
+    /^10\./.test(hostPart) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(hostPart);
+  const scheme = isLocal ? 'http://' : 'https://';
+  return `${scheme}${hostPart}`.replace(/\/+$/, '') || fallback;
+}
+
+const rawApiEnv = process.env.NEXT_PUBLIC_API_URL;
+const API_URL = normalizeApiBaseUrl(rawApiEnv);
+
+if (typeof window !== 'undefined' && rawApiEnv && !/^https?:\/\//i.test(String(rawApiEnv).trim())) {
+  console.warn('[api] NEXT_PUBLIC_API_URL should start with https:// or http://. Using:', API_URL);
+}
 
 // Warn if using localhost in production
 if (typeof window !== 'undefined' && API_URL.includes('localhost') && window.location.hostname !== 'localhost') {
@@ -113,19 +136,35 @@ api.interceptors.response.use(
       return Promise.reject(authError);
     }
     
-    // Network/CORS errors
-    if (error.code === 'ECONNREFUSED' || error.message === 'Network Error' || error.message?.includes('Network') || !error.response) {
+    // Timeouts (often large uploads) — avoid mislabeling as "cannot connect"
+    if (error.code === 'ECONNABORTED' && typeof window !== 'undefined') {
+      const timeoutError: AppError = new Error(
+        'Request timed out. If you are uploading many or large photos, try fewer images or a faster connection.'
+      );
+      timeoutError.isNetworkError = true;
+      return Promise.reject(timeoutError);
+    }
+
+    // Network / failed CORS preflight (browser hides response → no error.response)
+    if (
+      error.code === 'ECONNREFUSED' ||
+      error.message === 'Network Error' ||
+      error.message?.includes('Network') ||
+      !error.response
+    ) {
       console.error(`❌ Cannot connect to backend at ${apiUrl}`);
       console.error('🔍 Troubleshooting:');
-      console.error('1. Check if backend is running:', `${apiUrl.replace('/api', '/health')}`);
+      console.error(
+        '1. Check if backend is running:',
+        `${apiUrl.replace(/\/api\/?$/, '')}/health`
+      );
       console.error('2. Verify NEXT_PUBLIC_API_URL:', apiUrl);
-      console.error('3. Check CORS - Frontend origin:', currentOrigin);
-      console.error('4. Backend should allow:', currentOrigin);
-      
-      // Show user-friendly error
+      console.error('3. CORS / preflight — Frontend origin:', currentOrigin);
+      console.error('4. Disable extensions or try another browser if preflight adds extra headers');
+
       if (typeof window !== 'undefined') {
         const userError: AppError = new Error(
-          `Cannot connect to server at ${apiUrl}. Please check:\n1. Backend is running\n2. CORS is configured\n3. Environment variables are set correctly`
+          `Cannot reach the API at ${apiUrl}. The site is online if /health works; this is often a browser extension, strict network, or an outdated API deploy. Try another browser or incognito.`
         );
         userError.isNetworkError = true;
         return Promise.reject(userError);

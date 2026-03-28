@@ -132,15 +132,8 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH', 'HEAD'],
-  allowedHeaders: [
-    'Content-Type', 
-    'Authorization', 
-    'X-Requested-With',
-    'Accept',
-    'Origin',
-    'Access-Control-Request-Method',
-    'Access-Control-Request-Headers'
-  ],
+  // Omit allowedHeaders: the cors package then echoes Access-Control-Request-Headers from the
+  // browser. A fixed list breaks preflight when clients add headers (Sentry, APM, extensions).
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
   preflightContinue: false,
   optionsSuccessStatus: 204
@@ -173,15 +166,6 @@ app.use(passport.session());
 // Serve uploaded files statically
 const path = require('path');
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Handle preflight OPTIONS requests explicitly
-app.options('*', (req, res) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.sendStatus(204);
-});
 
 // Health check
 app.get('/health', (req, res) => {

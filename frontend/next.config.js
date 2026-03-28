@@ -77,7 +77,7 @@ const nextConfig = {
               "img-src 'self' data: https://res.cloudinary.com https://triberoutes.com https://www.triberoutes.com https://triberoutes-app.vercel.app",
               "font-src 'self' data: https://fonts.gstatic.com", // Allow Google Fonts
               "media-src 'self' https://cdn.coverr.co", // Allow Coverr videos
-              "connect-src 'self' https://api.triberoutes.com http://localhost:5000",
+              "connect-src 'self' https://api.triberoutes.com https://*.vercel.app http://localhost:5000 http://127.0.0.1:5000",
               "frame-ancestors 'self'",
               "base-uri 'self'",
               "form-action 'self'",
