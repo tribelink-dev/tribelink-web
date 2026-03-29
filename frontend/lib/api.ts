@@ -21,7 +21,7 @@ function normalizeApiBaseUrl(raw: string | undefined): string {
 const rawApiEnv = process.env.NEXT_PUBLIC_API_URL;
 const API_URL = normalizeApiBaseUrl(rawApiEnv);
 
-/** On production triberoutes.com hosts, call API via same-origin /tr-api Route Handler proxy. */
+/** On production triberoutes.com hosts, JSON calls use same-origin /tr-api (next.config rewrite). */
 function sameOriginApiBasePath(): string | null {
   if (typeof window === 'undefined') return null;
   const host = window.location.hostname;
@@ -54,11 +54,17 @@ const api = axios.create({
   timeout: 30000, // 30 seconds timeout for all requests
 });
 
-// Add token to requests. On triberoutes.com always use same-origin /tr-api (Route Handler → API)
-// so the browser never calls api.* directly (avoids CORS and mixed-origin issues). Multipart included.
+// Add token to requests. On triberoutes.com: JSON → /tr-api (edge rewrite). FormData → API_URL
+// directly so uploads are not proxied through Vercel (Hobby function limits / streaming bugs).
 api.interceptors.request.use((config) => {
   const proxied = sameOriginApiBasePath();
-  config.baseURL = proxied ?? API_URL;
+  const isFormData =
+    typeof FormData !== 'undefined' && config.data instanceof FormData;
+  if (proxied && !isFormData) {
+    config.baseURL = proxied;
+  } else {
+    config.baseURL = API_URL;
+  }
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   if (token) {
@@ -184,8 +190,8 @@ api.interceptors.response.use(
         const viaProxy = reqBase === '/tr-api';
         const userError: AppError = new Error(
           viaProxy
-            ? `Cannot reach the API through this site (proxy). Confirm the latest frontend is deployed and API_UPSTREAM_ORIGIN on Vercel points to your API. Open ${apiUrl.replace(/\/api\/?$/, '')}/health in a new tab — if that loads, try again or contact support.`
-            : `Cannot reach the API at ${attempted}. Check your network, try incognito without extensions, or confirm NEXT_PUBLIC_API_URL. API health: ${apiUrl.replace(/\/api\/?$/, '')}/health`
+            ? `Cannot reach the API through this site (/tr-api rewrite). Redeploy the frontend; on Vercel set API_UPSTREAM_ORIGIN to your API origin (e.g. https://api.triberoutes.com). Health check: ${apiUrl.replace(/\/api\/?$/, '')}/health`
+            : `Cannot reach the API at ${attempted}. If uploads fail, ensure the backend allows your site origin in CORS. Health: ${apiUrl.replace(/\/api\/?$/, '')}/health`
         );
         userError.isNetworkError = true;
         return Promise.reject(userError);

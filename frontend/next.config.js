@@ -1,9 +1,21 @@
 /** @type {import('next').NextConfig} */
+const apiUpstream = (
+  process.env.API_UPSTREAM_ORIGIN || 'https://api.triberoutes.com'
+).replace(/\/$/, '');
+
 const nextConfig = {
   reactStrictMode: true,
 
-  // API proxy is app/tr-api/[[...path]]/route.ts (Node, long maxDuration, streaming body).
-  // Do not add a /tr-api rewrite here — it would bypass the route and break uploads/timeouts.
+  // Edge rewrite: JSON/small API calls via same-origin /tr-api (no CORS). Large multipart
+  // should go straight to NEXT_PUBLIC_API_URL from the client (see lib/api.ts).
+  async rewrites() {
+    return [
+      {
+        source: '/tr-api/:path*',
+        destination: `${apiUpstream}/api/:path*`,
+      },
+    ];
+  },
 
   // Image domain whitelist for security (prevents SSRF)
   images: {
