@@ -6,8 +6,7 @@ const apiUpstream = (
 const nextConfig = {
   reactStrictMode: true,
 
-  // Edge rewrite: JSON/small API calls via same-origin /tr-api (no CORS). Large multipart
-  // should go straight to NEXT_PUBLIC_API_URL from the client (see lib/api.ts).
+  // Edge rewrite: same-origin /tr-api → API (no browser CORS to api.*). Client uses /tr-api on triberoutes hosts (see lib/api.ts).
   async rewrites() {
     return [
       {
@@ -92,7 +91,7 @@ const nextConfig = {
               "img-src 'self' data: https://res.cloudinary.com https://triberoutes.com https://www.triberoutes.com https://triberoutes-app.vercel.app",
               "font-src 'self' data: https://fonts.gstatic.com", // Allow Google Fonts
               "media-src 'self' https://cdn.coverr.co", // Allow Coverr videos
-              "connect-src 'self' https://api.triberoutes.com https://*.vercel.app http://localhost:5000 http://127.0.0.1:5000",
+              "connect-src 'self' https://api.triberoutes.com https://*.triberoutes.com https://*.vercel.app http://localhost:5000 http://127.0.0.1:5000",
               "frame-ancestors 'self'",
               "base-uri 'self'",
               "form-action 'self'",
