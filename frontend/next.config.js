@@ -1,21 +1,7 @@
 /** @type {import('next').NextConfig} */
-const apiUpstream = (
-  process.env.API_UPSTREAM_ORIGIN || 'https://api.triberoutes.com'
-).replace(/\/$/, '');
-
 const nextConfig = {
   reactStrictMode: true,
-
-  // Edge rewrite: same-origin /tr-api → API (no browser CORS to api.*). Client uses /tr-api on triberoutes hosts (see lib/api.ts).
-  async rewrites() {
-    return [
-      {
-        source: '/tr-api/:path*',
-        destination: `${apiUpstream}/api/:path*`,
-      },
-    ];
-  },
-
+  
   // Image domain whitelist for security (prevents SSRF)
   images: {
     remotePatterns: [
@@ -91,7 +77,7 @@ const nextConfig = {
               "img-src 'self' data: https://res.cloudinary.com https://triberoutes.com https://www.triberoutes.com https://triberoutes-app.vercel.app",
               "font-src 'self' data: https://fonts.gstatic.com", // Allow Google Fonts
               "media-src 'self' https://cdn.coverr.co", // Allow Coverr videos
-              "connect-src 'self' https://api.triberoutes.com https://*.triberoutes.com https://*.vercel.app http://localhost:5000 http://127.0.0.1:5000",
+              "connect-src 'self' https://api.triberoutes.com http://localhost:5000",
               "frame-ancestors 'self'",
               "base-uri 'self'",
               "form-action 'self'",

@@ -9,6 +9,7 @@ import { INDIAN_STATES, DISTRICTS_BY_STATE } from '@/lib/indianStates';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import { motion } from 'framer-motion';
+import { compressImageFile } from '@/lib/compressImageForUpload';
 
 const PROPERTY_TYPES = ['Traditional Home', 'Heritage House', 'Village Home', 'Farmhouse', 'Cottage', 'Other'];
 const CULTURAL_CATEGORIES = ['Cooking', 'Craft', 'Music', 'Dance', 'Ritual', 'Festival', 'Agriculture', 'Traditional Medicine', 'Other'];
@@ -247,11 +248,7 @@ export default function EditAbodePage() {
         formDataToSend.append('image', newExperienceImage);
       }
 
-      const response = await api.post('/hosts/experience', formDataToSend, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      const response = await api.post('/hosts/experience', formDataToSend);
 
       if (response.data.success || response.data.experience) {
         const createdExperience = response.data.experience || response.data;
@@ -280,16 +277,24 @@ export default function EditAbodePage() {
     }
   };
 
-  const handleNewExperienceImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleNewExperienceImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setNewExperienceImage(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setNewExperienceImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    e.target.value = '';
+    if (!file) return;
+    let useFile = file;
+    if (file.type.startsWith('image/') && !file.type.startsWith('image/gif')) {
+      try {
+        useFile = await compressImageFile(file);
+      } catch {
+        /* use original */
+      }
     }
+    setNewExperienceImage(useFile);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setNewExperienceImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(useFile);
   };
 
   const fetchAbode = async () => {
@@ -370,26 +375,41 @@ export default function EditAbodePage() {
     }
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    
-    files.forEach(file => {
-      // Check file size (100MB limit for videos, 10MB for images)
+    e.target.value = '';
+
+    for (const file of files) {
       const isVideo = file.type.startsWith('video/');
       const maxSize = isVideo ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
-      
+
       if (file.size > maxSize) {
         setError(`${isVideo ? 'Video' : 'Image'} must be less than ${maxSize / (1024 * 1024)}MB`);
-        return;
+        continue;
       }
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImageFiles(prev => [...prev, file]);
-        setImagePreviews(prev => [...prev, reader.result as string]);
-      };
-      reader.readAsDataURL(file);
-    });
+      let toAdd = file;
+      if (!isVideo && file.type.startsWith('image/')) {
+        try {
+          toAdd = await compressImageFile(file);
+        } catch {
+          /* keep original */
+        }
+      }
+
+      try {
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = () => reject(new Error('read failed'));
+          reader.readAsDataURL(toAdd);
+        });
+        setImageFiles((prev) => [...prev, toAdd]);
+        setImagePreviews((prev) => [...prev, dataUrl]);
+      } catch {
+        setError('Could not process an image file');
+      }
+    }
   };
 
   const removeImage = (index: number) => {
@@ -799,9 +819,7 @@ export default function EditAbodePage() {
         formDataToSend.append('images', file);
       });
 
-      const response = await api.put(`/abodes/${params.id}`, formDataToSend, {
-        timeout: 600000,
-      });
+      const response = await api.put(`/abodes/${params.id}`, formDataToSend);
 
       if (response.data.success) {
         setSuccess(true);

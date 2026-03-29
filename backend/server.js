@@ -46,52 +46,84 @@ const allowedOrigins = [
 // Determine if we're in development mode
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
-/** Single source of truth for browser Origin checks (preflight + cors package). */
-function isOriginAllowed(origin) {
-  if (!origin) return false;
-  if (isDevelopment) return true;
-  if (allowedOrigins.indexOf(origin) !== -1) return true;
-  if (origin.includes('triberoutes.com')) return true;
-  if (origin.endsWith('.vercel.app') || origin.includes('vercel.app')) return true;
-  if (origin.endsWith('.onrender.com') || origin.includes('onrender.com')) return true;
-  if (origin.endsWith('.netlify.app') || origin.includes('netlify.app')) return true;
-  if (origin.endsWith('.railway.app') || origin.includes('railway.app')) return true;
-  if (origin.endsWith('.herokuapp.com') || origin.includes('herokuapp.com')) return true;
-  return false;
-}
-
-// Preflight before cors(): always send Allow-Headers (some browsers omit Access-Control-Request-Headers;
-// the cors package then omits Allow-Headers and preflight fails). Reflect requested headers when present.
-app.use((req, res, next) => {
-  if (req.method !== 'OPTIONS') return next();
-  const origin = req.headers.origin;
-  if (!isOriginAllowed(origin)) return next();
-  res.setHeader('Access-Control-Allow-Origin', origin);
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  const requested = req.headers['access-control-request-headers'];
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    requested ||
-      'Content-Type, Authorization, Accept, X-Requested-With, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'
-  );
-  res.setHeader(
-    'Access-Control-Allow-Methods',
-    'GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD'
-  );
-  res.setHeader('Access-Control-Max-Age', '7200');
-  res.setHeader('Vary', 'Origin, Access-Control-Request-Headers');
-  return res.status(204).end();
-});
-
 // Enhanced CORS configuration
 app.use(cors({
   origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl requests, Postman, etc.)
     if (!origin) {
+      console.log('[CORS] Allowing request with no origin');
       return callback(null, true);
     }
-    if (isOriginAllowed(origin)) {
-      return callback(null, origin);
+    
+    // In development, always allow localhost and common development origins
+    if (isDevelopment) {
+      // Allow localhost, 127.0.0.1, and common development IPs
+      if (
+        origin.startsWith('http://localhost:') ||
+        origin.startsWith('http://127.0.0.1:') ||
+        origin.startsWith('http://172.16.') ||
+        origin.startsWith('http://192.168.') ||
+        origin.startsWith('http://10.') ||
+        allowedOrigins.indexOf(origin) !== -1
+      ) {
+        console.log('[CORS] Allowing origin in development:', origin);
+        return callback(null, true);
+      }
+      // In development, allow all origins for easier debugging
+      console.log('[CORS] Allowing origin in development (catch-all):', origin);
+      return callback(null, true);
     }
+    
+    // Production: check allowed origins with more flexible matching
+    // Check exact match first
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+      return;
+    }
+    
+    // Allow custom domain triberoutes.com
+    if (origin.includes('triberoutes.com')) {
+      console.log('[CORS] Allowed: triberoutes.com domain');
+      callback(null, true);
+      return;
+    }
+    
+    // Allow Vercel deployments (*.vercel.app)
+    if (origin.endsWith('.vercel.app') || origin.includes('vercel.app')) {
+      console.log('[CORS] Allowed: Vercel deployment');
+      callback(null, true);
+      return;
+    }
+    
+    // Allow Render deployments (*.onrender.com)
+    if (origin.endsWith('.onrender.com') || origin.includes('onrender.com')) {
+      console.log('[CORS] Allowed: Render deployment');
+      callback(null, true);
+      return;
+    }
+    
+    // Allow Netlify deployments (*.netlify.app)
+    if (origin.endsWith('.netlify.app') || origin.includes('netlify.app')) {
+      console.log('[CORS] Allowed: Netlify deployment');
+      callback(null, true);
+      return;
+    }
+    
+    // Allow Railway deployments (*.railway.app)
+    if (origin.endsWith('.railway.app') || origin.includes('railway.app')) {
+      console.log('[CORS] Allowed: Railway deployment');
+      callback(null, true);
+      return;
+    }
+    
+    // Allow Heroku deployments (*.herokuapp.com)
+    if (origin.endsWith('.herokuapp.com') || origin.includes('herokuapp.com')) {
+      console.log('[CORS] Allowed: Heroku deployment');
+      callback(null, true);
+      return;
+    }
+    
+    // Log blocked origin for debugging
     console.error('[CORS] ❌ Blocked origin:', origin);
     console.error('[CORS] Allowed origins:', allowedOrigins);
     console.error('[CORS] NODE_ENV:', process.env.NODE_ENV);
@@ -100,8 +132,15 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH', 'HEAD'],
-  // Omit allowedHeaders: the cors package then echoes Access-Control-Request-Headers from the
-  // browser. A fixed list breaks preflight when clients add headers (Sentry, APM, extensions).
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'Access-Control-Request-Method',
+    'Access-Control-Request-Headers'
+  ],
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
   preflightContinue: false,
   optionsSuccessStatus: 204
@@ -134,6 +173,15 @@ app.use(passport.session());
 // Serve uploaded files statically
 const path = require('path');
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Handle preflight OPTIONS requests explicitly
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.sendStatus(204);
+});
 
 // Health check
 app.get('/health', (req, res) => {
