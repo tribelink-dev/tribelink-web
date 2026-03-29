@@ -21,7 +21,7 @@ function normalizeApiBaseUrl(raw: string | undefined): string {
 const rawApiEnv = process.env.NEXT_PUBLIC_API_URL;
 const API_URL = normalizeApiBaseUrl(rawApiEnv);
 
-/** On production triberoutes.com hosts, call API via Next.js rewrite (/tr-api → api host) to avoid CORS. */
+/** On production triberoutes.com hosts, call API via same-origin /tr-api Route Handler proxy. */
 function sameOriginApiBasePath(): string | null {
   if (typeof window === 'undefined') return null;
   const host = window.location.hostname;
@@ -54,16 +54,11 @@ const api = axios.create({
   timeout: 30000, // 30 seconds timeout for all requests
 });
 
-// Add token to requests; use same-origin proxy on triberoutes.com for JSON (avoids CORS).
-// FormData must use API_URL: proxying large multipart through Vercel is slow and often times out.
+// Add token to requests. On triberoutes.com always use same-origin /tr-api (Route Handler → API)
+// so the browser never calls api.* directly (avoids CORS and mixed-origin issues). Multipart included.
 api.interceptors.request.use((config) => {
   const proxied = sameOriginApiBasePath();
-  const isFormData = typeof FormData !== 'undefined' && config.data instanceof FormData;
-  if (proxied && !isFormData) {
-    config.baseURL = proxied;
-  } else {
-    config.baseURL = API_URL;
-  }
+  config.baseURL = proxied ?? API_URL;
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   if (token) {
@@ -174,19 +169,23 @@ api.interceptors.response.use(
       error.message?.includes('Network') ||
       !error.response
     ) {
-      console.error(`❌ Cannot connect to backend at ${apiUrl}`);
-      console.error('🔍 Troubleshooting:');
-      console.error(
-        '1. Check if backend is running:',
-        `${apiUrl.replace(/\/api\/?$/, '')}/health`
-      );
-      console.error('2. Verify NEXT_PUBLIC_API_URL:', apiUrl);
-      console.error('3. CORS / preflight — Frontend origin:', currentOrigin);
-      console.error('4. Disable extensions or try another browser if preflight adds extra headers');
+      const reqBase = (error?.config?.baseURL as string | undefined) ?? apiUrl;
+      const reqPath = (error?.config?.url as string | undefined) ?? '';
+      const attempted =
+        reqBase.startsWith('/') && typeof window !== 'undefined'
+          ? `${window.location.origin}${reqBase}${reqPath}`
+          : `${reqBase}${reqPath}`;
+
+      console.error(`❌ Request failed (no response): ${attempted}`);
+      console.error('🔍 Upstream health:', `${apiUrl.replace(/\/api\/?$/, '')}/health`);
+      console.error('🔍 NEXT_PUBLIC_API_URL:', apiUrl, '| origin:', currentOrigin);
 
       if (typeof window !== 'undefined') {
+        const viaProxy = reqBase === '/tr-api';
         const userError: AppError = new Error(
-          `Cannot reach the API at ${apiUrl}. The site is online if /health works; this is often a browser extension, strict network, or an outdated API deploy. Try another browser or incognito.`
+          viaProxy
+            ? `Cannot reach the API through this site (proxy). Confirm the latest frontend is deployed and API_UPSTREAM_ORIGIN on Vercel points to your API. Open ${apiUrl.replace(/\/api\/?$/, '')}/health in a new tab — if that loads, try again or contact support.`
+            : `Cannot reach the API at ${attempted}. Check your network, try incognito without extensions, or confirm NEXT_PUBLIC_API_URL. API health: ${apiUrl.replace(/\/api\/?$/, '')}/health`
         );
         userError.isNetworkError = true;
         return Promise.reject(userError);
