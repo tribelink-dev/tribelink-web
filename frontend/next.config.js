@@ -1,6 +1,22 @@
 /** @type {import('next').NextConfig} */
+const apiUpstream =
+  (process.env.API_UPSTREAM_ORIGIN || 'https://api.triberoutes.com').replace(
+    /\/$/,
+    ''
+  );
+
 const nextConfig = {
   reactStrictMode: true,
+
+  // Same-origin proxy: browser calls /tr-api/* → upstream /api/* (no cross-origin CORS).
+  async rewrites() {
+    return [
+      {
+        source: '/tr-api/:path*',
+        destination: `${apiUpstream}/api/:path*`,
+      },
+    ];
+  },
   
   // Image domain whitelist for security (prevents SSRF)
   images: {

@@ -683,7 +683,7 @@ export default function RegisterAbodePage() {
       });
 
       const response = await api.post('/abodes/register', formDataToSend, {
-        timeout: 180000,
+        timeout: 600000,
       });
 
       if (response.data.success) {

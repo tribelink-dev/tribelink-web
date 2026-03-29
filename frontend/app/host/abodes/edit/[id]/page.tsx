@@ -800,9 +800,7 @@ export default function EditAbodePage() {
       });
 
       const response = await api.put(`/abodes/${params.id}`, formDataToSend, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+        timeout: 600000,
       });
 
       if (response.data.success) {

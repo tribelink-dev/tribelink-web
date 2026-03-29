@@ -21,6 +21,19 @@ function normalizeApiBaseUrl(raw: string | undefined): string {
 const rawApiEnv = process.env.NEXT_PUBLIC_API_URL;
 const API_URL = normalizeApiBaseUrl(rawApiEnv);
 
+/** On production triberoutes.com hosts, call API via Next.js rewrite (/tr-api → api host) to avoid CORS. */
+function sameOriginApiBasePath(): string | null {
+  if (typeof window === 'undefined') return null;
+  const host = window.location.hostname;
+  if (host === 'triberoutes.com' || host === 'www.triberoutes.com') {
+    return '/tr-api';
+  }
+  if (host.endsWith('.triberoutes.com')) {
+    return '/tr-api';
+  }
+  return null;
+}
+
 if (typeof window !== 'undefined' && rawApiEnv && !/^https?:\/\//i.test(String(rawApiEnv).trim())) {
   console.warn('[api] NEXT_PUBLIC_API_URL should start with https:// or http://. Using:', API_URL);
 }
@@ -41,8 +54,17 @@ const api = axios.create({
   timeout: 30000, // 30 seconds timeout for all requests
 });
 
-// Add token to requests
+// Add token to requests; use same-origin proxy on triberoutes.com for JSON (avoids CORS).
+// FormData must use API_URL: proxying large multipart through Vercel is slow and often times out.
 api.interceptors.request.use((config) => {
+  const proxied = sameOriginApiBasePath();
+  const isFormData = typeof FormData !== 'undefined' && config.data instanceof FormData;
+  if (proxied && !isFormData) {
+    config.baseURL = proxied;
+  } else {
+    config.baseURL = API_URL;
+  }
+
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -139,7 +161,7 @@ api.interceptors.response.use(
     // Timeouts (often large uploads) — avoid mislabeling as "cannot connect"
     if (error.code === 'ECONNABORTED' && typeof window !== 'undefined') {
       const timeoutError: AppError = new Error(
-        'Request timed out. If you are uploading many or large photos, try fewer images or a faster connection.'
+        'Request timed out while talking to the server. Try smaller or fewer images, a stronger network, or wait and submit again.'
       );
       timeoutError.isNetworkError = true;
       return Promise.reject(timeoutError);
