@@ -668,41 +668,46 @@ export default function RegisterAbodePage() {
         throw new Error('Please set location coordinates');
       }
 
-      const formDataToSend = new FormData();
-      formDataToSend.append('abodeDetails', JSON.stringify(formData.abodeDetails));
-      formDataToSend.append('culturalPractices', JSON.stringify(formData.culturalPractices));
-      formDataToSend.append('nearbyPlaces', JSON.stringify(formData.nearbyPlaces));
-      formDataToSend.append('availability', JSON.stringify(formData.availability));
-      formDataToSend.append('pricing', JSON.stringify({
-        ...formData.pricing,
-        pricePerNight: Number(formData.pricing.pricePerNight),
-      }));
-      formDataToSend.append('languages', JSON.stringify(formData.languages));
-      formDataToSend.append('familyInfo', JSON.stringify({
-        ...formData.familyInfo,
-        familySize: formData.familyInfo.familySize ? Number(formData.familyInfo.familySize) : undefined,
-        generations: formData.familyInfo.generations ? Number(formData.familyInfo.generations) : undefined,
-      }));
-      formDataToSend.append('location', JSON.stringify(formData.location));
-      
-      // Add room variants if any
+      const imagesPayload = await Promise.all(
+        imageFiles.map(async (file) => {
+          const fd = new FormData();
+          fd.append('image', file);
+          const up = await api.post('/abodes/upload-photo', fd);
+          const url = up.data?.url;
+          if (!url) {
+            throw new Error(up.data?.message || 'Image upload did not return a URL');
+          }
+          return { url, caption: file.name };
+        })
+      );
+
+      const payload: Record<string, unknown> = {
+        abodeDetails: formData.abodeDetails,
+        culturalPractices: formData.culturalPractices,
+        nearbyPlaces: formData.nearbyPlaces,
+        availability: formData.availability,
+        pricing: {
+          ...formData.pricing,
+          pricePerNight: Number(formData.pricing.pricePerNight),
+        },
+        languages: formData.languages,
+        familyInfo: {
+          ...formData.familyInfo,
+          familySize: formData.familyInfo.familySize ? Number(formData.familyInfo.familySize) : undefined,
+          generations: formData.familyInfo.generations ? Number(formData.familyInfo.generations) : undefined,
+        },
+        location: formData.location,
+        linkedExperiences: selectedExperienceIds,
+        images: imagesPayload,
+      };
       if (roomVariants.length > 0) {
-        formDataToSend.append('roomVariants', JSON.stringify(roomVariants));
+        payload.roomVariants = roomVariants;
         if (defaultVariantId) {
-          formDataToSend.append('defaultVariantId', defaultVariantId);
+          payload.defaultVariantId = defaultVariantId;
         }
       }
-      
-      // Add linked experiences if any
-      if (selectedExperienceIds.length > 0) {
-        formDataToSend.append('linkedExperiences', JSON.stringify(selectedExperienceIds));
-      }
 
-      imageFiles.forEach((file) => {
-        formDataToSend.append('images', file);
-      });
-
-      const response = await api.post('/abodes/register', formDataToSend);
+      const response = await api.post('/abodes/register', payload);
 
       if (response.data.success) {
         setSuccess(true);

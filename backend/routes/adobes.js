@@ -4,6 +4,7 @@
  */
 
 const express = require('express');
+const path = require('path');
 const LocalHost = require('../models/LocalHost');
 const Provider = require('../models/Provider');
 const Booking = require('../models/Booking');
@@ -12,6 +13,63 @@ const upload = require('../middleware/uploadCloudinary');
 const { getBaseUrlFromRequest } = require('../utils/imageUtils');
 
 const router = express.Router();
+
+/**
+ * Public URL to store in DB / return to client (never absolute disk paths).
+ * Cloudinary populates secure_url/url; local disk uses filename under /uploads/.
+ */
+function publicUrlFromMulterFile(file) {
+  if (!file) return null;
+  if (file.secure_url && /^https:\/\//i.test(String(file.secure_url))) {
+    return String(file.secure_url);
+  }
+  if (file.url && /^https?:\/\//i.test(String(file.url))) {
+    return String(file.url);
+  }
+  if (file.path && /^https?:\/\//i.test(String(file.path))) {
+    return String(file.path);
+  }
+  if (file.filename) {
+    return `/uploads/${file.filename}`;
+  }
+  if (typeof file.path === 'string' && file.path) {
+    const base = path.basename(file.path);
+    if (base && base !== file.path) {
+      return `/uploads/${base}`;
+    }
+  }
+  return null;
+}
+
+/** Image URLs allowed on JSON register/update (after POST /upload-photo). */
+function isTrustedAbodeImageUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  const u = url.trim();
+  if (u.startsWith('/uploads/')) return true;
+  try {
+    const parsed = new URL(u);
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return false;
+    const host = parsed.hostname.toLowerCase();
+    if (host === 'res.cloudinary.com' || host.endsWith('.cloudinary.com')) {
+      return true;
+    }
+    const pathname = parsed.pathname || '';
+    if (pathname.startsWith('/uploads/')) {
+      if (host === 'localhost' || host === '127.0.0.1') return true;
+      if (process.env.BACKEND_URL) {
+        try {
+          const backendHost = new URL(process.env.BACKEND_URL).hostname.toLowerCase();
+          if (backendHost && host === backendHost) return true;
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
 
 // List all local hosts (abodes) with filters
 router.get('/', async (req, res) => {
@@ -170,6 +228,24 @@ router.get('/', async (req, res) => {
   }
 });
 
+// One image at a time → Cloudinary/local (staged abode save avoids huge multipart timeouts)
+router.post('/upload-photo', authenticate, requireHost, upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No image file uploaded' });
+    }
+    const url = publicUrlFromMulterFile(req.file);
+    if (!url) {
+      console.error('[upload-photo] Could not resolve URL; file keys:', Object.keys(req.file));
+      return res.status(500).json({ message: 'Upload did not return a usable URL' });
+    }
+    return res.json({ success: true, url });
+  } catch (err) {
+    console.error('[upload-photo]', err);
+    return res.status(500).json({ message: 'Upload failed', error: err.message });
+  }
+});
+
 // Get abode details by ID
 router.get('/:id', async (req, res) => {
   try {
@@ -294,8 +370,137 @@ router.get('/:id/experiences', async (req, res) => {
   }
 });
 
+/** JSON body after client uploaded each photo via POST /upload-photo (fast, small requests). */
+async function registerAbodeJson(req, res) {
+  const providerId = req.user._id;
+  const existingHost = await LocalHost.findOne({ providerId });
+  if (existingHost) {
+    return res.status(400).json({ message: 'Local host profile already exists' });
+  }
+
+  const {
+    abodeDetails,
+    culturalPractices = [],
+    nearbyPlaces = [],
+    availability = [],
+    pricing,
+    languages = [],
+    familyInfo = {},
+    location,
+    roomVariants,
+    defaultVariantId,
+    linkedExperiences = [],
+    images: imageInputs
+  } = req.body || {};
+
+  if (!Array.isArray(imageInputs) || imageInputs.length === 0) {
+    return res.status(400).json({ message: 'At least one image is required' });
+  }
+  const images = [];
+  for (let i = 0; i < imageInputs.length; i++) {
+    const row = imageInputs[i];
+    const url = row && row.url;
+    if (!isTrustedAbodeImageUrl(url)) {
+      return res.status(400).json({ message: 'Invalid or untrusted image URL' });
+    }
+    images.push({
+      url,
+      isMain: i === 0,
+      caption: (row && row.caption) || `Photo ${i + 1}`
+    });
+  }
+
+  if (!abodeDetails?.title || !String(abodeDetails.title).trim()) {
+    return res.status(400).json({ message: 'Abode title is required' });
+  }
+  if (!abodeDetails?.description || !String(abodeDetails.description).trim()) {
+    return res.status(400).json({ message: 'Abode description is required' });
+  }
+  if (!location?.state || !String(location.state).trim()) {
+    return res.status(400).json({ message: 'State is required' });
+  }
+  if (!location?.district || !String(location.district).trim()) {
+    return res.status(400).json({ message: 'District is required' });
+  }
+
+  const preparedRoomVariants = Array.isArray(roomVariants) ? roomVariants.map(variant => ({
+    variantId: variant.variantId || `variant-${Date.now()}-${Math.random()}`,
+    name: variant.name || '',
+    description: variant.description || '',
+    pricePerNight: Number(variant.pricePerNight) || 0,
+    capacity: Number(variant.capacity) || 1,
+    bedrooms: Number(variant.bedrooms) || 1,
+    bathrooms: Number(variant.bathrooms) || 1,
+    amenities: Array.isArray(variant.amenities) ? variant.amenities : [],
+    images: Array.isArray(variant.images) ? variant.images : [],
+    availability: Array.isArray(variant.availability) ? variant.availability : []
+  })) : [];
+
+  const localHost = new LocalHost({
+    providerId,
+    abodeDetails: {
+      title: abodeDetails.title.trim(),
+      description: abodeDetails.description || '',
+      capacity: Number(abodeDetails.capacity) || 2,
+      bedrooms: Number(abodeDetails.bedrooms) || 1,
+      bathrooms: Number(abodeDetails.bathrooms) || 1,
+      amenities: Array.isArray(abodeDetails.amenities) ? abodeDetails.amenities : [],
+      houseRules: Array.isArray(abodeDetails.houseRules) ? abodeDetails.houseRules : [],
+      propertyType: abodeDetails.propertyType || 'Traditional Home'
+    },
+    culturalPractices: Array.isArray(culturalPractices) ? culturalPractices : [],
+    nearbyPlaces: Array.isArray(nearbyPlaces) ? nearbyPlaces : [],
+    availability: Array.isArray(availability) ? availability : [],
+    pricing: {
+      pricePerNight: Number(pricing?.pricePerNight) || 0,
+      currency: pricing?.currency || 'INR',
+      weeklyDiscount: Number(pricing?.weeklyDiscount) || 0,
+      monthlyDiscount: Number(pricing?.monthlyDiscount) || 0
+    },
+    images,
+    languages: Array.isArray(languages) ? languages : [],
+    familyInfo: familyInfo || {},
+    location: {
+      country: location?.country || 'India',
+      state: location.state || '',
+      district: location.district || '',
+      address: location?.address || '',
+      coordinates: {
+        lat: Number(location?.coordinates?.lat) || 0,
+        lng: Number(location?.coordinates?.lng) || 0
+      },
+      nearbyLandmarks: Array.isArray(location?.nearbyLandmarks) ? location.nearbyLandmarks : []
+    },
+    roomVariants: preparedRoomVariants,
+    defaultVariantId: defaultVariantId || (preparedRoomVariants.length > 0 ? preparedRoomVariants[0].variantId : null),
+    linkedExperiences: Array.isArray(linkedExperiences) ? linkedExperiences : []
+  });
+
+  await localHost.save();
+  return res.status(201).json({
+    success: true,
+    message: 'Local host profile created successfully',
+    localHost
+  });
+}
+
 // Register as local host (create LocalHost profile)
-router.post('/register', authenticate, requireHost, upload.array('images'), async (req, res) => {
+router.post(
+  '/register',
+  authenticate,
+  requireHost,
+  (req, res, next) => {
+    if (req.is('application/json')) {
+      registerAbodeJson(req, res).catch((err) => {
+        console.error('Error creating local host (JSON):', err);
+        res.status(500).json({ message: 'Server error', error: err.message });
+      });
+      return;
+    }
+    next();
+  },
+  upload.array('images'),
+  async (req, res) => {
   try {
     const providerId = req.user._id; // Assuming req.user is the Provider
 
@@ -378,6 +583,9 @@ router.post('/register', authenticate, requireHost, upload.array('images'), asyn
           caption: file.originalname
         });
       });
+    }
+    if (images.length === 0) {
+      return res.status(400).json({ message: 'At least one image is required' });
     }
 
     // Validate required fields
@@ -465,10 +673,130 @@ router.post('/register', authenticate, requireHost, upload.array('images'), asyn
     console.error('Error creating local host:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
-});
+  }
+);
 
 // Update local host profile
-router.put('/:id', authenticate, requireHost, upload.array('images'), async (req, res) => {
+async function updateAbodeJson(req, res) {
+  const localHost = await LocalHost.findById(req.params.id);
+  if (!localHost) {
+    return res.status(404).json({ message: 'Local host not found' });
+  }
+  if (localHost.providerId.toString() !== req.user._id.toString()) {
+    return res.status(403).json({ message: 'Access denied' });
+  }
+
+  const body = req.body || {};
+  const {
+    abodeDetails,
+    culturalPractices,
+    nearbyPlaces,
+    availability,
+    pricing,
+    languages,
+    familyInfo,
+    location,
+    roomVariants,
+    defaultVariantId,
+    linkedExperiences,
+    existingImages: existingImagesData,
+    newUploadedImages = []
+  } = body;
+
+  if (abodeDetails) localHost.abodeDetails = { ...localHost.abodeDetails, ...abodeDetails };
+  if (culturalPractices !== undefined) {
+    localHost.culturalPractices = Array.isArray(culturalPractices) ? culturalPractices : localHost.culturalPractices;
+  }
+  if (nearbyPlaces !== undefined) {
+    localHost.nearbyPlaces = Array.isArray(nearbyPlaces) ? nearbyPlaces : localHost.nearbyPlaces;
+  }
+  if (availability !== undefined) {
+    localHost.availability = Array.isArray(availability) ? availability : localHost.availability;
+  }
+  if (pricing) localHost.pricing = { ...localHost.pricing, ...pricing };
+  if (languages !== undefined) {
+    localHost.languages = Array.isArray(languages) ? languages : localHost.languages;
+  }
+  if (familyInfo) localHost.familyInfo = { ...localHost.familyInfo, ...familyInfo };
+  if (location) localHost.location = { ...localHost.location, ...location };
+  if (roomVariants !== undefined && Array.isArray(roomVariants)) {
+    localHost.roomVariants = roomVariants;
+  }
+  if (defaultVariantId !== undefined) {
+    localHost.defaultVariantId = defaultVariantId || null;
+  }
+  if (linkedExperiences !== undefined && Array.isArray(linkedExperiences)) {
+    localHost.linkedExperiences = linkedExperiences;
+  }
+
+  let existingImagesToKeep = [];
+  if (Array.isArray(existingImagesData)) {
+    const existingImageIds = existingImagesData.map(img => img._id?.toString()).filter(Boolean);
+    existingImagesToKeep = localHost.images.filter(img =>
+      existingImageIds.includes(img._id.toString())
+    );
+    const orderedImages = [];
+    existingImagesData.forEach(requestedImg => {
+      const found = existingImagesToKeep.find(img => img._id.toString() === requestedImg._id?.toString());
+      if (found) {
+        if (requestedImg.isMain !== undefined) found.isMain = requestedImg.isMain;
+        if (requestedImg.caption !== undefined) found.caption = requestedImg.caption;
+        orderedImages.push(found);
+      }
+    });
+    existingImagesToKeep = orderedImages;
+  } else {
+    existingImagesToKeep = localHost.images;
+  }
+
+  const newImages = [];
+  if (Array.isArray(newUploadedImages)) {
+    for (let i = 0; i < newUploadedImages.length; i++) {
+      const row = newUploadedImages[i];
+      const url = row && row.url;
+      if (!isTrustedAbodeImageUrl(url)) {
+        return res.status(400).json({ message: 'Invalid or untrusted image URL' });
+      }
+      newImages.push({
+        url,
+        isMain: existingImagesToKeep.length === 0 && i === 0,
+        caption: (row && row.caption) || `Photo ${i + 1}`
+      });
+    }
+  }
+
+  const allImages = [...existingImagesToKeep, ...newImages];
+  if (allImages.length > 0) {
+    allImages.forEach((img, idx) => {
+      img.isMain = idx === 0;
+    });
+  }
+  localHost.images = allImages;
+
+  await localHost.save();
+  return res.json({
+    success: true,
+    message: 'Local host profile updated successfully',
+    localHost
+  });
+}
+
+router.put(
+  '/:id',
+  authenticate,
+  requireHost,
+  (req, res, next) => {
+    if (req.is('application/json')) {
+      updateAbodeJson(req, res).catch((err) => {
+        console.error('Error updating local host (JSON):', err);
+        res.status(500).json({ message: 'Server error', error: err.message });
+      });
+      return;
+    }
+    next();
+  },
+  upload.array('images'),
+  async (req, res) => {
   try {
     const localHost = await LocalHost.findById(req.params.id);
 
@@ -659,7 +987,8 @@ router.put('/:id', authenticate, requireHost, upload.array('images'), async (req
     console.error('Error updating local host:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
-});
+  }
+);
 
 // Get abodes by owner (for abode host dashboard)
 router.get('/owner/my-abodes', authenticate, requireHost, async (req, res) => {

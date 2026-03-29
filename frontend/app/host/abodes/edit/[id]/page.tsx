@@ -768,58 +768,48 @@ export default function EditAbodePage() {
         throw new Error('Please set location on the map');
       }
 
-      const formDataToSend = new FormData();
-      formDataToSend.append('abodeDetails', JSON.stringify(formData.abodeDetails));
-      formDataToSend.append('culturalPractices', JSON.stringify(formData.culturalPractices));
-      formDataToSend.append('nearbyPlaces', JSON.stringify(formData.nearbyPlaces));
-      formDataToSend.append('availability', JSON.stringify(formData.availability));
-      formDataToSend.append('pricing', JSON.stringify({
-        ...formData.pricing,
-        pricePerNight: Number(formData.pricing.pricePerNight),
-      }));
-      formDataToSend.append('languages', JSON.stringify(formData.languages));
-      formDataToSend.append('familyInfo', JSON.stringify({
-        ...formData.familyInfo,
-        familySize: formData.familyInfo.familySize ? Number(formData.familyInfo.familySize) : undefined,
-        generations: formData.familyInfo.generations ? Number(formData.familyInfo.generations) : undefined,
-      }));
-      formDataToSend.append('location', JSON.stringify(formData.location));
-      
-      // Add room variants if any
-      if (roomVariants.length > 0) {
-        formDataToSend.append('roomVariants', JSON.stringify(roomVariants));
-        if (defaultVariantId) {
-          formDataToSend.append('defaultVariantId', defaultVariantId);
-        }
-      } else {
-        // Clear room variants if none
-        formDataToSend.append('roomVariants', JSON.stringify([]));
-      }
-      
-      // Add linked experiences if any
-      if (selectedExperienceIds.length > 0) {
-        formDataToSend.append('linkedExperiences', JSON.stringify(selectedExperienceIds));
-      } else {
-        // Clear linked experiences if none
-        formDataToSend.append('linkedExperiences', JSON.stringify([]));
-      }
+      const newUploadedImages = await Promise.all(
+        imageFiles.map(async (file) => {
+          const fd = new FormData();
+          fd.append('image', file);
+          const up = await api.post('/abodes/upload-photo', fd);
+          const url = up.data?.url;
+          if (!url) {
+            throw new Error(up.data?.message || 'Image upload did not return a URL');
+          }
+          return { url, caption: file.name };
+        })
+      );
 
-      // Send existing images that should be kept (with their IDs)
-      if (existingImages.length > 0) {
-        formDataToSend.append('existingImages', JSON.stringify(existingImages.map(img => ({
+      const payload: Record<string, unknown> = {
+        abodeDetails: formData.abodeDetails,
+        culturalPractices: formData.culturalPractices,
+        nearbyPlaces: formData.nearbyPlaces,
+        availability: formData.availability,
+        pricing: {
+          ...formData.pricing,
+          pricePerNight: Number(formData.pricing.pricePerNight),
+        },
+        languages: formData.languages,
+        familyInfo: {
+          ...formData.familyInfo,
+          familySize: formData.familyInfo.familySize ? Number(formData.familyInfo.familySize) : undefined,
+          generations: formData.familyInfo.generations ? Number(formData.familyInfo.generations) : undefined,
+        },
+        location: formData.location,
+        roomVariants,
+        defaultVariantId: defaultVariantId || null,
+        linkedExperiences: selectedExperienceIds,
+        existingImages: existingImages.map(img => ({
           _id: img._id,
           url: img.url,
           isMain: img.isMain,
-          caption: img.caption
-        }))));
-      }
+          caption: img.caption,
+        })),
+        newUploadedImages,
+      };
 
-      // Send new image files
-      imageFiles.forEach((file) => {
-        formDataToSend.append('images', file);
-      });
-
-      const response = await api.put(`/abodes/${params.id}`, formDataToSend);
+      const response = await api.put(`/abodes/${params.id}`, payload);
 
       if (response.data.success) {
         setSuccess(true);
