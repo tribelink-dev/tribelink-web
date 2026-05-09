@@ -61,10 +61,11 @@ frontend/public/uploads/
 logs/
 *.log
 
-# Documentation files (except README.md and TEST_USERS.md)
+# Documentation files (except whitelisted ones)
 *.md
 !README.md
 !TEST_USERS.md
+!context.md
 
 # Local debugging scripts
 backend/scripts/findExperienceSimple.js

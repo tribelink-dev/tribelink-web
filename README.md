@@ -19,8 +19,12 @@
 - [User Flows](#user-flows)
 - [Test Users](#test-users)
 - [Architecture Overview](#architecture-overview)
+- [Production Deployment](#production-deployment)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
+
+> **Engineering context:** for deployment topology, branch strategy, recent
+> production fixes, and operational gotchas, see [`context.md`](./context.md).
 
 ---
 
@@ -770,6 +774,18 @@ RAZORPAY_WEBHOOK_SECRET=your-webhook-secret
 # Stripe (when PAYMENT_PROVIDER=stripe)
 STRIPE_SECRET_KEY=sk_test_your-stripe-secret-key
 STRIPE_WEBHOOK_SECRET=whsec_your-webhook-signing-secret
+
+# Cloudinary (image storage). The same cloud name is also exposed to the
+# frontend as NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME for direct uploads.
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
+
+# Render keep-alive self-ping (production only; harmless if left blank locally).
+# Render auto-injects RENDER_EXTERNAL_URL so usually you don't need to touch
+# either of these. KEEP_ALIVE_URL overrides for non-Render hosting.
+RENDER_EXTERNAL_URL=
+KEEP_ALIVE_URL=
 ```
 
 ### Frontend Environment Variables
@@ -777,11 +793,28 @@ STRIPE_WEBHOOK_SECRET=whsec_your-webhook-signing-secret
 Create a `.env.local` file in the `frontend/` directory:
 
 ```env
-# Backend API URL
+# Backend API URL — read at BUILD time by Next.js. Changing it requires a
+# rebuild (Vercel: redeploy with cache cleared).
 NEXT_PUBLIC_API_URL=http://localhost:5000/api
 
 # Optional: Stripe publishable key only if using Stripe and need it on frontend
 # NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+
+# Direct browser → Cloudinary uploads for abode photos. Strongly recommended
+# in production: bypasses backend dyno, gives real upload progress, ~10x
+# faster on free hosting tiers. If either is missing, the app silently
+# falls back to backend-proxied uploads.
+#
+# Setup:
+#   1. Cloudinary dashboard → Settings → Upload → Upload presets → Add new
+#      with Signing Mode = Unsigned, optional folder = triberoutes/abodes.
+#   2. Set both vars below; backend already trusts *.cloudinary.com URLs so
+#      no server change is required.
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=
+NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=
+
+# Mapbox public token for map components.
+NEXT_PUBLIC_MAPBOX_TOKEN=
 ```
 
 ---
@@ -1145,6 +1178,91 @@ See `TEST_USERS.md` for complete list.
 
 ---
 
+## 🚀 Production Deployment
+
+> Deeper operational notes — branch strategy, env-var checklists, recent
+> production incidents — live in [`context.md`](./context.md). This section
+> is the quick-start.
+
+### Topology
+
+| Layer | Service | Custom domain |
+|-------|---------|---------------|
+| Frontend (Next.js) | Vercel | `triberoutes.com` |
+| Backend (Express) | Render Free | `api.triberoutes.com` |
+| Database | MongoDB Atlas | — |
+| Image storage / CDN | Cloudinary | `res.cloudinary.com` (delivery), `api.cloudinary.com` (uploads) |
+
+### Production Branch
+
+- **Vercel deploys from `pivot-v2`**, not `main` or `dev`. Configured in
+  Vercel Project → Settings → Git → Production Branch.
+- Render auto-deploys the same `pivot-v2` from GitHub.
+- The GitHub repo's default branch is `dev` for legacy reasons; **don't push
+  production fixes to `dev`** unless you also intend them for `pivot-v2`.
+
+### Render Free-Tier Cold Starts
+
+The backend dyno suspends after 15 min of inactivity and takes 30–60s to
+wake. Mitigation lives in two places:
+
+1. **External cron** — `.github/workflows/keep-alive.yml` pings the backend
+   every 14 minutes. **Required setup:** GitHub repo → Settings → Secrets
+   and variables → Actions → add `RENDER_BACKEND_URL = https://api.triberoutes.com`.
+   Without this secret the workflow runs but does nothing.
+2. **Self-ping** — `backend/server.js` hits its own `/ping` every 14 min in
+   production (uses Render's auto-injected `RENDER_EXTERNAL_URL`).
+
+The frontend also has client-side resilience: 60s default axios timeout,
+`prewarmBackend()` before heavy flows, and `withRetry()` around the final
+register/update POSTs.
+
+### Image Uploads
+
+Production uses **direct browser → Cloudinary** uploads (bypassing the
+Render dyno) for abode register/edit. To enable:
+
+1. Cloudinary dashboard → Settings → Upload → Upload presets → Add new with
+   **Signing Mode = Unsigned**.
+2. Set on Vercel (Production + Preview):
+   - `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`
+   - `NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET`
+3. Make sure `frontend/next.config.js` CSP `connect-src` includes
+   `https://api.cloudinary.com` (it does by default).
+
+If either env var is missing, the code silently falls back to the legacy
+backend-proxied upload (slower, no progress bar). Backend already trusts
+`*.cloudinary.com` URLs via `backend/routes/adobes.js#isTrustedAbodeImageUrl`,
+so no server change is needed.
+
+### Required Backend Env Vars at Boot
+
+`backend/server.js` **throws on startup** if these are missing:
+- `SESSION_SECRET`
+- `JWT_SECRET` (checked in `services/oauthService.js`)
+
+`backend/config/envCheck.js` warns (doesn't crash) if these aren't set in
+production: `FRONTEND_URL`, `BACKEND_URL`, `NEXT_PUBLIC_API_URL`.
+
+### CSP & New Third-Party Origins
+
+The CSP in `frontend/next.config.js` is restrictive. When adding a new
+external service the browser talks to:
+
+| Where the JS calls | CSP directive to update |
+|---------------------|------------------------|
+| `fetch` / `XMLHttpRequest` / WebSocket | `connect-src` |
+| Loading external `<script>` | `script-src` |
+| Loading external `<img>` | `img-src` |
+| Embedding `<iframe>` (3DS, captcha) | `frame-src` |
+
+CSP rejections are **silent in the network log** — they show only in the
+browser Console as "Refused to connect to '...' because it violates the
+following Content Security Policy directive". Worth checking Console first
+when something works in dev but breaks in prod.
+
+---
+
 ## 🔧 Troubleshooting
 
 ### Common Issues
@@ -1265,10 +1383,52 @@ kill -9 <PID>
 **Problem**: Image upload fails
 
 **Solutions**:
-- Check file size (must be < 5MB)
-- Verify `uploads/` directory exists in backend
-- Check file permissions
-- Ensure Multer is properly configured
+- Check file size (must be < 100MB; abode photos are auto-compressed to ~250KB)
+- Verify `uploads/` directory exists in backend (only for the legacy local-storage fallback)
+- Ensure Cloudinary env vars are set on the backend (`CLOUDINARY_CLOUD_NAME` etc.)
+- For **direct browser → Cloudinary uploads** (production), see the next two entries
+
+#### "Network error during Cloudinary upload"
+
+**Problem**: Abode photo upload fails immediately with this exact message,
+no useful info in DevTools Network tab.
+
+**Solutions** (in order of likelihood):
+1. **CSP `connect-src` doesn't include `api.cloudinary.com`** — check
+   `frontend/next.config.js`. Browser silently blocks the XHR; the only
+   place it shows up is the browser **Console** as "Refused to connect to ...".
+2. **Cloudinary upload preset is in Signed mode** — needs to be Unsigned.
+   Cloudinary dashboard → Settings → Upload → Upload presets → edit your
+   preset → Signing Mode = **Unsigned**.
+3. **Wrong preset name** in `NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET` — the
+   POST will fail with a 400 + body `{"error":{"message":"Upload preset not found"}}`.
+4. **Wrong cloud name** in `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` — DNS will
+   fail. The XHR returns `onerror` immediately.
+
+Confirm by opening DevTools → Network → look for the POST to
+`api.cloudinary.com/v1_1/.../auto/upload`. Its status code (or absence of
+the request entirely, in CSP cases) tells you which.
+
+#### "Cannot connect to server at https://api.triberoutes.com/api"
+
+**Problem**: This exact error message appears on submit.
+
+**Solution**: That wording comes from an older version of
+`frontend/lib/api.ts`. The current code reads "Network error talking to the
+server. The backend may be waking up after being idle…". Seeing the old
+text means **the deployed Vercel build is stale** — trigger a redeploy
+from the Vercel dashboard. Make sure Production Branch is set to
+`pivot-v2`.
+
+#### "Route not found" on a fresh API endpoint
+
+**Problem**: GET/POST returns `{"message":"Route not found"}` even though
+you just added the endpoint locally.
+
+**Solution**: Render hasn't redeployed yet. The 404 is from the catch-all
+in `backend/server.js`. Push to `pivot-v2` (Render auto-deploys from there)
+and wait ~2 minutes. Watch the Render dashboard logs for "Build successful"
+followed by "Starting service".
 
 #### Email OTP Not Sending
 
@@ -1377,9 +1537,9 @@ Built with:
 
 ---
 
-**Last Updated**: December 2024
+**Last Updated**: May 2026
 
-**Version**: 2.0.0
+**Version**: 2.1.0
 
 ---
 
