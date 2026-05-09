@@ -3,10 +3,13 @@
  * GIFs and non-images are returned unchanged.
  */
 
-const DEFAULT_MAX_EDGE = 1920;
-const DEFAULT_QUALITY = 0.82;
+// Tuned for listing photos. 1600px wide is plenty for hero/gallery rendering
+// at 2x DPR up to ~800px container width, and q=0.78 keeps photographic
+// images under ~250KB without visible artifacts.
+const DEFAULT_MAX_EDGE = 1600;
+const DEFAULT_QUALITY = 0.78;
 /** Skip work for already-small files */
-const DEFAULT_SKIP_BELOW = 350 * 1024;
+const DEFAULT_SKIP_BELOW = 250 * 1024;
 
 export async function compressImageFile(
   file: File,

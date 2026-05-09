@@ -1,19 +1,30 @@
 import axios from 'axios';
 import api from '@/lib/api';
+import {
+  isCloudinaryDirectUploadConfigured,
+  uploadFileToCloudinary,
+} from '@/lib/cloudinaryDirectUpload';
 
 const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 const BACKEND_ROOT = RAW_API_URL.replace(/\/api\/?$/, '');
 
 /**
- * Upload photos one-at-a-time with retry. Used by abode register/edit flows.
+ * Upload photos for abode register/edit flows.
  *
- * Why sequential and not Promise.all:
- *  - Render free tier (shared 0.5 CPU) chokes on N concurrent multipart streams,
- *    causing some uploads to time out or fail with "Network Error". Promise.all
- *    rejects on the first failure, killing the entire submission and leaving the
- *    user staring at "Cannot connect to server" even though the backend is fine.
- *  - Sequential uploads + per-photo retry are dramatically more reliable on free
- *    hosting tiers, at the cost of slightly higher wall-clock time.
+ * Two modes (chosen automatically):
+ *
+ *  1. **Direct-to-Cloudinary** (preferred). Used when
+ *     NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME + NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
+ *     are set. Uploads go browser → Cloudinary edge in parallel (capped),
+ *     bypassing Render's tiny dyno. Fast, reliable, real per-byte progress.
+ *
+ *  2. **Backend proxy** (fallback). Sequential one-at-a-time POSTs to our
+ *     /abodes/upload-photo, with retry. Used only when Cloudinary direct
+ *     env vars are absent — it's the legacy path and is slow on free tier.
+ *
+ * Either way, the call returns a list of {url, caption} that's safe to send
+ * to the JSON register/update endpoint (backend already trusts cloudinary.com
+ * URLs via routes/adobes.js#isTrustedAbodeImageUrl).
  */
 
 export interface UploadedPhoto {
@@ -26,18 +37,26 @@ export interface UploadProgress {
   total: number;
   attempt: number;
   fileName: string;
+  /** 0..1 fraction for the current file (only direct-upload mode) */
+  fileProgress?: number;
 }
 
 export interface UploadPhotosOptions {
   endpoint?: string;
   maxAttempts?: number;
   retryDelayMs?: number;
+  /** Concurrency for direct-upload mode. Default 3. Backend mode is always 1. */
+  parallel?: number;
+  /** Cloudinary folder for direct uploads. Default 'triberoutes/abodes'. */
+  folder?: string;
   onProgress?: (progress: UploadProgress) => void;
 }
 
 const DEFAULT_ENDPOINT = '/abodes/upload-photo';
 const DEFAULT_MAX_ATTEMPTS = 3;
 const DEFAULT_RETRY_DELAY_MS = 1500;
+const DEFAULT_PARALLEL = 3;
+const DEFAULT_FOLDER = 'triberoutes/abodes';
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -123,6 +142,101 @@ export async function withRetry<T>(
   throw lastError;
 }
 
+/** Upload one file via the backend route, with retry. Used by fallback path. */
+async function uploadOneViaBackend(
+  file: File,
+  index: number,
+  total: number,
+  endpoint: string,
+  maxAttempts: number,
+  retryDelayMs: number,
+  onProgress?: (p: UploadProgress) => void
+): Promise<UploadedPhoto> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    onProgress?.({ current: index + 1, total, attempt, fileName: file.name });
+    try {
+      const fd = new FormData();
+      fd.append('image', file);
+      const response = await api.post(endpoint, fd);
+      const url: string | undefined = response.data?.url;
+      if (!url) throw new Error(response.data?.message || 'Upload did not return a URL');
+      return { url, caption: file.name };
+    } catch (err) {
+      lastError = err;
+      if (attempt < maxAttempts && isRetriableError(err)) {
+        await sleep(retryDelayMs * attempt);
+        continue;
+      }
+      break;
+    }
+  }
+  const e = lastError as { response?: { data?: { message?: string } }; message?: string };
+  const detail = e.response?.data?.message || e.message || 'Unknown error';
+  throw new Error(`Failed to upload "${file.name}" after ${maxAttempts} attempt(s): ${detail}`);
+}
+
+/** Upload one file directly to Cloudinary, with retry + per-byte progress. */
+async function uploadOneViaCloudinary(
+  file: File,
+  index: number,
+  total: number,
+  folder: string,
+  maxAttempts: number,
+  retryDelayMs: number,
+  onProgress?: (p: UploadProgress) => void
+): Promise<UploadedPhoto> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    onProgress?.({ current: index + 1, total, attempt, fileName: file.name, fileProgress: 0 });
+    try {
+      const result = await uploadFileToCloudinary(file, {
+        folder,
+        onProgress: (fraction) => {
+          onProgress?.({
+            current: index + 1,
+            total,
+            attempt,
+            fileName: file.name,
+            fileProgress: fraction,
+          });
+        },
+      });
+      return { url: result.url, caption: file.name };
+    } catch (err) {
+      lastError = err;
+      if (attempt < maxAttempts && isRetriableError(err)) {
+        await sleep(retryDelayMs * attempt);
+        continue;
+      }
+      break;
+    }
+  }
+  const e = lastError as { message?: string };
+  throw new Error(
+    `Failed to upload "${file.name}" after ${maxAttempts} attempt(s): ${e.message || 'Unknown error'}`
+  );
+}
+
+/** Generic concurrency limiter. Preserves input order in the result array. */
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let cursor = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (true) {
+      const i = cursor++;
+      if (i >= items.length) return;
+      results[i] = await fn(items[i], i);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
 export async function uploadPhotosWithRetry(
   files: File[],
   options: UploadPhotosOptions = {}
@@ -130,51 +244,30 @@ export async function uploadPhotosWithRetry(
   const endpoint = options.endpoint ?? DEFAULT_ENDPOINT;
   const maxAttempts = Math.max(1, options.maxAttempts ?? DEFAULT_MAX_ATTEMPTS);
   const retryDelayMs = options.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS;
+  const folder = options.folder ?? DEFAULT_FOLDER;
   const onProgress = options.onProgress;
 
-  const results: UploadedPhoto[] = [];
-
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    let lastError: unknown;
-
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      onProgress?.({
-        current: i + 1,
-        total: files.length,
-        attempt,
-        fileName: file.name,
-      });
-
-      try {
-        const fd = new FormData();
-        fd.append('image', file);
-        const response = await api.post(endpoint, fd);
-        const url: string | undefined = response.data?.url;
-        if (!url) {
-          throw new Error(response.data?.message || 'Upload did not return a URL');
-        }
-        results.push({ url, caption: file.name });
-        lastError = null;
-        break;
-      } catch (err) {
-        lastError = err;
-        if (attempt < maxAttempts && isRetriableError(err)) {
-          await sleep(retryDelayMs * attempt);
-          continue;
-        }
-        break;
-      }
-    }
-
-    if (lastError) {
-      const e = lastError as { response?: { data?: { message?: string } }; message?: string };
-      const detail = e.response?.data?.message || e.message || 'Unknown error';
-      throw new Error(
-        `Failed to upload "${file.name}" after ${maxAttempts} attempt(s): ${detail}`
-      );
-    }
+  if (isCloudinaryDirectUploadConfigured()) {
+    const parallel = Math.max(1, options.parallel ?? DEFAULT_PARALLEL);
+    return mapWithConcurrency(files, parallel, (file, i) =>
+      uploadOneViaCloudinary(file, i, files.length, folder, maxAttempts, retryDelayMs, onProgress)
+    );
   }
 
+  // Legacy fallback: serial backend uploads.
+  const results: UploadedPhoto[] = [];
+  for (let i = 0; i < files.length; i++) {
+    results.push(
+      await uploadOneViaBackend(
+        files[i],
+        i,
+        files.length,
+        endpoint,
+        maxAttempts,
+        retryDelayMs,
+        onProgress
+      )
+    );
+  }
   return results;
 }

@@ -670,13 +670,21 @@ export default function RegisterAbodePage() {
         throw new Error('Please set location coordinates');
       }
 
-      setUploadStatus('Waking server...');
-      await prewarmBackend();
+      setUploadStatus('Preparing upload...');
+      // Best-effort prewarm in the background; don't block uploads on it.
+      // Direct-to-Cloudinary uploads don't even need our backend awake yet.
+      prewarmBackend().catch(() => undefined);
 
       const imagesPayload = await uploadPhotosWithRetry(imageFiles, {
-        onProgress: ({ current, total, attempt, fileName }) => {
+        onProgress: ({ current, total, attempt, fileName, fileProgress }) => {
           const retryNote = attempt > 1 ? ` (retry ${attempt - 1})` : '';
-          setUploadStatus(`Uploading image ${current} of ${total}${retryNote}: ${fileName}`);
+          const pct =
+            typeof fileProgress === 'number'
+              ? ` — ${Math.round(fileProgress * 100)}%`
+              : '';
+          setUploadStatus(
+            `Uploading image ${current} of ${total}${retryNote}: ${fileName}${pct}`
+          );
         },
       });
       setUploadStatus('Saving abode...');

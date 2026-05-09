@@ -772,12 +772,18 @@ export default function EditAbodePage() {
 
       let newUploadedImages: { url: string; caption: string }[] = [];
       if (imageFiles.length > 0) {
-        setUploadStatus('Waking server...');
-        await prewarmBackend();
+        setUploadStatus('Preparing upload...');
+        prewarmBackend().catch(() => undefined);
         newUploadedImages = await uploadPhotosWithRetry(imageFiles, {
-          onProgress: ({ current, total, attempt, fileName }) => {
+          onProgress: ({ current, total, attempt, fileName, fileProgress }) => {
             const retryNote = attempt > 1 ? ` (retry ${attempt - 1})` : '';
-            setUploadStatus(`Uploading image ${current} of ${total}${retryNote}: ${fileName}`);
+            const pct =
+              typeof fileProgress === 'number'
+                ? ` — ${Math.round(fileProgress * 100)}%`
+                : '';
+            setUploadStatus(
+              `Uploading image ${current} of ${total}${retryNote}: ${fileName}${pct}`
+            );
           },
         });
         setUploadStatus('Saving abode...');
