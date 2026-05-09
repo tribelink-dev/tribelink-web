@@ -1,0 +1,53 @@
+name: Keep Render Backend Awake
+
+# Pings the backend every ~14 minutes so the Render free plan never hits
+# its 15-minute idle threshold and spins the service down.
+#
+# Setup:
+#   1. Push this file to GitHub.
+#   2. In the repo: Settings -> Secrets and variables -> Actions -> New
+#      repository secret named RENDER_BACKEND_URL with the full URL of the
+#      Render service (e.g. https://tribelink-backend.onrender.com).
+#   3. The cron will start automatically. You can also trigger it manually
+#      from the Actions tab via "Run workflow".
+#
+# Notes:
+#   - GitHub-hosted cron schedules can be delayed by a few minutes during
+#     periods of high load — that's why we run every 14 min, not every 15.
+#   - For private repos this still falls under GitHub Actions free minutes
+#     (2,000/month for Free plan; this workflow uses ~10 min/month).
+
+on:
+  schedule:
+    - cron: '*/14 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Ping backend /ping endpoint
+        run: |
+          if [ -z "${{ secrets.RENDER_BACKEND_URL }}" ]; then
+            echo "RENDER_BACKEND_URL secret is not set. Skipping."
+            exit 0
+          fi
+
+          URL="${{ secrets.RENDER_BACKEND_URL }}/ping"
+          echo "Pinging $URL"
+
+          # Retry a few times because the first request after a cold start
+          # can take 30-60s while Render boots the container.
+          for i in 1 2 3 4 5; do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 "$URL" || echo "000")
+            echo "Attempt $i -> HTTP $CODE"
+            if [ "$CODE" = "200" ]; then
+              echo "Backend is awake."
+              exit 0
+            fi
+            sleep 10
+          done
+
+          echo "Backend did not respond after 5 attempts."
+          exit 1

@@ -11,18 +11,25 @@ async function convertCurrency(amount, fromCurrency, toCurrency) {
       return amount;
     }
 
-    // For demo, use a simple conversion or API
-    // In production, use a real API like exchangerate-api.io
     const apiKey = process.env.EXCHANGE_RATE_API_KEY;
     
     if (apiKey) {
       const response = await axios.get(
-        `https://api.exchangerate-api.com/v4/latest/${fromCurrency}`
+        `https://v6.exchangerate-api.com/v6/${apiKey}/latest/${fromCurrency}`
       );
-      const rate = response.data.rates[toCurrency];
+      const rate = response?.data?.conversion_rates?.[toCurrency];
       if (rate) {
         return amount * rate;
       }
+    }
+
+    // Keyless endpoint fallback
+    const response = await axios.get(
+      `https://api.exchangerate-api.com/v4/latest/${fromCurrency}`
+    );
+    const rate = response?.data?.rates?.[toCurrency];
+    if (rate) {
+      return amount * rate;
     }
 
     // Fallback: simple conversion rates (for demo)

@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const axios = require('axios');
 const session = require('express-session');
 const passport = require('./config/passport');
 const connectDB = require('./config/database');
@@ -194,6 +195,12 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Lightweight keep-alive endpoint (used by external cron services / self-ping
+// to prevent Render free plan from spinning the service down after 15 min idle)
+app.get('/ping', (req, res) => {
+  res.status(200).send('pong');
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
@@ -269,7 +276,38 @@ app.listen(PORT, HOST, () => {
     console.log(`🎯 Frontend URL: ${process.env.FRONTEND_URL}`);
   }
   console.log('='.repeat(60));
+  startKeepAlive();
 });
+
+// Keep-alive self-ping for Render free plan (idles after 15 min without
+// incoming HTTP traffic). Acts as a backup to the external GitHub Actions
+// cron — if the service is awake, it pings its own public URL so Render
+// counts inbound traffic and resets the idle timer. Disabled locally.
+function startKeepAlive() {
+  if (process.env.NODE_ENV !== 'production') return;
+
+  // Render auto-injects RENDER_EXTERNAL_URL. Allow override via KEEP_ALIVE_URL.
+  const target = process.env.KEEP_ALIVE_URL || process.env.RENDER_EXTERNAL_URL;
+  if (!target) {
+    console.log('Keep-alive disabled: no RENDER_EXTERNAL_URL / KEEP_ALIVE_URL set');
+    return;
+  }
+
+  const url = `${target.replace(/\/$/, '')}/ping`;
+  const intervalMs = 14 * 60 * 1000; // 14 min — under Render's 15 min idle window
+
+  console.log(`Keep-alive enabled: pinging ${url} every 14 minutes`);
+
+  const ping = async () => {
+    try {
+      await axios.get(url, { timeout: 10000 });
+    } catch (err) {
+      console.warn('Keep-alive ping failed:', err.message);
+    }
+  };
+
+  setInterval(ping, intervalMs);
+}
 
 module.exports = app;
 

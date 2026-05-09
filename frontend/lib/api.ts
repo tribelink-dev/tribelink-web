@@ -1,6 +1,21 @@
 import axios, { type AxiosError } from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const isHostSidePath = (path: string) =>
+  path.startsWith('/host') || path.startsWith('/provider');
+
+const getLoginRedirectPath = (): string => {
+  if (typeof window === 'undefined') {
+    return '/login';
+  }
+
+  const currentPath = window.location.pathname;
+  const userType = localStorage.getItem('userType');
+  if (isHostSidePath(currentPath) || userType === 'host') {
+    return '/host/login';
+  }
+  return '/login';
+};
 
 // Warn if using localhost in production
 if (typeof window !== 'undefined' && API_URL.includes('localhost') && window.location.hostname !== 'localhost') {
@@ -103,10 +118,11 @@ api.interceptors.response.use(
         const isPublicPage = publicPages.some(page => currentPath === page || currentPath.startsWith(page + '/'));
 
         if (!isPublicPage && !currentPath.includes('/login') && !currentPath.includes('/signup')) {
+          const redirectPath = getLoginRedirectPath();
           console.log('Redirecting to login due to invalid token...');
           // Use setTimeout to avoid navigation during render
           setTimeout(() => {
-            window.location.href = '/host/login';
+            window.location.href = redirectPath;
           }, 100);
         }
       }

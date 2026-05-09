@@ -4,10 +4,18 @@
  */
 
 const { scheduleTrip } = require('./core/scheduler');
+const {
+  calculateScheduleCost,
+  optimizeScheduleForBudget,
+  getBudgetBreakdown
+} = require('./features/budgetOptimizer');
 
 // Export main function for backward compatibility
 module.exports = {
-  scheduleTrip
+  scheduleTrip,
+  calculateScheduleCost,
+  optimizeScheduleForBudget,
+  getBudgetBreakdown
 };
 
 
