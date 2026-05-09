@@ -10,6 +10,7 @@ import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import { compressImageFile } from '@/lib/compressImageForUpload';
+import { uploadPhotosWithRetry, prewarmBackend, withRetry } from '@/lib/uploadPhotoWithRetry';
 
 const PROPERTY_TYPES = ['Traditional Home', 'Heritage House', 'Village Home', 'Farmhouse', 'Cottage', 'Other'];
 const CULTURAL_CATEGORIES = ['Cooking', 'Craft', 'Music', 'Dance', 'Ritual', 'Festival', 'Agriculture', 'Traditional Medicine', 'Other'];
@@ -22,6 +23,7 @@ export default function RegisterAbodePage() {
   const [success, setSuccess] = useState(false);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [uploadStatus, setUploadStatus] = useState<string>('');
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 6;
   
@@ -668,18 +670,16 @@ export default function RegisterAbodePage() {
         throw new Error('Please set location coordinates');
       }
 
-      const imagesPayload = await Promise.all(
-        imageFiles.map(async (file) => {
-          const fd = new FormData();
-          fd.append('image', file);
-          const up = await api.post('/abodes/upload-photo', fd);
-          const url = up.data?.url;
-          if (!url) {
-            throw new Error(up.data?.message || 'Image upload did not return a URL');
-          }
-          return { url, caption: file.name };
-        })
-      );
+      setUploadStatus('Waking server...');
+      await prewarmBackend();
+
+      const imagesPayload = await uploadPhotosWithRetry(imageFiles, {
+        onProgress: ({ current, total, attempt, fileName }) => {
+          const retryNote = attempt > 1 ? ` (retry ${attempt - 1})` : '';
+          setUploadStatus(`Uploading image ${current} of ${total}${retryNote}: ${fileName}`);
+        },
+      });
+      setUploadStatus('Saving abode...');
 
       const payload: Record<string, unknown> = {
         abodeDetails: formData.abodeDetails,
@@ -707,7 +707,23 @@ export default function RegisterAbodePage() {
         }
       }
 
-      const response = await api.post('/abodes/register', payload);
+      // Final save: retry the JSON POST too. After many sequential image
+      // uploads the dyno can briefly stall, and a single timeout here would
+      // throw away all the work the user just did.
+      const response = await withRetry(
+        () => api.post('/abodes/register', payload, { timeout: 90000 }),
+        {
+          onAttempt: ({ attempt, willRetry }) => {
+            if (attempt > 1) {
+              setUploadStatus(
+                willRetry
+                  ? `Saving abode (retry ${attempt - 1})...`
+                  : `Saving abode (final attempt ${attempt})...`
+              );
+            }
+          },
+        }
+      );
 
       if (response.data.success) {
         setSuccess(true);
@@ -717,9 +733,23 @@ export default function RegisterAbodePage() {
       }
     } catch (err: any) {
       console.error('Error registering abode:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to register abode');
+      const status = err?.response?.status;
+      const serverMsg = err?.response?.data?.message;
+      let friendly: string;
+      if (status === 401) {
+        friendly = 'Your session has expired. Please log in again.';
+      } else if (status && status >= 400 && status < 500) {
+        friendly = serverMsg || 'The server rejected the submission. Please review your inputs.';
+      } else if (err?.isNetworkError) {
+        friendly =
+          'Could not reach the server after several attempts. The free hosting tier may still be waking up — wait ~30 seconds and try again.';
+      } else {
+        friendly = serverMsg || err?.message || 'Failed to register abode';
+      }
+      setError(friendly);
     } finally {
       setLoading(false);
+      setUploadStatus('');
     }
   };
 
@@ -2018,11 +2048,18 @@ export default function RegisterAbodePage() {
                   </div>
                 </div>
 
+                {loading && uploadStatus && (
+                  <div className="mt-6 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-xl text-sm text-indigo-800">
+                    {uploadStatus}
+                  </div>
+                )}
+
                 <div className="mt-8 flex justify-between">
                   <button
                     type="button"
                     onClick={() => setCurrentStep(5)}
-                    className="px-8 py-3 border-2 border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-all"
+                    disabled={loading}
+                    className="px-8 py-3 border-2 border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     ← Back
                   </button>

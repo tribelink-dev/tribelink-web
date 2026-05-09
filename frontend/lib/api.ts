@@ -30,7 +30,10 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000, // 30 seconds timeout for all requests
+  // 60s default — covers Render free-tier cold starts (typically 30–60s for the
+  // first request to wake the dyno). FormData uploads override this to 15min
+  // in the request interceptor below.
+  timeout: 60000,
 });
 
 // Add token to requests
@@ -154,10 +157,9 @@ api.interceptors.response.use(
       console.error('3. Check CORS - Frontend origin:', currentOrigin);
       console.error('4. Backend should allow:', currentOrigin);
 
-      // Show user-friendly error
       if (typeof window !== 'undefined') {
         const userError: AppError = new Error(
-          `Cannot connect to server at ${apiUrl}. Please check:\n1. Backend is running\n2. CORS is configured\n3. Environment variables are set correctly`
+          'Network error talking to the server. The backend may be waking up after being idle (free hosting tier). Please wait a few seconds and try again.'
         );
         userError.isNetworkError = true;
         return Promise.reject(userError);
