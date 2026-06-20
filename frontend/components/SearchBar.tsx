@@ -6,7 +6,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import { format } from 'date-fns';
-import { MapPin, Calendar, Users, Search, ChevronDown, X } from 'lucide-react';
+import { MapPin, Calendar, Users, Search, X, Minus, Plus } from 'lucide-react';
+import { Sheet } from '@/components/ui/Sheet';
+import { Button } from '@/components/ui/Button';
+import { cn } from '@/lib/utils';
 
 interface SearchBarProps {
   className?: string;
@@ -19,6 +22,22 @@ interface SearchBarProps {
   }) => void;
 }
 
+const popularDestinations = [
+  { name: 'Kerala, India', description: "God's Own Country", icon: '🌴' },
+  { name: 'Tamil Nadu, India', description: 'Land of Temples', icon: '🕌' },
+  { name: 'Rajasthan, India', description: 'Land of Kings', icon: '🏰' },
+  { name: 'Goa, India', description: 'Beach Paradise', icon: '🏖️' },
+  { name: 'Himachal Pradesh, India', description: 'Mountain Retreat', icon: '⛰️' },
+];
+
+function buildDateSummary(checkIn?: Date, checkOut?: Date) {
+  if (checkIn && checkOut) {
+    return `${format(checkIn, 'MMM d')} – ${format(checkOut, 'MMM d')}`;
+  }
+  if (checkIn) return `${format(checkIn, 'MMM d')} – Add checkout`;
+  return 'Add dates';
+}
+
 export default function SearchBar({ className = '', variant = 'homepage', onSearch }: SearchBarProps) {
   const router = useRouter();
   const [location, setLocation] = useState('');
@@ -28,6 +47,7 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
   const [showLocationMenu, setShowLocationMenu] = useState(false);
   const [showDateMenu, setShowDateMenu] = useState(false);
   const [showGuestsMenu, setShowGuestsMenu] = useState(false);
+  const [showMobileSheet, setShowMobileSheet] = useState(false);
   const [activeField, setActiveField] = useState<string | null>(null);
   const [locationSearch, setLocationSearch] = useState('');
   const locationMenuRef = useRef<HTMLDivElement>(null);
@@ -45,478 +65,484 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
 
   const handleSearch = () => {
     if (onSearch) {
-      // Use custom onSearch callback if provided
-      onSearch({
-        location,
-        checkIn,
-        checkOut,
-        guests,
-      });
+      onSearch({ location, checkIn, checkOut, guests });
     } else {
-      // Default behavior: Navigate to abodes page with search params
       const params = new URLSearchParams();
       if (location) params.set('location', location);
       if (checkIn) params.set('checkIn', checkIn.toISOString());
       if (checkOut) params.set('checkOut', checkOut.toISOString());
       if (guests > 1) params.set('guests', guests.toString());
-      
       router.push(`/abodes?${params.toString()}`);
     }
+    setShowMobileSheet(false);
+    closeMenus();
+  };
+
+  const closeMenus = () => {
+    setShowLocationMenu(false);
+    setShowDateMenu(false);
+    setShowGuestsMenu(false);
+    setActiveField(null);
   };
 
   const isHomepage = variant === 'homepage';
-  const menuPositionClass = isMobile
-    ? 'fixed inset-x-4 bottom-4 top-auto max-h-[85vh] overflow-y-auto safe-area-bottom'
-    : 'absolute top-full left-0 mt-3';
-  const guestsMenuPositionClass = isMobile
-    ? 'fixed inset-x-4 bottom-4 top-auto safe-area-bottom'
-    : 'absolute top-full right-0 mt-3';
+  const dateSummary = buildDateSummary(checkIn, checkOut);
+  const guestSummary = `${guests} guest${guests !== 1 ? 's' : ''}`;
 
-  // Popular destinations
-  const popularDestinations = [
-    { name: 'Kerala, India', description: 'God\'s Own Country', icon: '🌴' },
-    { name: 'Tamil Nadu, India', description: 'Land of Temples', icon: '🕌' },
-    { name: 'Rajasthan, India', description: 'Land of Kings', icon: '🏰' },
-    { name: 'Goa, India', description: 'Beach Paradise', icon: '🏖️' },
-    { name: 'Himachal Pradesh, India', description: 'Mountain Retreat', icon: '⛰️' },
-  ];
-
-  // Filter destinations based on search
-  const filteredDestinations = popularDestinations.filter(dest =>
-    dest.name.toLowerCase().includes(locationSearch.toLowerCase()) ||
-    dest.description.toLowerCase().includes(locationSearch.toLowerCase())
+  const filteredDestinations = popularDestinations.filter(
+    (dest) =>
+      dest.name.toLowerCase().includes(locationSearch.toLowerCase()) ||
+      dest.description.toLowerCase().includes(locationSearch.toLowerCase())
   );
 
-  // Close menus when clicking outside
   useEffect(() => {
+    if (isMobile) return;
+
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        locationMenuRef.current && !locationMenuRef.current.contains(event.target as Node) &&
-        dateMenuRef.current && !dateMenuRef.current.contains(event.target as Node) &&
-        guestsMenuRef.current && !guestsMenuRef.current.contains(event.target as Node)
+        locationMenuRef.current &&
+        !locationMenuRef.current.contains(event.target as Node) &&
+        dateMenuRef.current &&
+        !dateMenuRef.current.contains(event.target as Node) &&
+        guestsMenuRef.current &&
+        !guestsMenuRef.current.contains(event.target as Node)
       ) {
-        setShowLocationMenu(false);
-        setShowDateMenu(false);
-        setShowGuestsMenu(false);
-        setActiveField(null);
+        closeMenus();
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [isMobile]);
 
-  return (
-    <div className={`relative ${className}`}>
-      <motion.div
-        initial={isHomepage ? { scale: 0.95, opacity: 0, y: 10 } : {}}
-        animate={isHomepage ? { scale: 1, opacity: 1, y: 0 } : {}}
-        transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-        className={`
-          ${isHomepage 
-            ? 'bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-100/50 p-2 sm:p-2' 
-            : 'bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-100/50 p-1.5'
-          }
-          flex flex-col md:flex-row md:items-center gap-2 md:gap-1
-          ${isHomepage ? 'h-auto md:h-20' : 'h-auto md:h-16'}
-        `}
-      >
-        {/* Location */}
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => {
-            setActiveField('location');
-            setShowLocationMenu(true);
-            setShowDateMenu(false);
-            setShowGuestsMenu(false);
-          }}
-          className={`
-            w-full md:flex-1 px-4 md:px-6 py-3 md:py-4 text-left rounded-2xl transition-all duration-300 relative group
-            ${activeField === 'location' 
-              ? 'bg-brand/5 border-2 border-brand shadow-medium' 
-              : 'hover:bg-gray-50 border-2 border-transparent'
-            }
-            md:min-w-[180px] ${isHomepage ? 'md:min-w-[220px]' : ''}
-          `}
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <MapPin className={`w-4 h-4 ${activeField === 'location' ? 'text-brand-hover' : 'text-gray-400'} transition-colors`} />
-            <div className="text-xs font-bold text-gray-700 uppercase tracking-wide">Where</div>
-          </div>
-          <div className={`text-sm font-semibold truncate transition-colors ${
-            location ? 'text-gray-900' : 'text-gray-400'
-          }`}>
-            {location || 'Search destinations'}
-          </div>
-          {activeField === 'location' && (
-            <motion.div
-              layoutId="activeFieldIndicator"
-              className="absolute inset-0 rounded-2xl bg-brand/10 pointer-events-none"
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            />
-          )}
-        </motion.button>
+  const dayPickerClass =
+    '[&_.rdp]:m-0 [&_.rdp-month]:m-0 [&_.rdp-table]:w-full [&_.rdp-day_selected]:!bg-brand [&_.rdp-day_selected]:!text-white [&_.rdp-day_range_start]:!bg-brand [&_.rdp-day_range_end]:!bg-brand [&_.rdp-day_range_middle]:!bg-brand/15 [&_.rdp-day]:rounded-lg';
 
-        {/* Check-in */}
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => {
-            setActiveField('checkIn');
-            setShowDateMenu(true);
-            setShowLocationMenu(false);
-            setShowGuestsMenu(false);
-          }}
-          className={`
-            w-full md:flex-1 px-4 md:px-6 py-3 md:py-4 text-left rounded-2xl transition-all duration-300 relative group
-            ${activeField === 'checkIn' || activeField === 'checkOut'
-              ? 'bg-brand/5 border-2 border-brand shadow-medium' 
-              : 'hover:bg-gray-50 border-2 border-transparent'
-            }
-            md:min-w-[140px] ${isHomepage ? 'md:min-w-[160px]' : ''}
-          `}
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <Calendar className={`w-4 h-4 ${activeField === 'checkIn' || activeField === 'checkOut' ? 'text-brand-hover' : 'text-gray-400'} transition-colors`} />
-            <div className="text-xs font-bold text-gray-700 uppercase tracking-wide">Check in</div>
-          </div>
-          <div className={`text-sm font-semibold transition-colors ${
-            checkIn ? 'text-gray-900' : 'text-gray-400'
-          }`}>
-            {checkIn ? format(checkIn, 'MMM dd') : 'Add date'}
-          </div>
-          {(activeField === 'checkIn' || activeField === 'checkOut') && (
-            <motion.div
-              layoutId="activeFieldIndicator"
-              className="absolute inset-0 rounded-2xl bg-brand/10 pointer-events-none"
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            />
-          )}
-        </motion.button>
-
-        {/* Check-out */}
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => {
-            setActiveField('checkOut');
-            setShowDateMenu(true);
-            setShowLocationMenu(false);
-            setShowGuestsMenu(false);
-          }}
-          className={`
-            w-full md:flex-1 px-4 md:px-6 py-3 md:py-4 text-left rounded-2xl transition-all duration-300 relative group
-            ${activeField === 'checkIn' || activeField === 'checkOut'
-              ? 'bg-brand/5 border-2 border-brand shadow-medium' 
-              : 'hover:bg-gray-50 border-2 border-transparent'
-            }
-            md:min-w-[140px] ${isHomepage ? 'md:min-w-[160px]' : ''}
-          `}
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <Calendar className={`w-4 h-4 ${activeField === 'checkIn' || activeField === 'checkOut' ? 'text-brand-hover' : 'text-gray-400'} transition-colors`} />
-            <div className="text-xs font-bold text-gray-700 uppercase tracking-wide">Check out</div>
-          </div>
-          <div className={`text-sm font-semibold transition-colors ${
-            checkOut ? 'text-gray-900' : 'text-gray-400'
-          }`}>
-            {checkOut ? format(checkOut, 'MMM dd') : 'Add date'}
-          </div>
-          {(activeField === 'checkIn' || activeField === 'checkOut') && (
-            <motion.div
-              layoutId="activeFieldIndicator"
-              className="absolute inset-0 rounded-2xl bg-brand/10 pointer-events-none"
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            />
-          )}
-        </motion.button>
-
-        {/* Guests */}
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => {
-            setActiveField('guests');
-            setShowGuestsMenu(true);
-            setShowLocationMenu(false);
-            setShowDateMenu(false);
-          }}
-          className={`
-            w-full md:flex-1 px-4 md:px-6 py-3 md:py-4 text-left rounded-2xl transition-all duration-300 relative group
-            ${activeField === 'guests' 
-              ? 'bg-brand/5 border-2 border-brand shadow-medium' 
-              : 'hover:bg-gray-50 border-2 border-transparent'
-            }
-            md:min-w-[140px] ${isHomepage ? 'md:min-w-[160px]' : ''}
-          `}
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <Users className={`w-4 h-4 ${activeField === 'guests' ? 'text-brand-hover' : 'text-gray-400'} transition-colors`} />
-            <div className="text-xs font-bold text-gray-700 uppercase tracking-wide">Who</div>
-          </div>
-          <div className={`text-sm font-semibold transition-colors ${
-            guests > 0 ? 'text-gray-900' : 'text-gray-400'
-          }`}>
-            {guests} {guests === 1 ? 'guest' : 'guests'}
-          </div>
-          {activeField === 'guests' && (
-            <motion.div
-              layoutId="activeFieldIndicator"
-              className="absolute inset-0 rounded-2xl bg-brand/10 pointer-events-none"
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            />
-          )}
-        </motion.button>
-
-        {/* Search Button */}
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={handleSearch}
-          className={`
-            w-full md:w-auto md:ml-2 rounded-2xl bg-gradient-to-r from-heritage-gold to-heritage-gold-dark
-            hover:from-heritage-gold-dark hover:to-heritage-gold
-            text-white transition-all duration-300
-            ${isHomepage ? 'h-14 md:w-16 md:h-16' : 'h-12 md:w-14 md:h-14'}
-            flex items-center justify-center gap-2
-            shadow-lg hover:shadow-xl
-            relative overflow-hidden group
-          `}
-        >
-          <motion.div
-            className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
-          />
-          <Search className="w-5 h-5 relative z-10" />
-          <span className="md:hidden relative z-10 font-bold text-sm">Search</span>
-        </motion.button>
-      </motion.div>
-
-      {/* Location Menu */}
-      <AnimatePresence>
-        {showLocationMenu && (
-          <>
-          <motion.div
-              ref={locationMenuRef}
-              initial={{ opacity: 0, y: 10, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 10, scale: 0.95 }}
-              transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-              className={`${menuPositionClass} w-full md:w-96 bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden z-[80]`}
-            >
-              {/* Search Input */}
-              <div className="p-4 border-b border-gray-100 bg-brand/5">
-                <div className="relative">
-                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-hover" />
-            <input
-              type="text"
-                    value={locationSearch}
-                    onChange={(e) => setLocationSearch(e.target.value)}
-              placeholder="Search destinations..."
-                    className="w-full pl-12 pr-10 py-3.5 bg-white border-2 border-brand/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand text-sm font-medium transition-all"
-              autoFocus
-            />
-                  {locationSearch && (
-              <button
-                      onClick={() => setLocationSearch('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
-                    >
-                      <X className="w-3.5 h-3.5 text-gray-600" />
-              </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Results */}
-              <div className="max-h-96 overflow-y-auto p-2">
-                {filteredDestinations.length > 0 ? (
-                  <div className="space-y-1">
-                    {filteredDestinations.map((dest, idx) => (
-                      <motion.button
-                        key={dest.name}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: idx * 0.05 }}
-                        whileHover={{ scale: 1.02, x: 4 }}
-                onClick={() => {
-                          setLocation(dest.name);
-                          setLocationSearch('');
-                  setShowLocationMenu(false);
-                  setActiveField(null);
-                }}
-                        className="w-full text-left px-4 py-3.5 hover:bg-surface-muted rounded-xl transition-all group"
-              >
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">{dest.icon}</span>
-                          <div className="flex-1">
-                            <div className="font-bold text-gray-900 group-hover:text-brand-hover transition-colors">
-                              {dest.name}
-                            </div>
-                            <div className="text-sm text-gray-500 mt-0.5">{dest.description}</div>
-                          </div>
-                          <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-brand-hover rotate-[-90deg] transition-all" />
-                        </div>
-                      </motion.button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500 font-medium">No destinations found</p>
-                    <p className="text-sm text-gray-400 mt-1">Try a different search term</p>
-                  </div>
-                )}
-            </div>
-          </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* Date Menu */}
-      <AnimatePresence>
-        {showDateMenu && (
-          <motion.div
-            ref={dateMenuRef}
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className={`${menuPositionClass} bg-white rounded-3xl shadow-2xl border border-gray-100 p-4 md:p-6 z-[80]`}
+  const locationPicker = (
+    <div className="space-y-3">
+      <div className="relative">
+        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
+        <input
+          type="text"
+          value={locationSearch}
+          onChange={(e) => setLocationSearch(e.target.value)}
+          placeholder="Search destinations..."
+          className="w-full pl-10 pr-9 py-2.5 bg-surface border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand text-sm"
+        />
+        {locationSearch && (
+          <button
+            type="button"
+            onClick={() => setLocationSearch('')}
+            className="absolute right-2 top-1/2 -translate-y-1/2 touch-target flex items-center justify-center w-7 h-7 rounded-full bg-surface-muted"
+            aria-label="Clear search"
           >
-            <div className="mb-4">
-              <h3 className="text-lg font-bold text-gray-900 mb-1">Select dates</h3>
-              <p className="text-sm text-gray-500">Choose your check-in and check-out dates</p>
-            </div>
-            <div className="[&_.rdp]:m-0 [&_.rdp-month]:m-0 [&_.rdp-table]:w-full [&_.rdp-day_selected]:!bg-brand [&_.rdp-day_selected]:!text-white [&_.rdp-day_selected]:!font-bold [&_.rdp-day_range_start]:!bg-brand [&_.rdp-day_range_end]:!bg-brand [&_.rdp-day]:rounded-xl [&_.rdp-day]:mx-0.5 [&_.rdp-day]:h-10 [&_.rdp-day]:w-10 [&_.rdp-day]:hover:!bg-brand/10 [&_.rdp-day]:transition-all">
-            <DayPicker
-              mode="range"
-              selected={{ from: checkIn, to: checkOut }}
-              onSelect={(range) => {
-                if (range?.from) setCheckIn(range.from);
-                if (range?.to) setCheckOut(range.to);
-                if (range?.from && range?.to) {
-                  setShowDateMenu(false);
+            <X className="w-3.5 h-3.5 text-text-secondary" />
+          </button>
+        )}
+      </div>
+      <div className="max-h-48 overflow-y-auto space-y-1">
+        {filteredDestinations.length > 0 ? (
+          filteredDestinations.map((dest) => (
+            <button
+              key={dest.name}
+              type="button"
+              onClick={() => {
+                setLocation(dest.name);
+                setLocationSearch('');
+                if (!isMobile) {
+                  setShowLocationMenu(false);
                   setActiveField(null);
                 }
               }}
-              disabled={(date) => date < new Date()}
-              numberOfMonths={isMobile ? 1 : 2}
-                className="custom-day-picker"
-            />
-            </div>
-            {(checkIn || checkOut) && (
-              <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  {checkIn && (
-                    <div>
-                      <div className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Check-in</div>
-                      <div className="text-sm font-bold text-gray-900">{format(checkIn, 'MMM dd, yyyy')}</div>
-                    </div>
-                  )}
-                  {checkOut && (
-                    <div>
-                      <div className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Check-out</div>
-                      <div className="text-sm font-bold text-gray-900">{format(checkOut, 'MMM dd, yyyy')}</div>
-                    </div>
-                  )}
-                </div>
-                {(checkIn || checkOut) && (
-                  <button
-                    onClick={() => {
-                      setCheckIn(undefined);
-                      setCheckOut(undefined);
-                    }}
-                    className="px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all"
-                  >
-                    Clear
-                  </button>
-                )}
+              className="w-full text-left px-3 py-2.5 hover:bg-surface-muted rounded-xl transition-colors flex items-center gap-3"
+            >
+              <span className="text-xl">{dest.icon}</span>
+              <div className="min-w-0 flex-1">
+                <div className="font-medium text-text-primary text-sm truncate">{dest.name}</div>
+                <div className="text-xs text-text-secondary truncate">{dest.description}</div>
               </div>
-            )}
-          </motion.div>
+            </button>
+          ))
+        ) : (
+          <p className="text-sm text-text-secondary text-center py-6">No destinations found</p>
         )}
-      </AnimatePresence>
+      </div>
+    </div>
+  );
 
-      {/* Guests Menu */}
-      <AnimatePresence>
-        {showGuestsMenu && (
-          <motion.div
-            ref={guestsMenuRef}
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className={`${guestsMenuPositionClass} w-full md:w-80 bg-white rounded-3xl shadow-2xl border border-gray-100 p-4 md:p-6 z-[80]`}
-          >
-            <div className="mb-4">
-              <h3 className="text-lg font-bold text-gray-900 mb-1">Guests</h3>
-              <p className="text-sm text-gray-500">How many guests are staying?</p>
-            </div>
-            <div className="space-y-6">
-              <div className="flex items-center justify-between p-4 bg-brand/5 rounded-2xl border-2 border-brand/20">
-                <div>
-                  <div className="font-bold text-gray-900 mb-1">Adults</div>
-                  <div className="text-sm text-gray-500">Ages 13 or above</div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => setGuests(Math.max(1, guests - 1))}
-                    disabled={guests <= 1}
-                    className="w-10 h-10 rounded-xl border-2 border-gray-300 disabled:border-gray-200 disabled:opacity-50 flex items-center justify-center hover:border-brand hover:bg-brand/5 transition-all disabled:cursor-not-allowed"
-                  >
-                    <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M20 12H4" />
-                    </svg>
-                  </motion.button>
-                  <span className="w-12 text-center font-black text-xl text-gray-900">{guests}</span>
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => setGuests(guests + 1)}
-                    className="w-10 h-10 rounded-xl border-2 border-gray-300 flex items-center justify-center hover:border-brand hover:bg-brand/5 transition-all"
-                  >
-                    <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                    </svg>
-                  </motion.button>
-                </div>
-              </div>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => {
-                  setShowGuestsMenu(false);
-                  setActiveField(null);
-                }}
-                className="w-full py-4 bg-gradient-to-r from-heritage-gold to-heritage-gold-dark hover:from-heritage-gold-dark hover:to-heritage-gold text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl"
-              >
-                Done
-              </motion.button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Backdrop */}
-      <AnimatePresence>
-      {(showLocationMenu || showDateMenu || showGuestsMenu) && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
-          onClick={() => {
-            setShowLocationMenu(false);
-            setShowDateMenu(false);
-            setShowGuestsMenu(false);
-            setActiveField(null);
+  const datePicker = (
+    <div className="space-y-3">
+      <div className={dayPickerClass}>
+        <DayPicker
+          mode="range"
+          selected={{ from: checkIn, to: checkOut }}
+          onSelect={(range) => {
+            setCheckIn(range?.from);
+            setCheckOut(range?.to);
           }}
+          disabled={(date) => date < new Date()}
+          numberOfMonths={isMobile ? 1 : 2}
         />
+      </div>
+      {(checkIn || checkOut) && (
+        <button
+          type="button"
+          onClick={() => {
+            setCheckIn(undefined);
+            setCheckOut(undefined);
+          }}
+          className="text-sm font-medium text-text-secondary hover:text-text-primary underline"
+        >
+          Clear dates
+        </button>
       )}
-      </AnimatePresence>
+    </div>
+  );
+
+  const guestsPicker = (
+    <div className="flex items-center justify-between py-1">
+      <div>
+        <p className="font-medium text-text-primary text-sm">Guests</p>
+        <p className="text-xs text-text-secondary">Ages 13 or above</p>
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setGuests(Math.max(1, guests - 1))}
+          disabled={guests <= 1}
+          className="touch-target w-9 h-9 rounded-full border border-border flex items-center justify-center disabled:opacity-40"
+          aria-label="Decrease guests"
+        >
+          <Minus className="w-4 h-4" />
+        </button>
+        <span className="w-6 text-center text-sm font-semibold">{guests}</span>
+        <button
+          type="button"
+          onClick={() => setGuests(guests + 1)}
+          className="touch-target w-9 h-9 rounded-full border border-border flex items-center justify-center"
+          aria-label="Increase guests"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className={cn('relative', className)}>
+      {/* Mobile: single compact search pill */}
+      {isMobile ? (
+        <>
+          <button
+            type="button"
+            onClick={() => setShowMobileSheet(true)}
+            className={cn(
+              'w-full flex items-center gap-3 rounded-full border border-border bg-surface text-left',
+              'h-11 px-3 shadow-card active:scale-[0.99] transition-transform',
+              isHomepage && 'shadow-medium'
+            )}
+            aria-label="Open search"
+          >
+            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-brand text-white shrink-0">
+              <Search className="w-4 h-4" />
+            </span>
+            <span className="flex-1 min-w-0 text-sm text-text-secondary truncate">
+              <span className="font-semibold text-text-primary">
+                {location || 'Where to?'}
+              </span>
+              {' · '}
+              {dateSummary}
+              {' · '}
+              {guestSummary}
+            </span>
+          </button>
+
+          <Sheet
+            open={showMobileSheet}
+            onClose={() => setShowMobileSheet(false)}
+            title="Search"
+            className="max-h-[92vh]"
+          >
+            <div className="-mx-4 -mb-4 flex flex-col max-h-[calc(92vh-5.5rem)]">
+              <div className="flex-1 overflow-y-auto px-4 space-y-5 pb-4">
+                <section>
+                  <h3 className="text-xs font-bold uppercase tracking-wide text-text-secondary mb-2 flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5" />
+                    Where
+                  </h3>
+                  {location && (
+                    <p className="text-sm font-medium text-text-primary mb-2">{location}</p>
+                  )}
+                  {locationPicker}
+                </section>
+
+                <section className="border-t border-border pt-5">
+                  <h3 className="text-xs font-bold uppercase tracking-wide text-text-secondary mb-3 flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5" />
+                    When
+                  </h3>
+                  {datePicker}
+                </section>
+
+                <section className="border-t border-border pt-5">
+                  <h3 className="text-xs font-bold uppercase tracking-wide text-text-secondary mb-3 flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5" />
+                    Who
+                  </h3>
+                  {guestsPicker}
+                </section>
+              </div>
+
+              <div className="shrink-0 px-4 py-4 border-t border-border bg-surface safe-area-bottom">
+                <Button className="w-full" size="lg" onClick={handleSearch}>
+                  <Search className="w-4 h-4" />
+                  Search
+                </Button>
+              </div>
+            </div>
+          </Sheet>
+        </>
+      ) : (
+        <>
+          <motion.div
+            initial={isHomepage ? { scale: 0.95, opacity: 0, y: 10 } : {}}
+            animate={isHomepage ? { scale: 1, opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+            className={cn(
+              'bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-100/50 p-1.5',
+              'flex flex-row items-center gap-1',
+              isHomepage ? 'h-20 rounded-3xl shadow-2xl p-2' : 'h-16'
+            )}
+          >
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                setActiveField('location');
+                setShowLocationMenu(true);
+                setShowDateMenu(false);
+                setShowGuestsMenu(false);
+              }}
+              className={cn(
+                'flex-1 px-6 py-4 text-left rounded-2xl transition-all duration-300 relative min-w-[180px]',
+                isHomepage && 'min-w-[220px]',
+                activeField === 'location'
+                  ? 'bg-brand/5 border-2 border-brand shadow-medium'
+                  : 'hover:bg-gray-50 border-2 border-transparent'
+              )}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <MapPin
+                  className={cn(
+                    'w-4 h-4',
+                    activeField === 'location' ? 'text-brand-hover' : 'text-gray-400'
+                  )}
+                />
+                <div className="text-xs font-bold text-gray-700 uppercase tracking-wide">Where</div>
+              </div>
+              <div
+                className={cn(
+                  'text-sm font-semibold truncate',
+                  location ? 'text-gray-900' : 'text-gray-400'
+                )}
+              >
+                {location || 'Search destinations'}
+              </div>
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                setActiveField('checkIn');
+                setShowDateMenu(true);
+                setShowLocationMenu(false);
+                setShowGuestsMenu(false);
+              }}
+              className={cn(
+                'flex-1 px-6 py-4 text-left rounded-2xl transition-all duration-300 relative min-w-[140px]',
+                isHomepage && 'min-w-[160px]',
+                activeField === 'checkIn' || activeField === 'checkOut'
+                  ? 'bg-brand/5 border-2 border-brand shadow-medium'
+                  : 'hover:bg-gray-50 border-2 border-transparent'
+              )}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Calendar
+                  className={cn(
+                    'w-4 h-4',
+                    activeField === 'checkIn' || activeField === 'checkOut'
+                      ? 'text-brand-hover'
+                      : 'text-gray-400'
+                  )}
+                />
+                <div className="text-xs font-bold text-gray-700 uppercase tracking-wide">Check in</div>
+              </div>
+              <div
+                className={cn('text-sm font-semibold', checkIn ? 'text-gray-900' : 'text-gray-400')}
+              >
+                {checkIn ? format(checkIn, 'MMM dd') : 'Add date'}
+              </div>
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                setActiveField('checkOut');
+                setShowDateMenu(true);
+                setShowLocationMenu(false);
+                setShowGuestsMenu(false);
+              }}
+              className={cn(
+                'flex-1 px-6 py-4 text-left rounded-2xl transition-all duration-300 relative min-w-[140px]',
+                isHomepage && 'min-w-[160px]',
+                activeField === 'checkIn' || activeField === 'checkOut'
+                  ? 'bg-brand/5 border-2 border-brand shadow-medium'
+                  : 'hover:bg-gray-50 border-2 border-transparent'
+              )}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Calendar
+                  className={cn(
+                    'w-4 h-4',
+                    activeField === 'checkIn' || activeField === 'checkOut'
+                      ? 'text-brand-hover'
+                      : 'text-gray-400'
+                  )}
+                />
+                <div className="text-xs font-bold text-gray-700 uppercase tracking-wide">
+                  Check out
+                </div>
+              </div>
+              <div
+                className={cn('text-sm font-semibold', checkOut ? 'text-gray-900' : 'text-gray-400')}
+              >
+                {checkOut ? format(checkOut, 'MMM dd') : 'Add date'}
+              </div>
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                setActiveField('guests');
+                setShowGuestsMenu(true);
+                setShowLocationMenu(false);
+                setShowDateMenu(false);
+              }}
+              className={cn(
+                'flex-1 px-6 py-4 text-left rounded-2xl transition-all duration-300 relative min-w-[140px]',
+                isHomepage && 'min-w-[160px]',
+                activeField === 'guests'
+                  ? 'bg-brand/5 border-2 border-brand shadow-medium'
+                  : 'hover:bg-gray-50 border-2 border-transparent'
+              )}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Users
+                  className={cn(
+                    'w-4 h-4',
+                    activeField === 'guests' ? 'text-brand-hover' : 'text-gray-400'
+                  )}
+                />
+                <div className="text-xs font-bold text-gray-700 uppercase tracking-wide">Who</div>
+              </div>
+              <div
+                className={cn('text-sm font-semibold', guests > 0 ? 'text-gray-900' : 'text-gray-400')}
+              >
+                {guests} {guests === 1 ? 'guest' : 'guests'}
+              </div>
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleSearch}
+              className={cn(
+                'ml-2 rounded-2xl bg-brand hover:bg-brand-hover text-white transition-all duration-300',
+                'flex items-center justify-center shadow-lg hover:shadow-xl relative overflow-hidden',
+                isHomepage ? 'w-16 h-16' : 'w-14 h-14'
+              )}
+              aria-label="Search"
+            >
+              <Search className="w-5 h-5" />
+            </motion.button>
+          </motion.div>
+
+          <AnimatePresence>
+            {showLocationMenu && (
+              <motion.div
+                ref={locationMenuRef}
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                className="absolute top-full left-0 mt-3 w-96 bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden z-[80] p-4"
+              >
+                {locationPicker}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {showDateMenu && (
+              <motion.div
+                ref={dateMenuRef}
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                className="absolute top-full left-0 mt-3 bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 z-[80]"
+              >
+                <div className="mb-4">
+                  <h3 className="text-lg font-bold text-gray-900 mb-1">Select dates</h3>
+                  <p className="text-sm text-gray-500">Choose your check-in and check-out dates</p>
+                </div>
+                {datePicker}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {showGuestsMenu && (
+              <motion.div
+                ref={guestsMenuRef}
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                className="absolute top-full right-0 mt-3 w-80 bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 z-[80]"
+              >
+                <div className="mb-4">
+                  <h3 className="text-lg font-bold text-gray-900 mb-1">Guests</h3>
+                  <p className="text-sm text-gray-500">How many guests are staying?</p>
+                </div>
+                <div className="space-y-4">
+                  <div className="p-4 bg-brand/5 rounded-2xl border-2 border-brand/20">
+                    {guestsPicker}
+                  </div>
+                  <Button className="w-full" onClick={closeMenus}>
+                    Done
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {(showLocationMenu || showDateMenu || showGuestsMenu) && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+                onClick={closeMenus}
+              />
+            )}
+          </AnimatePresence>
+        </>
+      )}
     </div>
   );
 }
-
