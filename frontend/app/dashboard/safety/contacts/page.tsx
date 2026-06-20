@@ -135,7 +135,7 @@ export default function EmergencyContactsPage() {
   }
 
   return (
-    <div className="page-container">
+    <div className="page-container pt-below-nav pb-sos-clear">
       <div className="section-container max-w-4xl">
         {/* Header */}
         <div className="mb-8">

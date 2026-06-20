@@ -44,7 +44,7 @@ const Navbar = () => {
         <>
             <nav
                 className={cn(
-                    'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
+                    'fixed top-0 left-0 right-0 z-50 transition-all duration-300 safe-area-top',
                     isScrolled ? 'bg-deep-jungle/95 backdrop-blur-xl shadow-lg py-4' : 'bg-transparent py-6'
                 )}
             >
@@ -54,7 +54,7 @@ const Navbar = () => {
                     style={{ scaleX: scrollProgress }}
                 />
 
-                <div className="container mx-auto px-6 flex items-center justify-between">
+                <div className="container mx-auto px-4 sm:px-6 flex items-center justify-between">
                     <motion.div
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
@@ -133,7 +133,7 @@ const Navbar = () => {
 
                     {/* Mobile Toggle */}
                     <motion.button
-                        className="md:hidden text-white relative z-50"
+                        className="md:hidden text-white relative z-50 touch-target p-2 -mr-2"
                         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                         whileTap={{ scale: 0.9 }}
                     >

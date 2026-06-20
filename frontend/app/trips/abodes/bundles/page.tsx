@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import AbodeCard from '@/components/AbodeCard';
 
@@ -23,6 +23,7 @@ interface PlannerSegment {
 
 export default function AbodeBundlesPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const [segments, setSegments] = useState<PlannerSegment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,7 +78,7 @@ export default function AbodeBundlesPage() {
     <div className="min-h-screen bg-cream-50">
       <div className="relative bg-gradient-to-br from-charcoal-700 via-charcoal-800 to-charcoal-900 overflow-hidden">
         <div className="section-container-luxury relative z-10 pt-24 pb-16">
-          <div className="max-w-5xl mx-auto">
+          <div className="w-full">
             <p className="text-sm font-medium text-white/70 mb-4">
               Step 3 of 3 · Your curated plan
             </p>
@@ -98,7 +99,7 @@ export default function AbodeBundlesPage() {
       </div>
 
       <div className="section-container-luxury -mt-10 relative z-20 pb-16">
-        <div className="max-w-6xl mx-auto">
+        <div className="w-full">
           <div className="content-card shadow-luxury-lg border-charcoal-100/50">
             {error && (
               <div className="bg-red-50/80 border-2 border-red-200 rounded-xl p-4 mb-6 text-sm text-red-800">
@@ -234,8 +235,24 @@ export default function AbodeBundlesPage() {
                   );
                 })}
 
-                <div className="pt-4 border-t border-charcoal-100 text-xs text-charcoal-500">
+                <div className="pt-4 border-t border-charcoal-100 text-xs text-charcoal-500 mb-6">
                   This is a high-level, non-timed plan—more like a local&apos;s suggestion than a rigid schedule—meant to gently maximize your exposure to abodes and experiences in each region.
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="button"
+                    onClick={() => router.push('/trips/schedule')}
+                    className="btn-primary flex-1 text-center"
+                  >
+                    Continue to full itinerary
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => router.push('/explore?section=abodes')}
+                    className="btn-secondary flex-1 text-center"
+                  >
+                    Browse homestays
+                  </button>
                 </div>
               </div>
             )}

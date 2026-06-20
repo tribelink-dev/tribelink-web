@@ -2,25 +2,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&family=Cormorant+Garamond:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700;800;900&display=swap');
 @import 'mapbox-gl/dist/mapbox-gl.css';
 @import 'react-day-picker/dist/style.css';
+@import './tokens.css';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.18);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --glass-bg: rgba(26, 26, 26, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.1);
-  }
+html {
+  color-scheme: light;
 }
 
 * {
@@ -28,16 +17,20 @@
 }
 
 body {
-  color: var(--foreground);
+  color: var(--text-primary);
   background: var(--background);
   font-family: 'Montserrat', 'Inter', system-ui, -apple-system, sans-serif;
-  @apply text-charcoal-700 leading-relaxed;
-  background: #FEFDFB;
+  @apply leading-relaxed;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 @layer utilities {
+  /* Fixed navbar offset — use on pages under platform Navbar (h-16) */
+  .page-offset-nav {
+    @apply pt-below-nav;
+  }
+
   .text-balance {
     text-wrap: balance;
   }
@@ -81,7 +74,7 @@ body {
   
   /* Focus visible for accessibility */
   *:focus-visible {
-    @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+    @apply outline-none ring-2 ring-brand ring-offset-2;
   }
 
   /* Modern Animations */
@@ -287,6 +280,8 @@ body {
 }
 
 @layer components {
+  /* @deprecated — prefer components/ui/* and tokens.css on platform traveler routes */
+
   /* Luxury Typography System */
   .heading-editorial {
     font-family: 'Cormorant Garamond', 'Playfair Display', serif;
@@ -508,37 +503,11 @@ body {
 
   /* Professional button styles - Enhanced with modern effects */
   .btn-primary {
-    @apply bg-gradient-primary text-white font-semibold py-3 px-8 rounded-xl shadow-medium hover:shadow-large transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-medium;
-    position: relative;
-    overflow: hidden;
-    transform: translateY(0);
-  }
-
-  .btn-primary::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.2);
-    transform: translate(-50%, -50%);
-    transition: width 0.6s, height 0.6s;
-  }
-
-  .btn-primary:hover::before {
-    width: 300px;
-    height: 300px;
+    @apply bg-brand text-white font-semibold py-3 px-8 rounded-xl shadow-medium hover:bg-brand-hover hover:shadow-large transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-primary:hover {
-    @apply transform -translate-y-0.5;
-    box-shadow: 0 10px 25px -5px rgba(0, 188, 212, 0.4);
-  }
-
-  .btn-primary:active {
-    @apply transform translate-y-0;
+    @apply shadow-large;
   }
 
   .btn-secondary {
@@ -562,18 +531,12 @@ body {
   }
   
   .btn-outline {
-    @apply bg-transparent text-primary-600 border-2 border-primary-500 font-semibold py-3 px-8 rounded-xl hover:bg-primary-50 transition-all duration-300;
-    position: relative;
+    @apply bg-transparent text-brand-hover border-2 border-brand font-semibold py-3 px-8 rounded-xl hover:bg-brand/5 transition-all duration-200;
   }
-
-  .btn-outline:hover {
-    @apply transform -translate-y-0.5 shadow-soft;
-    background: linear-gradient(135deg, rgba(0, 188, 212, 0.1) 0%, rgba(0, 150, 136, 0.1) 100%);
-  }
-
+  
   /* Professional input fields */
   .input-field {
-    @apply w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all duration-200;
+    @apply w-full px-4 py-3 bg-white border border-border rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-heritage-gold/20 focus:border-heritage-gold transition-all duration-200;
   }
 
   .input-field:disabled {
@@ -597,24 +560,14 @@ body {
     @apply inline-flex items-center gap-1 px-2.5 py-1 bg-green-50 text-green-700 rounded-lg font-semibold text-sm;
   }
 
-  /* Section container */
+  /* Section container — fluid gutters, no max-width cap */
   .section-container {
-    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+    @apply w-full px-page lg:px-page-lg;
   }
 
   /* Luxury section container (trip/adobe flows) */
   .section-container-luxury {
-    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
-  }
-
-  /* Fixed navbar offset — use on pages under platform Navbar (h-16) */
-  .page-offset-nav {
-    padding-top: calc(4rem + env(safe-area-inset-top, 0px));
-  }
-
-  /* Sticky/fixed elements below the navbar */
-  .top-below-nav {
-    top: calc(4rem + env(safe-area-inset-top, 0px));
+    @apply w-full px-page lg:px-page-lg;
   }
 
   /* Safe area insets for notched phones and bottom sticky bars */
@@ -633,6 +586,18 @@ body {
   /* Pages with fixed bottom CTA bars (~4.5rem + safe area) */
   .pb-bottom-bar {
     padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  @media (min-width: 768px) {
+    .pb-mobile-nav {
+      padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+    }
+  }
+
+  @media (max-width: 767px) {
+    .pb-mobile-nav {
+      padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+    }
   }
 
   @media (min-width: 1024px) {

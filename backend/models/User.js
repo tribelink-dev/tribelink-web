@@ -136,6 +136,10 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Experience'
   }],
+  savedAbodes: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'LocalHost'
+  }],
   bookings: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Trip'

@@ -179,7 +179,7 @@ export default function MyTicketsPage() {
 
   if (loading) {
     return (
-      <div className="page-container flex items-center justify-center min-h-screen">
+      <div className="page-container pt-below-nav pb-sos-clear flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-14 w-14 border-4 border-primary-500 border-t-transparent mb-6"></div>
           <div className="text-xl font-medium text-gray-700">Loading your tickets...</div>
@@ -189,13 +189,13 @@ export default function MyTicketsPage() {
   }
 
   return (
-    <div className="page-container">
-      <div className="section-container max-w-7xl">
+    <div className="page-container pt-below-nav pb-sos-clear">
+      <div className="section-container">
         {/* Header */}
         <div className="mb-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6">
             <div>
-              <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-2 tracking-tight">
+              <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-2 tracking-tight">
                 My Tickets <span className="text-primary-600">🎫</span>
               </h1>
               <p className="text-lg text-gray-600">View and manage your experience tickets</p>

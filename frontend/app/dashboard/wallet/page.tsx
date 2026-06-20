@@ -77,7 +77,7 @@ export default function WalletPage() {
 
   if (loading) {
     return (
-      <div className="page-container flex items-center justify-center min-h-screen">
+      <div className="page-container pt-below-nav pb-sos-clear flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-14 w-14 border-4 border-primary-500 border-t-transparent mb-6"></div>
           <div className="text-xl font-medium text-gray-700">Loading wallet...</div>
@@ -87,7 +87,7 @@ export default function WalletPage() {
   }
 
   return (
-    <div className="page-container">
+    <div className="page-container pt-below-nav pb-sos-clear">
       <div className="section-container max-w-4xl">
         {/* Header */}
         <div className="mb-8">

@@ -6,7 +6,7 @@
  *    dyno (0.1 vCPU). Even a single 2MB photo could take 30-90s and often
  *    timed out.
  *  - Posting straight to https://api.cloudinary.com goes to Cloudinary's
- *    globally distributed edge — same path Airbnb / Discord / Notion use.
+ *    globally distributed edge — the same direct-to-CDN path used by major platforms.
  *  - We get real per-byte upload progress, which the backend route never
  *    surfaced.
  *

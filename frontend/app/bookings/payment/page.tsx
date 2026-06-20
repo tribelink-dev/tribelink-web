@@ -7,6 +7,7 @@ import api from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useCurrency } from '@/lib/CurrencyContext';
 import { ArrowLeft, CreditCard, Wallet, Calendar, User } from 'lucide-react';
+import { PageContainer } from '@/components/ui/PageContainer';
 
 export default function BookingPaymentPage() {
   const router = useRouter();
@@ -22,6 +23,7 @@ export default function BookingPaymentPage() {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
 
   useEffect(() => {
     const id = searchParams.get('id') || (typeof window !== 'undefined' ? sessionStorage.getItem('bookingId') : null);
@@ -106,8 +108,8 @@ export default function BookingPaymentPage() {
       }
       await fetchWallet();
       if (typeof window !== 'undefined') sessionStorage.removeItem('bookingId');
+      setPaymentConfirmed(true);
       setMessage('Payment successful. Your booking is confirmed.');
-      setTimeout(() => router.push('/bookings'), 2000);
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'Payment failed';
       setError(err.response?.status === 400 && errorMessage.includes('balance') ? `${errorMessage} Add funds to your wallet below.` : errorMessage);
@@ -197,20 +199,18 @@ export default function BookingPaymentPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pt-24 pb-16">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-heritage-gold border-t-transparent" />
-          </div>
-          <p className="text-center text-charcoal-600 font-medium">Loading payment details…</p>
-        </div>
+      <div className="min-h-screen bg-background pb-sos-clear">
+        <PageContainer width="narrow" className="flex flex-col items-center justify-center min-h-[50vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-heritage-gold border-t-transparent" />
+          <p className="text-center text-charcoal-600 font-medium mt-4">Loading payment details…</p>
+        </PageContainer>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pt-24 pb-sos-clear">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6">
+    <div className="min-h-screen bg-background pb-sos-clear">
+      <PageContainer width="narrow">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -249,7 +249,21 @@ export default function BookingPaymentPage() {
           </div>
         )}
 
-        {booking && (
+        {paymentConfirmed && (
+          <div className="mb-6 p-6 bg-surface border border-border rounded-card text-center">
+            <p className="text-lg font-semibold text-text-primary mb-4">You&apos;re all set!</p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button type="button" className="btn-primary px-6 py-3" onClick={() => router.push('/bookings')}>
+                View trip
+              </button>
+              <button type="button" className="btn-secondary px-6 py-3" onClick={() => router.push('/explore')}>
+                Explore more
+              </button>
+            </div>
+          </div>
+        )}
+
+        {booking && !paymentConfirmed && (
           <>
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -404,7 +418,7 @@ export default function BookingPaymentPage() {
             </motion.div>
           </>
         )}
-      </div>
+      </PageContainer>
     </div>
   );
 }

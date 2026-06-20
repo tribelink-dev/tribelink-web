@@ -2,12 +2,17 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { ShoppingCart, ArrowLeft, Trash2, Edit2, Calendar, Users, Sparkles } from 'lucide-react';
+import { ShoppingCart, ArrowLeft, Trash2 } from 'lucide-react';
 import { useCart } from '@/lib/CartContext';
 import { useCurrency } from '@/lib/CurrencyContext';
 import { useAuth } from '@/lib/auth';
 import CartItem from '@/components/cart/CartItem';
+import CheckoutSteps from '@/components/checkout/CheckoutSteps';
+import { Button } from '@/components/ui/Button';
+import { Card, CardContent } from '@/components/ui/Card';
+import ToastContainer, { useToast } from '@/components/Toast';
+import { PageContainer } from '@/components/ui/PageContainer';
+import MobileStickyBar from '@/components/ui/MobileStickyBar';
 
 export default function CartPage() {
   const router = useRouter();
@@ -15,6 +20,8 @@ export default function CartPage() {
   const { cart, loading, checkout, clearCart } = useCart();
   const { formatPrice } = useCurrency();
   const [checkingOut, setCheckingOut] = useState(false);
+  const [checkoutError, setCheckoutError] = useState('');
+  const { toasts, removeToast, error: showError } = useToast();
 
   if (!user) {
     router.push(`/login?redirect=${encodeURIComponent('/cart')}`);
@@ -23,12 +30,10 @@ export default function CartPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pt-24 pb-sos-clear">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-heritage-gold border-t-transparent"></div>
-          </div>
-        </div>
+      <div className="min-h-screen bg-background pb-sos-clear">
+        <PageContainer className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-brand border-t-transparent" />
+        </PageContainer>
       </div>
     );
   }
@@ -36,12 +41,12 @@ export default function CartPage() {
   const itemCount = cart?.items?.length ?? 0;
   const totalPrice = cart?.totalPrice ?? 0;
   const items = cart?.items;
-  // Currency is set by backend from first item's abode; fallback to USD
   const currency = cart?.currency ?? 'USD';
 
   const handleCheckout = async () => {
+    setCheckoutError('');
     if (!cart || !cart.items?.length) {
-      alert('Your bucket is empty');
+      setCheckoutError('Your trip is empty');
       return;
     }
 
@@ -49,168 +54,103 @@ export default function CartPage() {
       setCheckingOut(true);
       const result = await checkout();
       if (result.success) {
-        router.push(`/bookings?success=true`);
+        router.push('/bookings/payment?from=cart');
       }
     } catch (error: any) {
-      alert(error.message || 'Checkout failed');
+      const msg = error.message || 'Checkout failed';
+      setCheckoutError(msg);
+      showError(msg);
     } finally {
       setCheckingOut(false);
     }
   };
 
   const handleClearCart = async () => {
-    if (confirm('Are you sure you want to clear your bucket?')) {
-      try {
-        await clearCart();
-      } catch (error: any) {
-        alert(error.message || 'Failed to clear bucket');
-      }
+    try {
+      await clearCart();
+    } catch (error: any) {
+      showError(error.message || 'Failed to clear trip');
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pt-20 sm:pt-24 pb-bottom-bar lg:pb-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors mb-6"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-medium">Back</span>
-          </button>
+    <div className="min-h-screen bg-background pb-bottom-bar lg:pb-16">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      <PageContainer>
+        <CheckoutSteps currentStep={1} />
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="bg-heritage-gold/10 p-3 sm:p-4 rounded-2xl shrink-0">
-                <ShoppingCart className="w-7 h-7 sm:w-8 sm:h-8 text-heritage-gold" />
-              </div>
-              <div>
-                <h1 className="text-2xl sm:text-4xl font-bold text-gray-900">My Bucket</h1>
-                <p className="text-gray-600 mt-1">
-                  {itemCount} {itemCount === 1 ? 'item' : 'items'}
-                </p>
-              </div>
-            </div>
-            {itemCount > 0 && (
-              <button
-                onClick={handleClearCart}
-                className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                Clear Bucket
-              </button>
-            )}
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors mb-6"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          <span className="font-medium">Back</span>
+        </button>
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-semibold text-text-primary">Review your trip</h1>
+            <p className="text-text-secondary mt-1">
+              {itemCount} {itemCount === 1 ? 'item' : 'items'}
+            </p>
           </div>
-        </motion.div>
+          {itemCount > 0 && (
+            <Button variant="ghost" onClick={handleClearCart} className="text-red-600">
+              <Trash2 className="w-4 h-4" />
+              Clear trip
+            </Button>
+          )}
+        </div>
+
+        {checkoutError && (
+          <p className="text-sm text-red-600 bg-red-50 px-4 py-3 rounded-lg mb-6">{checkoutError}</p>
+        )}
 
         {itemCount === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-3xl shadow-xl p-16 text-center"
-          >
-            <ShoppingCart className="w-24 h-24 text-gray-300 mx-auto mb-6" />
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Your bucket is empty</h2>
-            <p className="text-gray-600 mb-8">Start adding abodes and experiences to your bucket</p>
-            <motion.button
-              onClick={() => router.push('/adobes')}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-8 py-4 bg-gradient-to-r from-heritage-gold to-heritage-gold-dark text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all"
-            >
-              Browse Abodes
-            </motion.button>
-          </motion.div>
+          <Card className="p-16 text-center">
+            <ShoppingCart className="w-16 h-16 text-text-secondary opacity-40 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-text-primary mb-2">Your trip is empty</h2>
+            <p className="text-text-secondary mb-6">Add homestays and experiences to get started</p>
+            <Button onClick={() => router.push('/explore')}>Explore homestays</Button>
+          </Card>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Cart Items */}
             <div className="lg:col-span-2 space-y-6">
               {(items ?? []).map((item) => (
                 <CartItem key={item._id} item={item} currency={currency} />
               ))}
             </div>
 
-            {/* Order Summary (desktop) */}
             <div className="hidden lg:block lg:col-span-1">
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="sticky top-24 bg-white rounded-3xl shadow-xl p-8 border border-gray-200"
-              >
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Order Summary</h2>
-
-                <div className="space-y-4 mb-6">
-                  <div className="flex justify-between text-gray-700">
+              <Card className="sticky top-24">
+                <CardContent>
+                  <h2 className="text-lg font-semibold mb-4">Trip total</h2>
+                  <div className="flex justify-between text-text-secondary mb-2">
                     <span>Subtotal</span>
-                    <span className="font-semibold">{formatPrice(totalPrice, currency)}</span>
+                    <span>{formatPrice(totalPrice, currency)}</span>
                   </div>
-                  <div className="flex justify-between text-gray-700">
-                    <span>Service Fee</span>
-                    <span className="font-semibold">Free</span>
-                  </div>
-                  <div className="border-t border-gray-200 pt-4 flex justify-between text-xl font-bold text-gray-900">
+                  <div className="flex justify-between font-semibold text-text-primary pt-4 border-t border-border mb-6">
                     <span>Total</span>
-                    <span className="text-heritage-gold">{formatPrice(totalPrice, currency)}</span>
+                    <span>{formatPrice(totalPrice, currency)}</span>
                   </div>
-                </div>
-
-                <motion.button
-                  onClick={handleCheckout}
-                  disabled={checkingOut}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full px-6 py-4 bg-gradient-to-r from-heritage-gold to-heritage-gold-dark text-white font-bold text-lg rounded-xl shadow-xl hover:shadow-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {checkingOut ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                      <span>Processing...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Proceed to Checkout</span>
-                    </>
-                  )}
-                </motion.button>
-
-                <p className="text-sm text-gray-500 text-center mt-4">
-                  You will be redirected to complete your booking
-                </p>
-              </motion.div>
+                  <Button className="w-full" onClick={handleCheckout} disabled={checkingOut}>
+                    {checkingOut ? 'Processing...' : 'Continue to payment'}
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
           </div>
         )}
 
         {itemCount > 0 && (
-          <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-white border-t-2 border-gray-200 shadow-2xl px-4 py-3 safe-area-bottom">
-            <div className="flex items-center justify-between gap-3 max-w-7xl mx-auto">
-              <div>
-                <p className="text-xs text-gray-500">{itemCount} {itemCount === 1 ? 'item' : 'items'}</p>
-                <p className="text-lg font-bold text-heritage-gold">{formatPrice(totalPrice, currency)}</p>
-              </div>
-              <motion.button
-                onClick={handleCheckout}
-                disabled={checkingOut}
-                whileTap={{ scale: 0.98 }}
-                className="shrink-0 px-5 py-3 bg-gradient-to-r from-heritage-gold to-heritage-gold-dark text-white font-bold rounded-xl shadow-lg disabled:opacity-50 flex items-center gap-2 touch-target"
-              >
-                {checkingOut ? (
-                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
-                ) : (
-                  'Checkout'
-                )}
-              </motion.button>
-            </div>
-          </div>
+          <MobileStickyBar innerClassName="flex items-center justify-between gap-3">
+            <p className="text-lg font-semibold text-text-primary">{formatPrice(totalPrice, currency)}</p>
+            <Button onClick={handleCheckout} disabled={checkingOut}>
+              {checkingOut ? '...' : 'Continue'}
+            </Button>
+          </MobileStickyBar>
         )}
-      </div>
+      </PageContainer>
     </div>
   );
 }
-

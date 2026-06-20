@@ -8,6 +8,7 @@ import { useCurrency } from '@/lib/CurrencyContext';
 import { getImageUrl } from '@/lib/imageUtils';
 import ExperienceDetailModal from '@/components/ExperienceDetailModal';
 import ReviewModal from '@/components/ReviewModal';
+import MobileStickyBar from '@/components/ui/MobileStickyBar';
 import { DISTRICTS_BY_STATE } from '@/lib/indianStates';
 
 interface Review {
@@ -370,14 +371,14 @@ export default function ExperiencesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+    <div className={`min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 page-offset-nav ${bucketlist.length > 0 ? 'pb-bottom-bar md:pb-0' : 'pb-sos-clear md:pb-8'}`}>
       {/* Hero Header Section */}
       <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="w-full px-page lg:px-page-lg py-8 sm:py-12">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-3">
-                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-3">
+                <h1 className="text-xl sm:text-3xl md:text-4xl font-bold tracking-tight text-balance">
                   {locations.length === 1 
                     ? `Experiences in ${locations[0].district}`
                     : `${experiences.length} Experiences Across ${locations.length} Destinations`}
@@ -419,7 +420,7 @@ export default function ExperiencesPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="w-full px-page lg:px-page-lg py-8">
         {/* Token Warning */}
         {hasNoTokens || (user && (!user.tokens || user.tokens === 0)) ? (
           <div className="bg-amber-50 border-l-4 border-amber-400 rounded-lg p-6 mb-8 shadow-sm">
@@ -857,15 +858,16 @@ export default function ExperiencesPage() {
 
       {/* Mobile Sticky CTA */}
       {bucketlist.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-white border-t-2 border-slate-200 shadow-2xl p-4">
+        <MobileStickyBar>
           <button
+            type="button"
             onClick={handleProceed}
             disabled={hasNoTokens || (user ? (!user.tokens || user.tokens === 0) : false)}
-            className="w-full px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-base rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-6 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-base rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed touch-target"
           >
             Continue with {bucketlist.length} {bucketlist.length === 1 ? 'experience' : 'experiences'}
           </button>
-        </div>
+        </MobileStickyBar>
       )}
     </div>
   );

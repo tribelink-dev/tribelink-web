@@ -10,6 +10,7 @@ import GuidePricingSelector, { PricingMode } from '@/components/GuidePricingSele
 import { useAuth } from '@/lib/auth';
 import { getImageUrl } from '@/lib/imageUtils';
 import PreferenceModal from '@/components/PreferenceModal';
+import MobileStickyBar from '@/components/ui/MobileStickyBar';
 
 interface Activity {
   experienceId: string | any;
@@ -1072,7 +1073,7 @@ export default function SchedulePage() {
 
   return (
     <div className={`min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 page-offset-nav ${tripData ? 'pb-bottom-bar md:pb-0' : 'pb-sos-clear'}`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+      <div className="w-full px-page lg:px-page-lg py-8 lg:py-12">
         {/* Modern Hero Header with Glassmorphism */}
         <div className="relative mb-12">
           <div className="absolute inset-0 bg-gradient-to-r from-primary-500/10 via-accent-500/10 to-primary-500/10 rounded-3xl blur-3xl"></div>
@@ -1086,7 +1087,7 @@ export default function SchedulePage() {
                   </svg>
                 </div>
               </div>
-              <h1 className="text-4xl lg:text-5xl font-extrabold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 bg-clip-text text-transparent mb-4 tracking-tight">
+              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 bg-clip-text text-transparent mb-4 tracking-tight">
                 Your Perfect Itinerary
               </h1>
               <p className="text-lg text-gray-600 max-w-2xl leading-relaxed">
@@ -2121,23 +2122,21 @@ export default function SchedulePage() {
 
       {/* Mobile sticky proceed CTA */}
       {tripData && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-white border-t-2 border-gray-200 shadow-2xl px-4 py-3 safe-area-bottom">
-          <div className="flex items-center justify-between gap-3 max-w-7xl mx-auto">
-            <div className="min-w-0">
-              <p className="text-xs text-gray-500">Trip total</p>
-              <p className="text-lg font-bold text-gray-900 truncate">
-                ${tripData.totalPrice.toFixed(2)}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleProceedToPayment}
-              className="shrink-0 px-5 py-3 bg-gradient-to-r from-primary-500 to-accent-500 text-white font-bold rounded-xl shadow-lg touch-target"
-            >
-              Proceed to Payment
-            </button>
+        <MobileStickyBar innerClassName="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs text-text-secondary">Trip total</p>
+            <p className="text-lg font-bold text-text-primary truncate">
+              ${tripData.totalPrice.toFixed(2)}
+            </p>
           </div>
-        </div>
+          <button
+            type="button"
+            onClick={handleProceedToPayment}
+            className="shrink-0 px-5 py-3 bg-gradient-to-r from-primary-500 to-accent-500 text-white font-bold rounded-xl shadow-lg touch-target"
+          >
+            Proceed to Payment
+          </button>
+        </MobileStickyBar>
       )}
 
       {/* Preference Modal */}

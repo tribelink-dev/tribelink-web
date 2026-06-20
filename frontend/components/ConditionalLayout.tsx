@@ -4,6 +4,11 @@ import { usePathname } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import MarketingNavbar from '@/components/marketing/layout/Navbar';
 import MarketingFooter from '@/components/marketing/layout/Footer';
+import PlatformFooter from '@/components/PlatformFooter';
+import MobileBottomNav from '@/components/MobileBottomNav';
+import { ExploreNavProvider } from '@/lib/ExploreNavContext';
+import { shouldHideBottomNav } from '@/lib/mobileRoutes';
+import { cn } from '@/lib/utils';
 
 export default function ConditionalLayout({
   children,
@@ -12,7 +17,6 @@ export default function ConditionalLayout({
 }) {
   const pathname = usePathname();
   
-  // Marketing routes (homepage-style and marketing sections)
   const isMarketingRoute = pathname === '/' || 
     pathname === '/landing' ||
     pathname.startsWith('/#') ||
@@ -22,7 +26,6 @@ export default function ConditionalLayout({
     pathname === '/stories' ||
     pathname === '/contact';
 
-  // Host routes (don't show Navbar, they have their own sidebar)
   const isHostRoute = pathname.startsWith('/host/') || 
     pathname.startsWith('/provider/') ||
     pathname.startsWith('/adobes/register') ||
@@ -38,17 +41,20 @@ export default function ConditionalLayout({
     );
   }
 
-  // Host routes - no Navbar (they have sidebar)
   if (isHostRoute) {
     return <>{children}</>;
   }
 
-  // Platform routes
+  const hideBottomNav = shouldHideBottomNav(pathname);
+
   return (
-    <>
-      <Navbar />
-      {children}
-    </>
+    <ExploreNavProvider>
+      <div className="flex flex-col min-h-screen">
+        <Navbar />
+        <main className={cn('flex-1', !hideBottomNav && 'pb-mobile-nav')}>{children}</main>
+        <PlatformFooter />
+        {!hideBottomNav && <MobileBottomNav />}
+      </div>
+    </ExploreNavProvider>
   );
 }
-

@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import ToastContainer, { useToast } from '@/components/Toast';
 import { getImageUrl } from '@/lib/imageUtils';
+import { PageContainer } from '@/components/ui/PageContainer';
 
 interface UserProfile {
   _id: string;
@@ -256,27 +257,25 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 pt-24 pb-sos-clear">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="min-h-screen bg-background pb-sos-clear">
+        <PageContainer className="flex items-center justify-center min-h-[60vh]">
             <div className="text-center">
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-indigo-600 border-t-transparent mb-4"></div>
               <p className="text-gray-600">Loading your profile...</p>
             </div>
-          </div>
-        </div>
+        </PageContainer>
       </div>
     );
   }
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 pt-24 pb-sos-clear">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+      <div className="min-h-screen bg-background pb-sos-clear">
+        <PageContainer>
           <div className="text-center py-16">
             <p className="text-gray-600">Failed to load profile</p>
           </div>
-        </div>
+        </PageContainer>
       </div>
     );
   }
@@ -284,8 +283,8 @@ export default function ProfilePage() {
   const displayPicture = profilePicturePreview || profilePicture;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 pt-24 pb-sos-clear">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+    <div className="min-h-screen bg-background pb-sos-clear">
+      <PageContainer>
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -673,7 +672,7 @@ export default function ProfilePage() {
             )}
           </div>
         </div>
-      </div>
+      </PageContainer>
       <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
     </div>
   );

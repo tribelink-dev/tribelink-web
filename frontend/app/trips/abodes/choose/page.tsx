@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
 import AbodeCard from '@/components/AbodeCard';
+import MobileStickyBar from '@/components/ui/MobileStickyBar';
 
 interface PlannerAbodeResult {
   abode: any;
@@ -99,14 +100,14 @@ export default function AbodePlannerChoosePage() {
   const isSelected = (id: string) => selectedIds.has(id);
 
   return (
-    <div className="min-h-screen bg-cream-50">
+    <div className={`min-h-screen bg-cream-50 page-offset-nav ${selectedIds.size > 0 ? 'pb-bottom-bar md:pb-0' : 'pb-8'}`}>
       <div className="relative bg-gradient-to-br from-charcoal-700 via-charcoal-800 to-charcoal-900 overflow-hidden">
-        <div className="section-container-luxury relative z-10 pt-24 pb-16">
-          <div className="max-w-5xl mx-auto">
+        <div className="section-container-luxury relative z-10 pt-4 sm:pt-8 pb-12 sm:pb-16">
+          <div className="w-full">
             <p className="text-sm font-medium text-white/70 mb-4">
               Step 2 of 3 · Choose your home bases
             </p>
-            <h1 className="heading-display text-3xl md:text-4xl lg:text-5xl text-white mb-4">
+            <h1 className="heading-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-white mb-4">
               Pick Local Abodes for Your Trip
             </h1>
             {from && to && (
@@ -123,7 +124,7 @@ export default function AbodePlannerChoosePage() {
       </div>
 
       <div className="section-container-luxury -mt-10 relative z-20 pb-16">
-        <div className="max-w-6xl mx-auto">
+        <div className="w-full">
           <div className="content-card shadow-luxury-lg border-charcoal-100/50">
             {error && (
               <div className="bg-red-50/80 border-2 border-red-200 rounded-xl p-4 mb-6 text-sm text-red-800">
@@ -210,7 +211,7 @@ export default function AbodePlannerChoosePage() {
                   })}
                 </div>
 
-                <div className="flex flex-col md:flex-row items-center justify-between gap-3 border-t border-charcoal-100 pt-4">
+                <div className="hidden md:flex flex-col md:flex-row items-center justify-between gap-3 border-t border-charcoal-100 pt-4">
                   <p className="text-xs text-charcoal-500">
                     Tip: Select one or more abodes. We&apos;ll treat each as a home base and fill
                     your days with experiences around them.
@@ -219,7 +220,7 @@ export default function AbodePlannerChoosePage() {
                     type="button"
                     disabled={selectedIds.size === 0}
                     onClick={handleContinue}
-                    className={`px-6 py-3 rounded-xl text-sm font-semibold flex items-center gap-2 ${
+                    className={`px-6 py-3 rounded-xl text-sm font-semibold flex items-center gap-2 touch-target ${
                       selectedIds.size === 0
                         ? 'bg-charcoal-100 text-charcoal-400 cursor-not-allowed'
                         : 'bg-charcoal-700 text-white hover:bg-charcoal-800'
@@ -233,6 +234,22 @@ export default function AbodePlannerChoosePage() {
           </div>
         </div>
       </div>
+
+      {selectedIds.size > 0 && (
+        <MobileStickyBar innerClassName="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs text-text-secondary">Selected abodes</p>
+            <p className="font-bold text-text-primary">{selectedIds.size}</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleContinue}
+            className="shrink-0 px-5 py-3 bg-charcoal-700 text-white font-semibold rounded-xl touch-target"
+          >
+            Continue
+          </button>
+        </MobileStickyBar>
+      )}
     </div>
   );
 }

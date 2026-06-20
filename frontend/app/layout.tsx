@@ -3,6 +3,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import { CurrencyProvider } from "@/lib/CurrencyContext";
 import { CartProvider } from "@/lib/CartContext";
+import { SavedProvider } from "@/lib/SavedContext";
 import ConditionalLayout from "@/components/ConditionalLayout";
 import EmergencySOS from "@/components/EmergencySOS";
 import StructuredData from "@/components/StructuredData";
@@ -90,6 +91,7 @@ export const viewport: Viewport = {
   maximumScale: 5,
   userScalable: true,
   viewportFit: 'cover',
+  themeColor: '#FEFDFB',
 };
 
 export default function RootLayout({
@@ -104,10 +106,12 @@ export default function RootLayout({
         <AuthProvider>
           <CurrencyProvider>
             <CartProvider>
+              <SavedProvider>
               <ConditionalLayout>
                 {children}
               </ConditionalLayout>
               <EmergencySOS />
+              </SavedProvider>
             </CartProvider>
           </CurrencyProvider>
         </AuthProvider>

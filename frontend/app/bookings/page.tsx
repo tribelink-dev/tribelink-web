@@ -18,6 +18,7 @@ import {
   ArrowLeft,
   FileText,
 } from 'lucide-react';
+import { PageContainer } from '@/components/ui/PageContainer';
 
 interface Booking {
   _id: string;
@@ -187,19 +188,17 @@ export default function BookingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pt-24 pb-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-heritage-gold border-t-transparent" />
-          </div>
-        </div>
+      <div className="min-h-screen bg-background pb-sos-clear">
+        <PageContainer className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-heritage-gold border-t-transparent" />
+        </PageContainer>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pt-24 pb-sos-clear">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+    <div className="min-h-screen bg-background pb-sos-clear">
+      <PageContainer>
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -388,7 +387,7 @@ export default function BookingsPage() {
             })}
           </div>
         )}
-      </div>
+      </PageContainer>
     </div>
   );
 }

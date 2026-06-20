@@ -87,7 +87,7 @@ Even with keep-alive, the *first* request after a long-idle period may still hit
 
 ## Image Uploads
 
-Image-heavy flows (currently abode register/edit) use **direct browser → Cloudinary** uploads, bypassing our backend entirely. This is the standard pattern used by Airbnb / Discord / Notion, and it solved a class of free-tier-Render bottlenecks for us.
+Image-heavy flows (currently abode register/edit) use **direct browser → Cloudinary** uploads, bypassing our backend entirely. This is the standard direct-to-CDN upload pattern used by large consumer apps, and it solved a class of free-tier-Render bottlenecks for us.
 
 ### Why not via the backend?
 

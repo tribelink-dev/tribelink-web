@@ -5,15 +5,21 @@ import { useRouter, useParams } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useCart } from '@/lib/CartContext';
-import { getImageUrl } from '@/lib/imageUtils';
 import { useCurrency } from '@/lib/CurrencyContext';
-import { motion, AnimatePresence } from 'framer-motion';
-import { DayPicker } from 'react-day-picker';
-import { Calendar, Users, ChevronLeft, ChevronRight, Star, MapPin, Shield, Home, Bed, Bath, CheckCircle2, Sparkles, Award, Languages, ShoppingCart } from 'lucide-react';
+import { ChevronLeft, MapPin, Bed, Bath, Users, Sparkles } from 'lucide-react';
 import RoomVariantSelector from '@/components/booking/RoomVariantSelector';
 import ExperienceAddOnCard from '@/components/booking/ExperienceAddOnCard';
 import CartSidebar from '@/components/cart/CartSidebar';
-import 'react-day-picker/dist/style.css';
+import AbodePhotoGallery from '@/components/abode/AbodePhotoGallery';
+import AbodeHostProfile from '@/components/abode/AbodeHostProfile';
+import AbodeReviewsSection from '@/components/abode/AbodeReviewsSection';
+import ReserveWidget from '@/components/abode/ReserveWidget';
+import { DetailPageSkeleton } from '@/components/ui/Skeleton';
+import ToastContainer, { useToast } from '@/components/Toast';
+import { useSaved } from '@/lib/SavedContext';
+import { Button } from '@/components/ui/Button';
+import { PageContainer } from '@/components/ui/PageContainer';
+import MobileStickyBar from '@/components/ui/MobileStickyBar';
 
 interface LocalHost {
   _id: string;
@@ -130,10 +136,13 @@ export default function AbodeDetailPage() {
   const { user } = useAuth();
   const { formatPrice } = useCurrency();
   const { addAbodeToCart, addExperienceToCartItem } = useCart();
+  const { toasts, removeToast, error: showError, success: showSuccess } = useToast();
+  const { isAbodeSaved, toggleAbode } = useSaved();
   const [abode, setAbode] = useState<LocalHost | null>(null);
   const [linkedExperiences, setLinkedExperiences] = useState<LocalHost['linkedExperiences']>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [bookingError, setBookingError] = useState('');
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [checkIn, setCheckIn] = useState<Date | undefined>();
   const [checkOut, setCheckOut] = useState<Date | undefined>();
@@ -206,6 +215,7 @@ export default function AbodeDetailPage() {
   };
 
   const handleAddToCart = async () => {
+    setBookingError('');
     if (!user) {
       const currentPath = `/abodes/${params.id}`;
       router.push(`/login?redirect=${encodeURIComponent(currentPath)}`);
@@ -213,12 +223,12 @@ export default function AbodeDetailPage() {
     }
 
     if (!checkIn || !checkOut) {
-      alert('Please select check-in and check-out dates');
+      setBookingError('Please select check-in and check-out dates');
       return;
     }
 
     if (checkOut <= checkIn) {
-      alert('Check-out date must be after check-in date');
+      setBookingError('Check-out date must be after check-in date');
       return;
     }
 
@@ -229,7 +239,7 @@ export default function AbodeDetailPage() {
     const maxCapacity = selectedVariant ? selectedVariant.capacity : abode.abodeDetails.capacity;
     
     if (guests > maxCapacity) {
-      alert(`Maximum capacity is ${maxCapacity} guests`);
+      setBookingError(`Maximum capacity is ${maxCapacity} guests`);
       return;
     }
 
@@ -272,10 +282,12 @@ export default function AbodeDetailPage() {
         
         setShowCartSidebar(true);
         setAddingToCart(false);
+        showSuccess('Added to your trip');
       }, 500);
     } catch (err: any) {
-      console.error('Error adding to cart:', err);
-      alert(err.message || 'Failed to add to bucket');
+      const msg = err.message || 'Failed to reserve';
+      setBookingError(msg);
+      showError(msg);
       setAddingToCart(false);
     }
   };
@@ -304,13 +316,10 @@ export default function AbodeDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pt-24 pb-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="animate-pulse space-y-6">
-            <div className="h-96 bg-gray-200 rounded-3xl"></div>
-            <div className="h-64 bg-gray-200 rounded-3xl"></div>
-          </div>
-        </div>
+      <div className="min-h-screen bg-background pt-below-nav pb-16">
+        <PageContainer belowNav={false}>
+          <DetailPageSkeleton />
+        </PageContainer>
       </div>
     );
   }
@@ -337,7 +346,6 @@ export default function AbodeDetailPage() {
   }
 
   const mainImage = abode.images[selectedImageIndex] || abode.images[0];
-  const imageUrl = mainImage ? getImageUrl(mainImage.url) : null;
   const nights = checkIn && checkOut 
     ? Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24))
     : 0;
@@ -385,208 +393,79 @@ export default function AbodeDetailPage() {
     Math.min(...abode.roomVariants.map(v => v.pricePerNight)) !== 
     Math.max(...abode.roomVariants.map(v => v.pricePerNight));
 
+  const unavailableDates = (abode.availability || [])
+    .filter((a) => !a.available)
+    .map((a) => new Date(a.date));
+
+  const maxGuests = selectedVariant ? selectedVariant.capacity : abode.abodeDetails.capacity;
+  const displayTitle = abode.abodeDetails.title || `${abode.providerId.name}'s ${abode.abodeDetails.propertyType}`;
+
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pt-20 ${!isOwner ? 'pb-bottom-bar lg:pb-16' : 'pb-sos-clear lg:pb-16'}`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        {/* Back Button */}
-        <motion.button
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
+    <div className={`min-h-screen bg-background pt-below-nav ${!isOwner ? 'pb-bottom-bar lg:pb-16' : 'pb-sos-clear lg:pb-16'}`}>
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      <div className="px-page lg:px-page-lg">
+        <button
           onClick={() => router.back()}
-          className="mb-8 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
+          className="mb-6 flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors"
         >
-          <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+          <ChevronLeft className="w-5 h-5" />
           <span className="font-medium">Back</span>
-        </motion.button>
+        </button>
 
+        <div className="mb-6">
+          <div className="flex items-start justify-between gap-4 mb-2">
+            <h1 className="text-2xl md:text-3xl font-semibold text-text-primary">{displayTitle}</h1>
+            {!isOwner && abode._id && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => toggleAbode(abode._id)}
+              >
+                {isAbodeSaved(abode._id) ? 'Saved' : 'Save'}
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center gap-2 text-text-secondary text-sm">
+            <MapPin className="w-4 h-4" />
+            {abode.location.district}, {abode.location.state}
+          </div>
+        </div>
+      </div>
+
+      <div className="px-page lg:px-page-lg mb-8">
+        <AbodePhotoGallery images={abode.images} title={displayTitle} />
+      </div>
+
+      <PageContainer width="constrained" belowNav={false} className="pb-8">
         <div className={`grid grid-cols-1 gap-8 ${!isOwner ? 'lg:grid-cols-3' : 'lg:grid-cols-1 max-w-5xl mx-auto'}`}>
-          {/* Main Content */}
           <div className={!isOwner ? 'lg:col-span-2 order-2 lg:order-1 space-y-8' : 'space-y-8'}>
-            {/* Image Gallery */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100"
-            >
-              <div className="relative w-full h-[280px] sm:h-[400px] lg:h-[500px] bg-gradient-to-br from-gray-200 to-gray-300 overflow-hidden">
-                {imageUrl ? (
-                  <motion.img
-                    key={selectedImageIndex}
-                    src={imageUrl}
-                    alt={abode.abodeDetails.description}
-                    className="w-full h-full object-cover"
-                    initial={{ opacity: 0, scale: 1.1 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.5 }}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Home className="w-24 h-24 text-gray-400" />
-                  </div>
-                )}
-                
-                {/* Image Navigation */}
-                {abode.images.length > 1 && (
-                  <>
-                    <button
-                      onClick={() => setSelectedImageIndex((prev) => (prev - 1 + abode.images.length) % abode.images.length)}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center shadow-xl hover:scale-110 transition-all"
-                    >
-                      <ChevronLeft className="w-6 h-6 text-gray-700" />
-                    </button>
-                    <button
-                      onClick={() => setSelectedImageIndex((prev) => (prev + 1) % abode.images.length)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center shadow-xl hover:scale-110 transition-all"
-                    >
-                      <ChevronRight className="w-6 h-6 text-gray-700" />
-                    </button>
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                      {abode.images.slice(0, 5).map((_, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => setSelectedImageIndex(idx)}
-                          className={`h-2 rounded-full transition-all ${
-                            selectedImageIndex === idx ? 'w-8 bg-white' : 'w-2 bg-white/50'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-              
-              {abode.images.length > 1 && (
-                <div className="p-3 sm:p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
-                  {abode.images.slice(0, 5).map((img, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setSelectedImageIndex(index)}
-                      className={`relative h-20 rounded-xl overflow-hidden border-2 transition-all ${
-                        selectedImageIndex === index
-                          ? 'border-heritage-gold shadow-lg'
-                          : 'border-transparent hover:border-gray-300'
-                      }`}
-                    >
-                      <img
-                        src={getImageUrl(img.url) || ''}
-                        alt={img.caption || `Image ${index + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </motion.div>
+            <AbodeHostProfile
+              host={abode.providerId}
+              familyInfo={abode.familyInfo}
+              languages={abode.languages}
+              isVerified={abode.isVerified}
+            />
 
-            {/* Title & Location */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100"
-            >
-              <div className="flex items-start justify-between mb-6">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-4">
-                    {abode.isVerified && (
-                      <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
-                        <Shield className="w-4 h-4" />
-                        <span className="text-sm font-bold">Verified</span>
-                      </div>
-                    )}
-                    {abode.culturalPractices && abode.culturalPractices.length > 0 && (
-                      <div className="bg-gradient-to-r from-purple-500/90 to-indigo-500/90 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
-                        <Sparkles className="w-4 h-4" />
-                        <span className="text-sm font-semibold">Cultural Experience</span>
-                      </div>
-                    )}
-                  </div>
-                  <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-2">
-                    {abode.abodeDetails.title || `${abode.providerId.name}'s ${abode.abodeDetails.propertyType}`}
-                  </h1>
-                  {abode.abodeDetails.title && (
-                    <p className="text-xl text-gray-600 mb-4 font-medium">
-                      {abode.providerId.name}'s {abode.abodeDetails.propertyType}
-                    </p>
-                  )}
-                  <div className="flex items-center gap-2 text-gray-600 mb-6">
-                    <MapPin className="w-5 h-5" />
-                    <span className="text-lg">{abode.location.district}, {abode.location.state}, {abode.location.country}</span>
-                  </div>
-                </div>
-                {abode.rating > 0 && (
-                  <div className="flex items-center gap-2 bg-white rounded-2xl px-4 py-3 shadow-lg border border-gray-200">
-                    <Star className="w-6 h-6 fill-amber-400 text-amber-400" />
-                    <div>
-                      <span className="text-2xl font-bold text-gray-900">{abode.rating.toFixed(1)}</span>
-                      {abode.ratingCount > 0 && (
-                        <span className="text-sm text-gray-600 ml-1">({abode.ratingCount})</span>
-                      )}
-                    </div>
-                </div>
-                )}
-              </div>
+            <AbodeReviewsSection rating={abode.rating} ratingCount={abode.ratingCount} />
 
-              {/* Property Details */}
-              <div className="flex flex-wrap items-center gap-6 pt-6 border-t border-gray-200">
-                <div className="flex items-center gap-2 text-gray-700">
-                  <Users className="w-5 h-5 text-gray-500" />
-                  <span className="font-semibold">{abode.abodeDetails.capacity} guests</span>
-                </div>
-                <div className="flex items-center gap-2 text-gray-700">
-                  <Bed className="w-5 h-5 text-gray-500" />
-                  <span className="font-semibold">{abode.abodeDetails.bedrooms} bedroom{abode.abodeDetails.bedrooms !== 1 ? 's' : ''}</span>
-                </div>
-                <div className="flex items-center gap-2 text-gray-700">
-                  <Bath className="w-5 h-5 text-gray-500" />
-                  <span className="font-semibold">{abode.abodeDetails.bathrooms} bathroom{abode.abodeDetails.bathrooms !== 1 ? 's' : ''}</span>
-                </div>
-                {abode.languages && abode.languages.length > 0 && (
-                  <div className="flex items-center gap-2 text-gray-700">
-                    <Languages className="w-5 h-5 text-gray-500" />
-                    <span className="font-semibold">{abode.languages.join(', ')}</span>
-                </div>
-                )}
+            <section className="py-4">
+              <div className="flex flex-wrap items-center gap-4 text-sm text-text-secondary mb-6">
+                <span className="flex items-center gap-1"><Users className="w-4 h-4" />{abode.abodeDetails.capacity} guests</span>
+                <span className="flex items-center gap-1"><Bed className="w-4 h-4" />{abode.abodeDetails.bedrooms} bedrooms</span>
+                <span className="flex items-center gap-1"><Bath className="w-4 h-4" />{abode.abodeDetails.bathrooms} bathrooms</span>
               </div>
-            </motion.div>
-
-            {/* Description */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100"
-            >
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">About this abode</h2>
-              <p className="text-gray-700 leading-relaxed text-lg whitespace-pre-line">
+              <h2 className="text-xl font-semibold text-text-primary mb-4">About this homestay</h2>
+              <p className="text-text-secondary leading-relaxed whitespace-pre-line">
                 {abode.abodeDetails.description}
               </p>
-            </motion.div>
+            </section>
 
-            {/* Additional Experiences Section - Prominent Position */}
+            {/* Included & optional experiences */}
             {linkedExperiences && linkedExperiences.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="w-full"
-              >
-                <div className="bg-gradient-to-br from-heritage-gold/5 via-amber-50/30 to-cream-500/10 rounded-2xl shadow-lg p-4 md:p-5 border border-heritage-gold/20">
-                  {/* Compact Header */}
-                  <div className="flex items-center gap-2.5 mb-4">
-                    <div className="p-2 bg-gradient-to-br from-heritage-gold to-amber-600 rounded-lg shadow-md">
-                      <Sparkles className="w-4 h-4 md:w-5 md:h-5 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-lg md:text-xl font-bold text-gray-900">Enhance Your Stay</h2>
-                      <p className="text-xs md:text-sm text-gray-600">
-                        Optional cultural experiences
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {/* Compact Cards List */}
-                  <div className="space-y-2">
+              <section className="py-4 border-t border-border">
+                <h2 className="text-xl font-semibold text-text-primary mb-2">Included & optional experiences</h2>
+                <p className="text-sm text-text-secondary mb-4">Cultural activities you can add to your stay</p>
+                <div className="space-y-2">
                     {linkedExperiences.map((experience) => (
                       <ExperienceAddOnCard
                         key={experience._id}
@@ -596,104 +475,83 @@ export default function AbodeDetailPage() {
                         onRemove={() => handleRemoveExperience(experience._id)}
                       />
                     ))}
-                  </div>
                 </div>
-              </motion.div>
+              </section>
             )}
 
             {/* Cultural Practices */}
             {abode.culturalPractices.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="bg-white rounded-2xl shadow-luxury p-6"
-              >
-                <h2 className="text-2xl font-semibold text-charcoal-700 mb-4">
+              <section className="py-4 border-t border-border">
+                <h2 className="text-xl font-semibold text-text-primary mb-4">
                   Cultural Practices
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {abode.culturalPractices.map((practice, index) => (
-                    <div key={index} className="p-4 bg-cream-50 rounded-lg border border-cream-300">
+                    <div key={index} className="p-4 bg-surface-muted rounded-card border border-border">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="px-2 py-1 bg-heritage-gold text-white text-xs font-semibold rounded">
+                        <span className="px-2 py-1 bg-brand text-white text-xs font-semibold rounded">
                           {practice.category}
                         </span>
-                        <h3 className="font-semibold text-charcoal-700">{practice.practice}</h3>
+                        <h3 className="font-semibold text-text-primary">{practice.practice}</h3>
                       </div>
                       {practice.description && (
-                        <p className="text-sm text-charcoal-600">{practice.description}</p>
+                        <p className="text-sm text-text-secondary">{practice.description}</p>
                       )}
                     </div>
                   ))}
                 </div>
-              </motion.div>
+              </section>
             )}
 
             {/* Nearby Places */}
             {abode.nearbyPlaces.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="bg-white rounded-2xl shadow-luxury p-6"
-              >
-                <h2 className="text-2xl font-semibold text-charcoal-700 mb-4">
+              <section className="py-4 border-t border-border">
+                <h2 className="text-xl font-semibold text-text-primary mb-4">
                   Nearby Cultural & Historical Places
                 </h2>
                 <div className="space-y-4">
                   {abode.nearbyPlaces.map((place, index) => (
-                    <div key={index} className="p-4 bg-cream-50 rounded-lg border border-cream-300">
+                    <div key={index} className="p-4 bg-surface-muted rounded-card border border-border">
                       <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-semibold text-charcoal-700">{place.name}</h3>
-                        <span className="px-2 py-1 bg-heritage-gold-light text-charcoal-700 text-xs font-semibold rounded">
+                        <h3 className="font-semibold text-text-primary">{place.name}</h3>
+                        <span className="px-2 py-1 bg-brand-light text-text-primary text-xs font-semibold rounded">
                           {place.significance}
                         </span>
                       </div>
                       {place.description && (
-                        <p className="text-sm text-charcoal-600 mb-2">{place.description}</p>
+                        <p className="text-sm text-text-secondary mb-2">{place.description}</p>
                       )}
                       {place.distance > 0 && (
-                        <p className="text-xs text-charcoal-500">
+                        <p className="text-xs text-text-secondary">
                           {place.distance} km away
                         </p>
                       )}
                     </div>
                   ))}
                 </div>
-              </motion.div>
+              </section>
             )}
 
             {/* Amenities */}
             {abode.abodeDetails.amenities.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                className="bg-white rounded-2xl shadow-luxury p-6"
-              >
-                <h2 className="text-2xl font-semibold text-charcoal-700 mb-4">Amenities</h2>
+              <section className="py-4 border-t border-border">
+                <h2 className="text-xl font-semibold text-text-primary mb-4">Amenities</h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {abode.abodeDetails.amenities.map((amenity, index) => (
-                    <div key={index} className="flex items-center gap-2 text-charcoal-600">
-                      <svg className="w-5 h-5 text-heritage-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div key={index} className="flex items-center gap-2 text-text-secondary">
+                      <svg className="w-5 h-5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
                       {amenity}
                     </div>
                   ))}
                 </div>
-              </motion.div>
+              </section>
             )}
 
             {/* House Rules */}
             {abode.abodeDetails.houseRules.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-                className="bg-white rounded-2xl shadow-luxury p-6"
-              >
+              <section className="py-4 border-t border-border">
                 <h2 className="text-2xl font-semibold text-charcoal-700 mb-4">House Rules</h2>
                 <ul className="space-y-2">
                   {abode.abodeDetails.houseRules.map((rule, index) => (
@@ -705,17 +563,12 @@ export default function AbodeDetailPage() {
                     </li>
                   ))}
                 </ul>
-              </motion.div>
+              </section>
             )}
 
             {/* Family Info */}
             {abode.familyInfo?.background && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7 }}
-                className="bg-white rounded-2xl shadow-luxury p-6"
-              >
+              <section className="py-4 border-t border-border">
                 <h2 className="text-2xl font-semibold text-charcoal-700 mb-4">About the Family</h2>
                 <p className="text-charcoal-600 leading-relaxed whitespace-pre-line">
                   {abode.familyInfo.background}
@@ -725,262 +578,58 @@ export default function AbodeDetailPage() {
                     {abode.familyInfo.generations} generation{abode.familyInfo.generations !== 1 ? 's' : ''} of tradition
                   </p>
                 )}
-              </motion.div>
+              </section>
             )}
           </div>
 
-          {/* Booking Sidebar - Only show if user is not the owner */}
           {!isOwner && (
-            <div className="lg:col-span-1 order-1 lg:order-2">
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-                className="lg:sticky lg:top-24 bg-white rounded-3xl shadow-xl p-6 sm:p-8 border border-gray-200"
-              >
-              {/* Room Variant Selector */}
+            <div className="lg:col-span-1 order-1 lg:order-2 space-y-4">
               {abode.roomVariants && abode.roomVariants.length > 0 && (
-                <div className="mb-8">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">Select Room Type</h3>
-                  <RoomVariantSelector
-                    variants={abode.roomVariants}
-                    defaultVariantId={abode.defaultVariantId}
-                    selectedVariantId={selectedVariantId}
-                    onSelect={setSelectedVariantId}
-                    currency={abode.pricing.currency || 'USD'}
-                  />
-                </div>
+                <RoomVariantSelector
+                  variants={abode.roomVariants}
+                  defaultVariantId={abode.defaultVariantId}
+                  selectedVariantId={selectedVariantId}
+                  onSelect={setSelectedVariantId}
+                  currency={abode.pricing.currency || 'INR'}
+                />
               )}
-
-              {/* Price */}
-              <div className="mb-8 pb-8 border-b border-gray-200">
-                <div className="flex items-baseline gap-2 mb-2">
-                  {showFromPrefix && (
-                    <span className="text-lg text-gray-600 font-medium">from</span>
-                  )}
-                  <span className="text-4xl font-bold text-gray-900">
-                    {formatPrice(pricePerNight, abode.pricing.currency || 'INR')}
-                  </span>
-                  <span className="text-lg text-gray-600">/night</span>
-                </div>
-                {abode.pricing.weeklyDiscount && (
-                  <p className="text-sm text-gray-500 flex items-center gap-1">
-                    <Award className="w-4 h-4 text-heritage-gold" />
-                    {abode.pricing.weeklyDiscount}% off for 7+ nights
-                  </p>
-                )}
-              </div>
-
-              {/* Date Selection */}
-              <div className="mb-8 space-y-6">
-                <div>
-                  <label className="block text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    Check-in
-                  </label>
-                  <button
-                    onClick={() => setShowDatePicker(showDatePicker === 'checkin' ? null : 'checkin')}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl hover:border-heritage-gold transition-colors text-left flex items-center justify-between"
-                  >
-                    <span className={checkIn ? 'text-gray-900 font-medium' : 'text-gray-400'}>
-                      {checkIn ? checkIn.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Select date'}
-                    </span>
-                    <Calendar className="w-5 h-5 text-gray-400" />
-                  </button>
-                  <AnimatePresence>
-                    {showDatePicker === 'checkin' && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="mt-3 bg-white border-2 border-gray-200 rounded-xl p-4 shadow-xl"
-                      >
-                  <DayPicker
-                    mode="single"
-                    selected={checkIn}
-                          onSelect={(date) => {
-                            setCheckIn(date);
-                            setShowDatePicker(null);
-                          }}
-                    disabled={(date) => date < new Date()}
-                  />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    Check-out
-                  </label>
-                  <button
-                    onClick={() => setShowDatePicker(showDatePicker === 'checkout' ? null : 'checkout')}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl hover:border-heritage-gold transition-colors text-left flex items-center justify-between"
-                  >
-                    <span className={checkOut ? 'text-gray-900 font-medium' : 'text-gray-400'}>
-                      {checkOut ? checkOut.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Select date'}
-                    </span>
-                    <Calendar className="w-5 h-5 text-gray-400" />
-                  </button>
-                  <AnimatePresence>
-                    {showDatePicker === 'checkout' && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="mt-3 bg-white border-2 border-gray-200 rounded-xl p-4 shadow-xl"
-                      >
-                  <DayPicker
-                    mode="single"
-                    selected={checkOut}
-                          onSelect={(date) => {
-                            setCheckOut(date);
-                            setShowDatePicker(null);
-                          }}
-                    disabled={(date) => !checkIn || date <= checkIn}
-                  />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
-                    <Users className="w-4 h-4" />
-                    Guests
-                  </label>
-                  <select
-                    value={guests}
-                    onChange={(e) => setGuests(Number(e.target.value))}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-heritage-gold focus:border-heritage-gold transition-all font-medium"
-                  >
-                    {[...Array(abode.abodeDetails.capacity)].map((_, i) => (
-                      <option key={i + 1} value={i + 1}>
-                        {i + 1} guest{i !== 0 ? 's' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Price Breakdown */}
-              {nights > 0 && (
-                <div className="mb-8 p-6 bg-gradient-to-br from-heritage-gold/5 to-cream-500/10 rounded-2xl border border-heritage-gold/20 space-y-3">
-                  <div className="flex justify-between text-sm text-gray-700">
-                    <span>{formatPrice(pricePerNight, abode.pricing.currency || 'INR')} × {nights} nights</span>
-                    <span className="font-semibold">{formatPrice(basePrice, abode.pricing.currency || 'INR')}</span>
-                  </div>
-                  {discount > 0 && (
-                    <div className="flex justify-between text-sm text-emerald-600 font-semibold">
-                      <span>Discount</span>
-                      <span>-{formatPrice(discount, abode.pricing.currency || 'INR')}</span>
-                    </div>
-                  )}
-                  {addedExperiences.size > 0 && (
-                    <div className="space-y-1 pt-2 border-t border-gray-300">
-                      {Array.from(addedExperiences.entries()).map(([expId, expData]) => {
-                        const experience = (linkedExperiences ?? []).find(e => e._id === expId);
-                        if (!experience) return null;
-                        let expPrice = experience.price;
-                        if (experience.isAddOn && experience.addOnPricing?.price) {
-                          expPrice = experience.addOnPricing.price;
-                          if (experience.addOnPricing.discount) {
-                            expPrice *= (1 - experience.addOnPricing.discount / 100);
-                          }
-                        }
-                        return (
-                          <div key={expId} className="flex justify-between text-sm text-gray-700">
-                            <span>{experience.title} ({expData.participants} ×)</span>
-                            <span className="font-semibold">{formatPrice(expPrice * expData.participants, experience.currency || 'USD')}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                  <div className="border-t border-gray-300 pt-3 flex justify-between font-bold text-lg text-gray-900">
-                    <span>Total</span>
-                    <span>{formatPrice(totalPrice, abode.pricing.currency || 'INR')}</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Add to Cart Button */}
-              <motion.button
-                onClick={handleAddToCart}
-                disabled={!checkIn || !checkOut || addingToCart}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="w-full px-6 py-4 bg-gradient-to-r from-heritage-gold to-heritage-gold-dark text-white font-bold text-lg rounded-xl shadow-xl hover:shadow-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {addingToCart ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                    <span>Adding to Bucket...</span>
-                  </>
-                ) : (
-                  <>
-                    <ShoppingCart className="w-5 h-5" />
-                    Add to Bucket
-                  </>
-                )}
-              </motion.button>
-
-              {!user && (
-                <p className="mt-4 text-sm text-center text-gray-600">
-                  <button
-                    onClick={() => router.push(`/login?redirect=${encodeURIComponent(`/adobes/${params.id}`)}`)}
-                    className="text-heritage-gold hover:underline font-semibold"
-                  >
-                    Sign in
-                  </button>
-                  {' '}to book
-                </p>
-              )}
-            </motion.div>
-          </div>
+              <ReserveWidget
+                pricePerNight={pricePerNight}
+                currency={abode.pricing.currency || 'INR'}
+                nights={nights}
+                totalPrice={totalPrice}
+                guests={guests}
+                maxGuests={maxGuests}
+                checkIn={checkIn}
+                checkOut={checkOut}
+                unavailableDates={unavailableDates}
+                onCheckInChange={setCheckIn}
+                onCheckOutChange={setCheckOut}
+                onGuestsChange={setGuests}
+                onReserve={handleAddToCart}
+                loading={addingToCart}
+                error={bookingError}
+                showFromPrefix={!!showFromPrefix}
+                experienceTotal={experienceTotal}
+              />
+            </div>
           )}
         </div>
-      </div>
+      </PageContainer>
 
-      {/* Mobile sticky booking bar */}
       {!isOwner && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-white border-t-2 border-gray-200 shadow-2xl px-4 py-3 safe-area-bottom">
-          <div className="flex items-center justify-between gap-3 max-w-7xl mx-auto">
-            <div className="min-w-0">
-              <div className="flex items-baseline gap-1">
-                {showFromPrefix && (
-                  <span className="text-sm text-gray-600">from</span>
-                )}
-                <span className="text-xl font-bold text-gray-900 truncate">
-                  {formatPrice(pricePerNight, abode.pricing.currency || 'INR')}
-                </span>
-                <span className="text-sm text-gray-600 shrink-0">/night</span>
-              </div>
-              {nights > 0 && (
-                <p className="text-xs text-gray-500 truncate">
-                  {nights} night{nights !== 1 ? 's' : ''} · {formatPrice(totalPrice, abode.pricing.currency || 'INR')} total
-                </p>
-              )}
-            </div>
-            <motion.button
-              onClick={handleAddToCart}
-              disabled={!checkIn || !checkOut || addingToCart}
-              whileTap={{ scale: 0.98 }}
-              className="shrink-0 px-5 py-3 bg-gradient-to-r from-heritage-gold to-heritage-gold-dark text-white font-bold rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 touch-target"
-            >
-              {addingToCart ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
-              ) : (
-                <>
-                  <ShoppingCart className="w-5 h-5" />
-                  <span className="hidden sm:inline">Add to Bucket</span>
-                  <span className="sm:hidden">Book</span>
-                </>
-              )}
-            </motion.button>
+        <MobileStickyBar innerClassName="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-lg font-semibold text-text-primary">
+              {formatPrice(pricePerNight, abode.pricing.currency || 'INR')}
+              <span className="text-sm font-normal text-text-secondary"> /night</span>
+            </p>
+            {bookingError && <p className="text-xs text-red-600 truncate">{bookingError}</p>}
           </div>
-        </div>
+          <Button onClick={handleAddToCart} disabled={addingToCart}>
+            {addingToCart ? '...' : 'Reserve'}
+          </Button>
+        </MobileStickyBar>
       )}
 
       {/* Cart Sidebar */}

@@ -1,0 +1,37 @@
+:root {
+  --background: #FEFDFB;
+  --foreground: #222222;
+  --surface: #FFFFFF;
+  --surface-muted: #F7F7F7;
+  --text-primary: #222222;
+  --text-secondary: #717171;
+  --text-caption: #717171;
+  --border: #DDDDDD;
+  --brand: #D4AF37;
+  --brand-hover: #B8941F;
+  --brand-light: #E8D4A3;
+  --destructive: #C13515;
+  --success: #008A05;
+  --warning: #E07912;
+  --nav-height: 4rem;
+  --page-gutter: 1rem;
+  --page-gutter-lg: 2.5rem;
+  --radius-card: 12px;
+  --radius-pill: 40px;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.05);
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.18);
+}
+
+/* Dark theme not yet implemented — light palette only until full audit of hardcoded colors */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

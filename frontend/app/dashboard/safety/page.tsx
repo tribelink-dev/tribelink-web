@@ -11,8 +11,8 @@ export default function SafetyDashboardPage() {
   }
 
   return (
-    <div className="page-container">
-      <div className="max-w-7xl mx-auto">
+    <div className="page-container pt-below-nav pb-sos-clear">
+      <div className="w-full px-page lg:px-page-lg">
         {/* Header */}
         <div className="mb-8">
           <h1 className="heading-primary text-gray-900 mb-2">Safety & Emergency</h1>

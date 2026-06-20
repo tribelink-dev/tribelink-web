@@ -234,7 +234,7 @@ export default function TripSelectPage() {
 
       {/* Main Form Section */}
       <div className="section-container-luxury -mt-10 sm:-mt-16 relative z-20 pb-safe">
-        <div className="max-w-5xl mx-auto">
+        <div className="w-full">
 
           <div className="content-card shadow-luxury-lg border-charcoal-100/50 mb-8">
             {/* Planner intro */}

@@ -306,5 +306,107 @@ router.delete('/bucketlist', authenticate, requireUser, async (req, res) => {
   }
 });
 
+// Get saved abodes
+router.get('/saved-abodes', authenticate, requireUser, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('savedAbodes');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json({
+      savedAbodes: (user.savedAbodes || []).map((id) => id.toString()),
+      count: user.savedAbodes?.length || 0,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Add abode to saved
+router.post('/saved-abodes', authenticate, requireUser, async (req, res) => {
+  try {
+    const { abodeId } = req.body;
+    if (!abodeId) {
+      return res.status(400).json({ message: 'Abode ID is required' });
+    }
+
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(abodeId)) {
+      return res.status(400).json({ message: 'Invalid abode ID format' });
+    }
+
+    const LocalHost = require('../models/LocalHost');
+    const abode = await LocalHost.findById(abodeId);
+    if (!abode) {
+      return res.status(404).json({ message: 'Abode not found' });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!user.savedAbodes) {
+      user.savedAbodes = [];
+    }
+
+    const abodeIdStr = abodeId.toString();
+    const savedIds = user.savedAbodes.map((id) => id.toString());
+
+    if (!savedIds.includes(abodeIdStr)) {
+      await User.updateOne(
+        { _id: req.user._id },
+        { $push: { savedAbodes: new mongoose.Types.ObjectId(abodeId) } }
+      );
+    }
+
+    const updatedUser = await User.findById(req.user._id).select('savedAbodes');
+    res.json({
+      message: 'Abode saved',
+      savedAbodes: (updatedUser.savedAbodes || []).map((id) => id.toString()),
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Remove abode from saved
+router.delete('/saved-abodes/:abodeId', authenticate, requireUser, async (req, res) => {
+  try {
+    const { abodeId } = req.params;
+    if (!abodeId) {
+      return res.status(400).json({ message: 'Abode ID is required' });
+    }
+
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(abodeId)) {
+      return res.status(400).json({ message: 'Invalid abode ID format' });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const savedIds = (user.savedAbodes || []).map((id) => id.toString());
+    if (!savedIds.includes(abodeId.toString())) {
+      return res.status(404).json({ message: 'Abode not found in saved list' });
+    }
+
+    await User.updateOne(
+      { _id: req.user._id },
+      { $pull: { savedAbodes: new mongoose.Types.ObjectId(abodeId) } }
+    );
+
+    const updatedUser = await User.findById(req.user._id).select('savedAbodes');
+    res.json({
+      message: 'Abode removed from saved',
+      savedAbodes: (updatedUser.savedAbodes || []).map((id) => id.toString()),
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 module.exports = router;
 

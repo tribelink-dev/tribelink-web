@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import MobileStickyBar from '@/components/ui/MobileStickyBar';
 
 export default function PaymentPage() {
   const router = useRouter();
@@ -201,7 +202,7 @@ export default function PaymentPage() {
   }
 
   return (
-    <div className="page-container">
+    <div className="page-container pt-below-nav pb-bottom-bar md:pb-12">
       <div className="section-container max-w-4xl">
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-primary-500 rounded-2xl mb-6 shadow-medium">
@@ -286,14 +287,14 @@ export default function PaymentPage() {
               </div>
               <div className="bg-primary-50 p-6 rounded-xl mb-6 border-2 border-primary-200">
                 <p className="text-sm text-gray-600 mb-2 font-semibold">Current Balance</p>
-                <p className="text-5xl font-bold text-primary-600">
+                <p className="text-3xl sm:text-5xl font-bold text-primary-600">
                   {wallet.balance.toFixed(2)} <span className="text-2xl text-gray-600">{wallet.currency}</span>
                 </p>
               </div>
 
               <div className="border-t border-gray-200 pt-6">
                 <h3 className="heading-tertiary mb-4">Add Funds to Wallet</h3>
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <input
                     type="number"
                     value={fundAmount}
@@ -316,7 +317,7 @@ export default function PaymentPage() {
                   <button
                     onClick={handleFundWallet}
                     disabled={processing}
-                    className="btn-accent px-8 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="btn-accent w-full sm:w-auto sm:px-8 disabled:opacity-50 disabled:cursor-not-allowed touch-target"
                   >
                     {processing ? (
                       <span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
@@ -353,7 +354,7 @@ export default function PaymentPage() {
               <button
                 onClick={handlePayment}
                 disabled={processing || wallet.balance < trip.totalPrice}
-                className="w-full bg-white text-primary-600 py-4 rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg shadow-xl transition-all disabled:hover:bg-white"
+                className="hidden md:block w-full bg-white text-primary-600 py-4 rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg shadow-xl transition-all disabled:hover:bg-white touch-target"
               >
                 {processing ? (
                   <span className="flex items-center justify-center gap-2">
@@ -368,6 +369,19 @@ export default function PaymentPage() {
           </>
         )}
       </div>
+
+      {trip && (
+        <MobileStickyBar>
+          <button
+            type="button"
+            onClick={handlePayment}
+            disabled={processing || wallet.balance < trip.totalPrice}
+            className="w-full bg-brand text-white py-3.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed font-bold text-base touch-target"
+          >
+            {processing ? 'Processing…' : `Pay $${trip.totalPrice.toFixed(2)}`}
+          </button>
+        </MobileStickyBar>
+      )}
     </div>
   );
 }

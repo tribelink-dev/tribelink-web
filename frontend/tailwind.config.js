@@ -7,9 +7,26 @@ module.exports = {
   ],
   theme: {
     extend: {
+      screens: {
+        '3xl': '1920px',
+      },
       colors: {
         background: 'var(--background)',
         foreground: 'var(--foreground)',
+        surface: 'var(--surface)',
+        'surface-muted': 'var(--surface-muted)',
+        'text-primary': 'var(--text-primary)',
+        'text-secondary': 'var(--text-secondary)',
+        border: 'var(--border)',
+        destructive: 'var(--destructive)',
+        success: 'var(--success)',
+        warning: 'var(--warning)',
+        'text-caption': 'var(--text-caption)',
+        brand: {
+          DEFAULT: 'var(--brand)',
+          hover: 'var(--brand-hover)',
+          light: 'var(--brand-light)',
+        },
         // Luxury Heritage Brand Palette
         charcoal: {
           50: '#f5f5f5',
@@ -266,8 +283,13 @@ module.exports = {
         'luxury': '0 4px 20px rgba(44, 44, 44, 0.08), 0 1px 3px rgba(44, 44, 44, 0.12)',
         'luxury-lg': '0 12px 40px rgba(44, 44, 44, 0.12), 0 2px 6px rgba(44, 44, 44, 0.16)',
         'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.15)',
+        'card': 'var(--shadow-card)',
       },
       spacing: {
+        'page': 'var(--page-gutter)',
+        'page-lg': 'var(--page-gutter-lg)',
+        'below-nav': 'calc(4rem + env(safe-area-inset-top, 0px))',
+        'below-nav-explore': 'calc(7.5rem + env(safe-area-inset-top, 0px))',
         '18': '4.5rem',
         '22': '5.5rem',
         '26': '6.5rem',
@@ -282,6 +304,8 @@ module.exports = {
         'xl': '0.75rem',
         '2xl': '1rem',
         '3xl': '1.5rem',
+        'card': 'var(--radius-card)',
+        'pill': 'var(--radius-pill)',
       },
     },
   },
