@@ -169,7 +169,9 @@ export default function AbodeDetailClient({
   const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
-    if (params.id && !initialAbode) {
+    if (!params.id) return;
+    // Refetch when server did not provide data (API timeout/cold start) or initial load failed
+    if (!initialAbode) {
       fetchAbode();
     }
   }, [params.id, initialAbode]);

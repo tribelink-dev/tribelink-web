@@ -31,9 +31,9 @@ export async function generateMetadata({
 
   if (!experience) {
     return {
-      title: 'Experience Not Found',
-      description: 'The requested experience could not be found.',
-      robots: { index: false, follow: false },
+      title: 'Kerala Cultural Experience',
+      description: 'View experience details on Triberoutes.',
+      alternates: { canonical: `${baseUrl}/experiences/${id}` },
     };
   }
 

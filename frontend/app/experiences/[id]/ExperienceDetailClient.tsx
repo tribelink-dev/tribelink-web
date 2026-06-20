@@ -1,7 +1,9 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import api from '@/lib/api';
 import { getImageUrl } from '@/lib/imageUtils';
 import { useCurrency } from '@/lib/CurrencyContext';
 import { PageContainer } from '@/components/ui/PageContainer';
@@ -11,12 +13,51 @@ import { MapPin, Star, ChevronLeft, Clock, Users } from 'lucide-react';
 import type { ExperienceData } from '@/lib/fetchExperience';
 
 interface ExperienceDetailClientProps {
-  experience: ExperienceData;
+  experienceId: string;
+  initialExperience?: ExperienceData | null;
 }
 
-export default function ExperienceDetailClient({ experience }: ExperienceDetailClientProps) {
+export default function ExperienceDetailClient({
+  experienceId,
+  initialExperience = null,
+}: ExperienceDetailClientProps) {
   const router = useRouter();
   const { formatPrice } = useCurrency();
+  const [experience, setExperience] = useState<ExperienceData | null>(initialExperience);
+  const [loading, setLoading] = useState(!initialExperience);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!experienceId || initialExperience) return;
+
+    setLoading(true);
+    api
+      .get(`/experiences/${experienceId}`)
+      .then((r) => setExperience(r.data.experience))
+      .catch(() => setError('Experience not found'))
+      .finally(() => setLoading(false));
+  }, [experienceId, initialExperience]);
+
+  if (loading) {
+    return <div className="min-h-screen bg-background pt-below-nav" />;
+  }
+
+  if (error || !experience) {
+    return (
+      <div className="min-h-screen bg-background pt-below-nav pb-16">
+        <PageContainer>
+          <p className="text-text-secondary">{error || 'Experience not found'}</p>
+          <Button
+            variant="secondary"
+            className="mt-4"
+            onClick={() => router.push('/explore?section=experiences')}
+          >
+            Back to explore
+          </Button>
+        </PageContainer>
+      </div>
+    );
+  }
 
   const location = experience.location
     ? [experience.location.district, experience.location.state || 'Kerala']

@@ -4,6 +4,8 @@
 
 import { isValidObjectId } from './seo';
 
+const SERVER_FETCH_TIMEOUT_MS = 15000;
+
 function getApiUrl(): string {
   return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 }
@@ -41,6 +43,7 @@ export interface AbodeData {
     monthlyDiscount?: number;
   };
   isVerified: boolean;
+  isArchived?: boolean;
   providerId?: {
     _id: string;
     name: string;
@@ -67,7 +70,7 @@ export async function fetchAbodeById(id: string): Promise<{
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       next: { revalidate: 3600 },
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
     });
 
     if (!response.ok) {
@@ -77,7 +80,8 @@ export async function fetchAbodeById(id: string): Promise<{
     const data = await response.json();
     const abode = data.localHost;
 
-    if (!abode || !abode.isVerified) {
+    // Match public listing API: exclude archived only (not isVerified)
+    if (!abode || abode.isArchived) {
       return null;
     }
 

@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { isValidObjectId } from '@/lib/seo';
 import { fetchAbodeById } from '@/lib/fetchAbode';
 import AbodeDetailClient from './AbodeDetailClient';
 
@@ -8,17 +9,18 @@ export default async function AbodeDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const result = await fetchAbodeById(id);
 
-  if (!result) {
+  if (!id || !isValidObjectId(id)) {
     notFound();
   }
+
+  const result = await fetchAbodeById(id);
 
   return (
     <AbodeDetailClient
       abodeId={id}
-      initialAbode={result.abode}
-      initialLinkedExperiences={result.linkedExperiences as never[]}
+      initialAbode={result?.abode ?? null}
+      initialLinkedExperiences={(result?.linkedExperiences ?? []) as never[]}
     />
   );
 }

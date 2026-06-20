@@ -64,9 +64,9 @@ export async function generateMetadata({
 
   if (!result) {
     return {
-      title: 'Abode Not Found',
-      description: 'The requested abode could not be found.',
-      robots: { index: false, follow: false },
+      title: 'Kerala Homestay',
+      description: 'View homestay details on Triberoutes.',
+      alternates: { canonical: `${baseUrl}/adobes/${id}` },
     };
   }
 

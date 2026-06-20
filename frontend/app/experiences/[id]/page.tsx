@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { isValidObjectId } from '@/lib/seo';
 import { fetchExperienceById } from '@/lib/fetchExperience';
 import ExperienceDetailClient from './ExperienceDetailClient';
 
@@ -8,11 +9,12 @@ export default async function ExperienceDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const experience = await fetchExperienceById(id);
 
-  if (!experience) {
+  if (!id || !isValidObjectId(id)) {
     notFound();
   }
 
-  return <ExperienceDetailClient experience={experience} />;
+  const experience = await fetchExperienceById(id);
+
+  return <ExperienceDetailClient experienceId={id} initialExperience={experience} />;
 }

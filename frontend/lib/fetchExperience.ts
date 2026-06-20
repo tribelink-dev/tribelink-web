@@ -4,6 +4,8 @@
 
 import { isValidObjectId } from './seo';
 
+const SERVER_FETCH_TIMEOUT_MS = 15000;
+
 function getApiUrl(): string {
   return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 }
@@ -47,7 +49,7 @@ export async function fetchExperienceById(id: string): Promise<ExperienceData | 
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       next: { revalidate: 3600 },
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
     });
 
     if (!response.ok) {
