@@ -71,7 +71,7 @@ const TRANSPORT_OPTIONS = [
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user: authUser } = useAuth();
+  const { user: authUser, loading: authLoading } = useAuth();
   const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -96,12 +96,17 @@ export default function ProfilePage() {
   const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!authUser) {
-      router.push('/login');
+      router.replace('/login?returnTo=/dashboard/profile');
       return;
     }
     fetchProfile();
-  }, [authUser, router]);
+  }, [authUser, authLoading, router]);
+
+  if (authLoading || !authUser) {
+    return null;
+  }
 
   useEffect(() => {
     // Check if form has changes

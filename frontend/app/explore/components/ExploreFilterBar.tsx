@@ -109,7 +109,7 @@ export default function ExploreFilterBar({
   );
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
       <p className="text-sm text-text-secondary">
         <span className="font-semibold text-text-primary">{showing}</span> of{' '}
         <span className="font-semibold text-text-primary">{total}</span> {label}

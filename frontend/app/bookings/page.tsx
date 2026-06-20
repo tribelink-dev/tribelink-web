@@ -53,7 +53,7 @@ interface Booking {
 export default function BookingsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { formatPrice } = useCurrency();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,12 +62,13 @@ export default function BookingsPage() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
-      router.push(`/login?redirect=${encodeURIComponent('/bookings')}`);
+      router.replace(`/login?returnTo=${encodeURIComponent('/bookings')}`);
       return;
     }
     fetchBookings();
-  }, [user, router]);
+  }, [user, authLoading, router]);
 
   useEffect(() => {
     if (searchParams.get('success') === 'true' || searchParams.get('payment') === 'success') {
@@ -185,6 +186,10 @@ export default function BookingsPage() {
     }
     return true;
   });
+
+  if (authLoading || !user) {
+    return null;
+  }
 
   if (loading) {
     return (

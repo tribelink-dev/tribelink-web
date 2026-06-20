@@ -80,7 +80,7 @@ export function ListingCardShell({
             type="button"
             onClick={onFavoriteClick}
             className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors shadow-sm z-10 touch-target"
-            aria-label={isFavorite ? 'Remove from saved' : 'Save listing'}
+            aria-label={isFavorite ? 'Remove from bucketlist' : 'Add to bucketlist'}
           >
             <Heart
               className={cn(

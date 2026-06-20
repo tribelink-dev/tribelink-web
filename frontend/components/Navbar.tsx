@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import Image from 'next/image';
 import { useAuth } from '@/lib/auth';
@@ -140,10 +140,10 @@ export default function Navbar() {
 
       {showCart && (
         <button
-          onClick={() => router.push('/dashboard/saved')}
+          onClick={() => router.push('/dashboard/bucketlist')}
           className="relative touch-target p-2 rounded-full text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors hidden sm:flex"
-          title="Saved"
-          aria-label="Saved listings"
+          title="Bucketlist"
+          aria-label="Bucketlist"
         >
           <Heart className="w-5 h-5" />
         </button>

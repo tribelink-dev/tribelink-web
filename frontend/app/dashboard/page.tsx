@@ -22,7 +22,7 @@ export default function TravelerDashboard() {
       return;
     }
     if (!user) {
-      router.replace('/login?redirect=/dashboard');
+      router.replace('/login?returnTo=/dashboard');
       return;
     }
     api.get('/bookings').then((r) => {
@@ -35,7 +35,7 @@ export default function TravelerDashboard() {
 
   const cards = [
     { href: '/bookings', icon: Calendar, label: 'Trips', desc: `${upcomingCount} booking${upcomingCount !== 1 ? 's' : ''}`, },
-    { href: '/dashboard/saved', icon: Heart, label: 'Saved', desc: 'Homestays & experiences' },
+    { href: '/dashboard/bucketlist', icon: Heart, label: 'Bucketlist', desc: 'Homestays & experiences' },
     { href: '/dashboard/profile', icon: User, label: 'Profile', desc: 'Account settings' },
     { href: '/explore', icon: MapPin, label: 'Explore', desc: 'Find your next stay' },
   ];

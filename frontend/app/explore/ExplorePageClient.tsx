@@ -24,22 +24,6 @@ interface ExplorePageClientProps {
   initialExperiences?: ListingExperience[];
 }
 
-/** Compact section header */
-function SectionHeaderCompact({
-  title,
-  tagline,
-}: {
-  title: string;
-  tagline: string;
-}) {
-  return (
-    <div className="mb-4">
-      <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
-      <p className="text-sm text-text-secondary">{tagline}</p>
-    </div>
-  );
-}
-
 function ExplorePageContent(_props: ExplorePageClientProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -199,7 +183,7 @@ function ExplorePageContent(_props: ExplorePageClientProps = {}) {
       }
     } catch (error: any) {
       console.error('Error toggling bucketlist:', error);
-      showError(error.response?.data?.message || 'Failed to update saved list');
+      showError(error.response?.data?.message || 'Failed to update bucketlist');
     }
   };
 
@@ -590,11 +574,9 @@ function ExplorePageContent(_props: ExplorePageClientProps = {}) {
 
       <ExploreHero activeSection={activeSection} onSearch={handleSearch} />
 
-      <div id="results-section" className="w-full px-page lg:px-page-lg py-6">
+      <div id="results-section" className="w-full px-page lg:px-page-lg pt-4 pb-6">
         {activeSection === 'abodes' && (
           <div>
-            <SectionHeaderCompact title="Family homestays" tagline="Stay with local hosts and experience authentic culture" />
-
             <ExploreFilterBar
               type="abodes"
               total={abodesPagination.total}
@@ -650,8 +632,7 @@ function ExplorePageContent(_props: ExplorePageClientProps = {}) {
 
         {activeSection === 'experiences' && (
           <div>
-            <SectionHeaderCompact title="Cultural experiences" tagline="Workshops, performances, and activities by local hosts" />
-            <div className="mb-6">
+            <div className="mb-4">
               <CategoryIcons section="experiences" />
             </div>
 

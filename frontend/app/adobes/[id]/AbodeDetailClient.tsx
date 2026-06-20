@@ -464,7 +464,7 @@ export default function AbodeDetailClient({
   const saveButton =
     !isOwner && abode._id ? (
       <Button variant="secondary" size="sm" onClick={() => toggleAbode(abode._id)}>
-        {isAbodeSaved(abode._id) ? 'Saved' : 'Save'}
+        {isAbodeSaved(abode._id) ? 'On bucketlist' : 'Add to bucketlist'}
       </Button>
     ) : null;
 

@@ -35,7 +35,7 @@ export default function ExploreSectionTabs({
         )}
       >
         <Home className={size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
-        Homestays
+        Abodes
       </button>
       <button
         type="button"

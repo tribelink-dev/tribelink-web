@@ -5,7 +5,6 @@ export function shouldHideBottomNav(pathname: string | null): boolean {
   if (pathname === '/cart') return true;
   if (/^\/adobes\/[^/]+$/.test(pathname)) return true;
   if (pathname.startsWith('/bookings/payment')) return true;
-  if (pathname === '/login' || pathname === '/signup') return true;
   return false;
 }
 

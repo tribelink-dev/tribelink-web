@@ -8,7 +8,7 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import PhoneInput from '@/components/PhoneInput';
 import { LOGO_PATH, LOGO_ALT_TEXT } from '@/lib/constants';
-import { Sparkles, Lock, Mail, Phone } from 'lucide-react';
+import { Sparkles, Lock, Mail, Phone, ChevronLeft } from 'lucide-react';
 
 export default function LoginPage() {
   const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
@@ -65,7 +65,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-50 p-4 sm:p-6 lg:p-8 relative overflow-hidden">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-50 p-4 sm:p-6 lg:p-8 pb-mobile-nav md:pb-8 relative overflow-hidden">
       {/* Animated Background Elements - Matching Explore Page */}
       <div className="absolute inset-0 overflow-hidden">
         <motion.div
@@ -95,6 +95,14 @@ export default function LoginPage() {
       </div>
 
       <div className="w-full max-w-md relative z-10">
+        <Link
+          href="/explore"
+          className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          Back to Explore
+        </Link>
+
         {/* Main Card */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
