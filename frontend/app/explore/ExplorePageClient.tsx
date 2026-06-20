@@ -19,6 +19,7 @@ import ToastContainer, { useToast } from '@/components/Toast';
 import type { ListingAbode, ListingExperience } from '@/lib/fetchListings';
 
 interface ExplorePageClientProps {
+  /** @deprecated SSR seed no longer passed — listings always load client-side */
   initialAbodes?: ListingAbode[];
   initialExperiences?: ListingExperience[];
 }
@@ -39,17 +40,14 @@ function SectionHeaderCompact({
   );
 }
 
-function ExplorePageContent({
-  initialAbodes = [],
-  initialExperiences = [],
-}: ExplorePageClientProps) {
+function ExplorePageContent(_props: ExplorePageClientProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
   const { toasts, removeToast, error: showError } = useToast();
-  const [allAbodes, setAllAbodes] = useState<any[]>(initialAbodes);
-  const [allExperiences, setAllExperiences] = useState<any[]>(initialExperiences);
-  const [loadingAbodes, setLoadingAbodes] = useState(false);
+  const [allAbodes, setAllAbodes] = useState<any[]>([]);
+  const [allExperiences, setAllExperiences] = useState<any[]>([]);
+  const [loadingAbodes, setLoadingAbodes] = useState(true);
   const [loadingExperiences, setLoadingExperiences] = useState(false);
   const [activeSection, setActiveSection] = useState<'abodes' | 'experiences'>(
     (searchParams.get('section') as 'abodes' | 'experiences') || 'abodes'
@@ -755,7 +753,7 @@ function ExplorePageContent({
   );
 }
 
-export default function ExplorePageClient(props: ExplorePageClientProps) {
+export default function ExplorePageClient(props: ExplorePageClientProps = {}) {
   return (
     <Suspense fallback={<div className="min-h-screen bg-background pt-below-nav" />}>
       <ExplorePageContent {...props} />

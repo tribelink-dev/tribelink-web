@@ -1,10 +1,11 @@
 /**
- * Shared server-side experience fetching for SEO, metadata, and SSR
+ * Shared server-side experience fetching for SEO, metadata, and SSR.
+ * Cached per-request so layout metadata and page share one API call.
  */
 
+import { cache } from 'react';
 import { isValidObjectId } from './seo';
-
-const SERVER_FETCH_TIMEOUT_MS = 15000;
+import { SERVER_FETCH_TIMEOUT_MS } from './fetchListings';
 
 function getApiUrl(): string {
   return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -38,7 +39,7 @@ export interface ExperienceData {
   };
 }
 
-export async function fetchExperienceById(id: string): Promise<ExperienceData | null> {
+async function fetchExperienceByIdUncached(id: string): Promise<ExperienceData | null> {
   if (!id || !isValidObjectId(id)) {
     return null;
   }
@@ -68,3 +69,5 @@ export async function fetchExperienceById(id: string): Promise<ExperienceData | 
     return null;
   }
 }
+
+export const fetchExperienceById = cache(fetchExperienceByIdUncached);

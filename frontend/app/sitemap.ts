@@ -1,6 +1,6 @@
 import { MetadataRoute } from 'next';
 import { getBaseUrl, isValidObjectId } from '@/lib/seo';
-import { fetchAllPublicExperiencesForSitemap } from '@/lib/fetchListings';
+import { fetchAllPublicExperiencesForSitemap, SERVER_FETCH_TIMEOUT_MS } from '@/lib/fetchListings';
 
 /**
  * Sitemap generation with security validation
@@ -46,7 +46,7 @@ async function fetchPublicAbodes(): Promise<Array<{ id: string; updatedAt?: stri
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const timeoutId = setTimeout(() => controller.abort(), SERVER_FETCH_TIMEOUT_MS);
 
     const response = await fetch(`${apiUrl}/abodes?limit=1000&page=1`, {
       method: 'GET',
@@ -63,9 +63,9 @@ async function fetchPublicAbodes(): Promise<Array<{ id: string; updatedAt?: stri
     const abodes = data.localHosts || [];
 
     return abodes
-      .filter((abode: { _id?: string; isVerified?: boolean }) => {
+      .filter((abode: { _id?: string; isArchived?: boolean }) => {
         if (!abode._id || !isValidObjectId(abode._id)) return false;
-        return abode.isVerified !== false;
+        return !abode.isArchived;
       })
       .map((abode: { _id: string; updatedAt?: string; createdAt?: string }) => ({
         id: abode._id,

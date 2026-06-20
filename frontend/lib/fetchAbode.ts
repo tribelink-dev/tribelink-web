@@ -1,10 +1,11 @@
 /**
- * Shared server-side abode fetching for SEO, metadata, and SSR
+ * Shared server-side abode fetching for SEO, metadata, and SSR.
+ * Cached per-request so layout metadata and page share one API call.
  */
 
+import { cache } from 'react';
 import { isValidObjectId } from './seo';
-
-const SERVER_FETCH_TIMEOUT_MS = 15000;
+import { SERVER_FETCH_TIMEOUT_MS } from './fetchListings';
 
 function getApiUrl(): string {
   return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -54,9 +55,11 @@ export interface AbodeData {
   languages?: string[];
   familyInfo?: { familySize?: number; background?: string; generations?: number };
   linkedExperiences?: unknown[];
+  roomVariants?: unknown[];
+  defaultVariantId?: string | null;
 }
 
-export async function fetchAbodeById(id: string): Promise<{
+async function fetchAbodeByIdUncached(id: string): Promise<{
   abode: AbodeData;
   linkedExperiences: unknown[];
 } | null> {
@@ -80,7 +83,6 @@ export async function fetchAbodeById(id: string): Promise<{
     const data = await response.json();
     const abode = data.localHost;
 
-    // Match public listing API: exclude archived only (not isVerified)
     if (!abode || abode.isArchived) {
       return null;
     }
@@ -93,3 +95,5 @@ export async function fetchAbodeById(id: string): Promise<{
     return null;
   }
 }
+
+export const fetchAbodeById = cache(fetchAbodeByIdUncached);

@@ -20,6 +20,7 @@ import { useSaved } from '@/lib/SavedContext';
 import { Button } from '@/components/ui/Button';
 import { PageContainer } from '@/components/ui/PageContainer';
 import MobileStickyBar from '@/components/ui/MobileStickyBar';
+import type { AbodeData } from '@/lib/fetchAbode';
 
 interface LocalHost {
   _id: string;
@@ -130,8 +131,6 @@ interface LocalHost {
   }>;
 }
 
-import type { AbodeData } from '@/lib/fetchAbode';
-
 interface AbodeDetailClientProps {
   abodeId: string;
   initialAbode?: AbodeData | null;
@@ -170,11 +169,23 @@ export default function AbodeDetailClient({
 
   useEffect(() => {
     if (!params.id) return;
-    // Refetch when server did not provide data (API timeout/cold start) or initial load failed
     if (!initialAbode) {
       fetchAbode();
     }
   }, [params.id, initialAbode]);
+
+  useEffect(() => {
+    if (!initialAbode) return;
+    if (initialAbode.defaultVariantId) {
+      setSelectedVariantId(initialAbode.defaultVariantId);
+    } else if (
+      Array.isArray(initialAbode.roomVariants) &&
+      initialAbode.roomVariants.length > 0
+    ) {
+      const first = initialAbode.roomVariants[0] as { variantId?: string };
+      if (first?.variantId) setSelectedVariantId(first.variantId);
+    }
+  }, [initialAbode]);
 
   useEffect(() => {
     // Check if current user is the owner of this abode
@@ -184,7 +195,7 @@ export default function AbodeDetailClient({
         try {
           const host = JSON.parse(hostData);
           // Check if host ID matches the abode's providerId
-          if (host._id === abode.providerId._id) {
+          if (host._id === abode.providerId?._id) {
             setIsOwner(true);
             return;
           }

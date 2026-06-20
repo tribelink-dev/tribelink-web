@@ -5,13 +5,14 @@ import KeralaFAQ from '@/components/seo/KeralaFAQ';
 import ExplorePageClient from './ExplorePageClient';
 
 export default async function ExplorePage() {
+  // SSR data is for crawlers only (sr-only block). UI always loads via client API.
   const { abodes, experiences } = await fetchInitialListings();
 
   return (
     <>
       <ExploreServerListings abodes={abodes} experiences={experiences} />
       <Suspense fallback={<div className="min-h-screen bg-background pt-below-nav" />}>
-        <ExplorePageClient initialAbodes={abodes} initialExperiences={experiences} />
+        <ExplorePageClient />
       </Suspense>
       <KeralaFAQ />
     </>

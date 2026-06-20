@@ -83,7 +83,7 @@ export async function generateMetadata({
 
   const description = generateMetadataDescription(
     abode.abodeDetails?.description,
-    `Live with a Keralite family in ${location}. Book this verified Kerala homestay on Triberoutes.`
+    `Live with a Keralite family in ${location}. Book this Kerala homestay on Triberoutes.`
   );
 
   const mainImage = abode.images?.find((img) => img.isMain) || abode.images?.[0];
@@ -123,7 +123,9 @@ export async function generateMetadata({
       images: [ogImage || `${baseUrl}/opengraph-image`],
     },
     alternates: { canonical: canonicalUrl },
-    robots: { index: true, follow: true },
+    robots: abode.isVerified
+      ? { index: true, follow: true }
+      : { index: false, follow: true },
   };
 }
 

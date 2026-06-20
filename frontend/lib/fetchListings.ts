@@ -1,8 +1,12 @@
 /**
- * Shared server-side data fetching for SEO and SSR pages
+ * Shared server-side data fetching for SEO and SSR pages.
+ * Uses React cache() so layout + page dedupe requests per render.
  */
 
+import { cache } from 'react';
 import { isValidObjectId } from './seo';
+
+export const SERVER_FETCH_TIMEOUT_MS = 15000;
 
 function getApiUrl(): string {
   return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -17,6 +21,7 @@ export interface ListingAbode {
   ratingCount?: number;
   pricing?: { pricePerNight?: number; currency?: string };
   isVerified?: boolean;
+  isArchived?: boolean;
 }
 
 export interface ListingExperience {
@@ -31,48 +36,49 @@ export interface ListingExperience {
   reviewCount?: number;
   duration?: number;
   provider?: { name?: string };
+  isArchived?: boolean;
 }
 
-export async function fetchPublicAbodes(limit = 12): Promise<ListingAbode[]> {
+async function fetchPublicAbodesUncached(limit = 12): Promise<ListingAbode[]> {
   const apiUrl = getApiUrl();
 
   try {
     const response = await fetch(`${apiUrl}/abodes?limit=${limit}&page=1`, {
       next: { revalidate: 3600 },
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
     });
     if (!response.ok) return [];
     const data = await response.json();
-    return (data.localHosts || []);
+    return (data.localHosts || []).filter((a: ListingAbode) => !a.isArchived);
   } catch {
     return [];
   }
 }
 
-export async function fetchPublicExperiences(limit = 12, state = 'Kerala'): Promise<ListingExperience[]> {
+async function fetchPublicExperiencesUncached(limit = 12): Promise<ListingExperience[]> {
   const apiUrl = getApiUrl();
 
   try {
-    const params = new URLSearchParams({ limit: String(limit), page: '1', state });
+    const params = new URLSearchParams({ limit: String(limit), page: '1' });
     const response = await fetch(`${apiUrl}/experiences?${params}`, {
       next: { revalidate: 3600 },
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
     });
     if (!response.ok) return [];
     const data = await response.json();
-    return data.experiences || [];
+    return (data.experiences || []).filter((e: ListingExperience) => !e.isArchived);
   } catch {
     return [];
   }
 }
 
-export async function fetchInitialListings() {
+export const fetchInitialListings = cache(async () => {
   const [abodes, experiences] = await Promise.all([
-    fetchPublicAbodes(12),
-    fetchPublicExperiences(12, 'Kerala'),
+    fetchPublicAbodesUncached(12),
+    fetchPublicExperiencesUncached(12),
   ]);
   return { abodes, experiences };
-}
+});
 
 export async function fetchAllPublicExperiencesForSitemap(): Promise<
   Array<{ id: string; updatedAt?: string }>
@@ -83,14 +89,17 @@ export async function fetchAllPublicExperiencesForSitemap(): Promise<
   }
 
   try {
-    const response = await fetch(`${apiUrl}/experiences?state=Kerala&limit=1000&page=1`, {
+    const response = await fetch(`${apiUrl}/experiences?limit=1000&page=1`, {
       next: { revalidate: 3600 },
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
     });
     if (!response.ok) return [];
     const data = await response.json();
     return (data.experiences || [])
-      .filter((exp: { _id?: string }) => exp._id && isValidObjectId(exp._id))
+      .filter(
+        (exp: { _id?: string; isArchived?: boolean }) =>
+          exp._id && isValidObjectId(exp._id) && !exp.isArchived
+      )
       .map((exp: { _id: string; updatedAt?: string; createdAt?: string }) => ({
         id: exp._id,
         updatedAt: exp.updatedAt || exp.createdAt,
