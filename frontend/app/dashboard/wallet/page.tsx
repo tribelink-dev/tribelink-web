@@ -91,9 +91,9 @@ export default function WalletPage() {
       <div className="section-container max-w-4xl">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-2 tracking-tight">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-2 tracking-tight">
                 My Wallet
               </h1>
               <p className="text-lg text-gray-600">Manage your travel funds</p>

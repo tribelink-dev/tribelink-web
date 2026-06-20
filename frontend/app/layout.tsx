@@ -1,11 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import { CurrencyProvider } from "@/lib/CurrencyContext";
 import { CartProvider } from "@/lib/CartContext";
 import ConditionalLayout from "@/components/ConditionalLayout";
 import EmergencySOS from "@/components/EmergencySOS";
-import DesktopViewport from "@/components/DesktopViewport";
 import StructuredData from "@/components/StructuredData";
 import { getBaseUrl, validateImageUrl } from "@/lib/seo";
 
@@ -85,6 +84,14 @@ export const metadata: Metadata = {
   category: "Travel",
 };
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  viewportFit: 'cover',
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -94,7 +101,6 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <StructuredData />
-        <DesktopViewport />
         <AuthProvider>
           <CurrencyProvider>
             <CartProvider>

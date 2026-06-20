@@ -74,9 +74,10 @@ const getUserCallbackURL = () => {
 const userCallbackURL = getUserCallbackURL();
 console.log('[OAuth] User callback URL:', userCallbackURL);
 
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 passport.use('google-user', new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID || '',
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   callbackURL: userCallbackURL
 }, async (accessToken, refreshToken, profile, done) => {
   try {
@@ -109,6 +110,10 @@ passport.use('google-user', new GoogleStrategy({
   }
 }));
 
+} else {
+  console.warn('[OAuth] GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET not set — Google sign-in disabled');
+}
+
 // Configure Google OAuth Strategy for Hosts
 // Determine callback URL based on environment
 const getHostCallbackURL = () => {
@@ -138,9 +143,10 @@ const getHostCallbackURL = () => {
 const hostCallbackURL = getHostCallbackURL();
 console.log('[OAuth] Host callback URL:', hostCallbackURL);
 
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 passport.use('google-host', new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID || '',
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   callbackURL: hostCallbackURL
 }, async (accessToken, refreshToken, profile, done) => {
   try {
@@ -172,6 +178,10 @@ passport.use('google-host', new GoogleStrategy({
     return done(error, null);
   }
 }));
+
+} else {
+  console.warn('[OAuth] Host Google sign-in disabled (missing Google OAuth credentials)');
+}
 
 // Serialize user for session
 passport.serializeUser((user, done) => {

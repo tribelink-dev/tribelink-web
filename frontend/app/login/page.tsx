@@ -103,7 +103,7 @@ export default function LoginPage() {
           className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-200/50"
         >
           {/* Header Section with Heritage Gold Gradient */}
-          <div className="relative bg-gradient-to-br from-heritage-gold/10 via-cream-50/80 to-heritage-gold-light/5 px-8 py-10 text-center overflow-hidden border-b border-heritage-gold/20">
+          <div className="relative bg-gradient-to-br from-heritage-gold/10 via-cream-50/80 to-heritage-gold-light/5 px-4 sm:px-8 py-8 sm:py-10 text-center overflow-hidden border-b border-heritage-gold/20">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(212,175,55,0.1),transparent_50%)]"></div>
             <div className="relative z-10">
               <motion.div
@@ -136,7 +136,7 @@ export default function LoginPage() {
           </div>
 
           {/* Form Section */}
-          <div className="px-8 py-8 bg-white">
+          <div className="px-4 sm:px-8 py-6 sm:py-8 bg-white safe-area-bottom">
             {error && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}

@@ -595,10 +595,23 @@ export default function ExplorePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+      {(showAbodeFilterDropdown || showAbodeSortDropdown || showExperienceFilterDropdown || showExperienceSortDropdown) && (
+        <button
+          type="button"
+          aria-label="Close filters"
+          className="fixed inset-0 z-[75] bg-black/40 md:hidden"
+          onClick={() => {
+            setShowAbodeFilterDropdown(false);
+            setShowAbodeSortDropdown(false);
+            setShowExperienceFilterDropdown(false);
+            setShowExperienceSortDropdown(false);
+          }}
+        />
+      )}
       {/* Hero Section - Enhanced */}
       <motion.div 
         style={{ opacity: heroOpacity, scale: heroScale }}
-        className="relative bg-gradient-to-br from-heritage-gold/10 via-cream-50/80 to-heritage-gold-light/5 pb-12 pt-32 overflow-hidden"
+        className="relative bg-gradient-to-br from-heritage-gold/10 via-cream-50/80 to-heritage-gold-light/5 pb-12 pt-4 sm:pt-8 overflow-hidden page-offset-nav"
       >
         {/* Animated Background Elements */}
         <div className="absolute inset-0 overflow-hidden">
@@ -628,7 +641,7 @@ export default function ExplorePage() {
           />
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-6 z-10">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 z-10">
           {/* Main Heading - Enhanced */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -664,7 +677,7 @@ export default function ExplorePage() {
             transition={{ duration: 0.6, delay: 0.2, ease: [0.4, 0, 0.2, 1] }}
             className="flex justify-center mb-8 relative z-10"
           >
-            <div className="inline-flex bg-white/95 backdrop-blur-xl rounded-3xl p-2 shadow-2xl border border-gray-200/50 relative z-10">
+            <div className="inline-flex flex-col sm:flex-row w-full sm:w-auto bg-white/95 backdrop-blur-xl rounded-3xl p-2 shadow-2xl border border-gray-200/50 relative z-10">
               <button
                 onClick={() => {
                   setActiveSection('abodes');
@@ -673,7 +686,7 @@ export default function ExplorePage() {
                   setShowExperienceFilterDropdown(false);
                   setShowExperienceSortDropdown(false);
                 }}
-                className={`relative px-10 py-5 rounded-2xl font-bold text-base transition-all duration-300 ${
+                className={`relative px-4 py-3 sm:px-10 sm:py-5 rounded-2xl font-bold text-sm sm:text-base transition-all duration-300 ${
                   activeSection === 'abodes'
                     ? 'text-white'
                     : 'text-gray-600 hover:text-gray-900'
@@ -686,9 +699,9 @@ export default function ExplorePage() {
                     transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
                   />
                 )}
-                <span className="relative z-10 flex items-center gap-3">
-                  <Home className="w-5 h-5" />
-                  <span>Stay with Local Hosts</span>
+                <span className="relative z-10 flex items-center justify-center gap-2 sm:gap-3">
+                  <Home className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+                  <span className="truncate">Stay with Local Hosts</span>
                 </span>
               </button>
               <button
@@ -699,7 +712,7 @@ export default function ExplorePage() {
                   setShowExperienceFilterDropdown(false);
                   setShowExperienceSortDropdown(false);
                 }}
-                className={`relative px-10 py-5 rounded-2xl font-bold text-base transition-all duration-300 ${
+                className={`relative px-4 py-3 sm:px-10 sm:py-5 rounded-2xl font-bold text-sm sm:text-base transition-all duration-300 ${
                   activeSection === 'experiences'
                     ? 'text-white'
                     : 'text-gray-600 hover:text-gray-900'
@@ -712,9 +725,9 @@ export default function ExplorePage() {
                     transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
                   />
                 )}
-                <span className="relative z-10 flex items-center gap-3">
-                  <Sparkles className="w-5 h-5" />
-                  <span>Book Experiences</span>
+                <span className="relative z-10 flex items-center justify-center gap-2 sm:gap-3">
+                  <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+                  <span className="truncate">Book Experiences</span>
                 </span>
               </button>
             </div>
@@ -755,14 +768,14 @@ export default function ExplorePage() {
 
       {/* Sticky Search Bar - Appears Below Navbar on Scroll */}
       <motion.div
-        className="fixed top-16 left-0 right-0 z-40 pointer-events-none"
+        className="fixed top-below-nav left-0 right-0 z-40 pointer-events-none"
         style={{
           opacity: stickySearchBarOpacity,
           y: stickySearchBarY,
           scale: stickySearchBarScale,
         }}
       >
-        <div className="max-w-5xl mx-auto px-6 pt-3 pb-2">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-3 pb-2">
           <div className="pointer-events-auto">
             <SearchBar variant="navbar" onSearch={handleSearch} />
           </div>
@@ -770,7 +783,7 @@ export default function ExplorePage() {
       </motion.div>
 
       {/* Content Sections */}
-      <div id="results-section" className="max-w-7xl mx-auto px-6 py-6">
+      <div id="results-section" className="max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-sos-clear">
         <AnimatePresence mode="wait">
           {activeSection === 'abodes' && (
             <motion.div
@@ -836,7 +849,7 @@ export default function ExplorePage() {
                               setShowAbodeFilterDropdown(!showAbodeFilterDropdown);
                               setShowAbodeSortDropdown(false);
                             }}
-                            className="px-6 py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-heritage-gold hover:bg-heritage-gold/5 transition-all text-sm font-semibold text-gray-700 flex items-center gap-2 shadow-sm hover:shadow-md"
+                            className="px-4 py-2.5 sm:px-6 sm:py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-heritage-gold hover:bg-heritage-gold/5 transition-all text-sm font-semibold text-gray-700 flex items-center gap-2 shadow-sm hover:shadow-md touch-target"
                           >
                             <Filter className="w-4 h-4" />
                             Filters
@@ -846,7 +859,7 @@ export default function ExplorePage() {
                               initial={{ opacity: 0, y: -10 }}
                               animate={{ opacity: 1, y: 0 }}
                               exit={{ opacity: 0, y: -10 }}
-                              className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 p-6 z-50"
+                              className="mobile-dropdown-panel w-sheet bg-white rounded-xl shadow-2xl border border-gray-200 p-4 md:p-6 z-[80]"
                             >
                               <h4 className="font-bold text-gray-900 mb-4">Filter Abodes</h4>
                               <div className="space-y-4">
@@ -922,7 +935,7 @@ export default function ExplorePage() {
                               setShowAbodeSortDropdown(!showAbodeSortDropdown);
                               setShowAbodeFilterDropdown(false);
                             }}
-                            className="px-6 py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-heritage-gold hover:bg-heritage-gold/5 transition-all text-sm font-semibold text-gray-700 flex items-center gap-2 shadow-sm hover:shadow-md"
+                            className="px-4 py-2.5 sm:px-6 sm:py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-heritage-gold hover:bg-heritage-gold/5 transition-all text-sm font-semibold text-gray-700 flex items-center gap-2 shadow-sm hover:shadow-md touch-target"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -934,7 +947,7 @@ export default function ExplorePage() {
                               initial={{ opacity: 0, y: -10 }}
                               animate={{ opacity: 1, y: 0 }}
                               exit={{ opacity: 0, y: -10 }}
-                              className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50"
+                              className="mobile-dropdown-panel w-sheet-sm bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-[80]"
                             >
                               <h4 className="font-bold text-gray-900 mb-3">Sort By</h4>
                               <div className="space-y-2">
@@ -1269,7 +1282,7 @@ export default function ExplorePage() {
                               setShowExperienceFilterDropdown(!showExperienceFilterDropdown);
                               setShowExperienceSortDropdown(false);
                             }}
-                            className="px-6 py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-indigo-400 hover:bg-indigo-50/50 transition-all text-sm font-semibold text-gray-700 flex items-center gap-2 shadow-sm hover:shadow-md"
+                            className="px-4 py-2.5 sm:px-6 sm:py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-indigo-400 hover:bg-indigo-50/50 transition-all text-sm font-semibold text-gray-700 flex items-center gap-2 shadow-sm hover:shadow-md touch-target"
                           >
                             <Filter className="w-4 h-4" />
                             Filters
@@ -1279,7 +1292,7 @@ export default function ExplorePage() {
                               initial={{ opacity: 0, y: -10 }}
                               animate={{ opacity: 1, y: 0 }}
                               exit={{ opacity: 0, y: -10 }}
-                              className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 p-6 z-50"
+                              className="mobile-dropdown-panel w-sheet bg-white rounded-xl shadow-2xl border border-gray-200 p-4 md:p-6 z-[80]"
                             >
                               <h4 className="font-bold text-gray-900 mb-4">Filter Experiences</h4>
                               <div className="space-y-4">
@@ -1344,7 +1357,7 @@ export default function ExplorePage() {
                               setShowExperienceSortDropdown(!showExperienceSortDropdown);
                               setShowExperienceFilterDropdown(false);
                             }}
-                            className="px-6 py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-indigo-400 hover:bg-indigo-50/50 transition-all text-sm font-semibold text-gray-700 flex items-center gap-2 shadow-sm hover:shadow-md"
+                            className="px-4 py-2.5 sm:px-6 sm:py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-indigo-400 hover:bg-indigo-50/50 transition-all text-sm font-semibold text-gray-700 flex items-center gap-2 shadow-sm hover:shadow-md touch-target"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -1356,7 +1369,7 @@ export default function ExplorePage() {
                               initial={{ opacity: 0, y: -10 }}
                               animate={{ opacity: 1, y: 0 }}
                               exit={{ opacity: 0, y: -10 }}
-                              className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50"
+                              className="mobile-dropdown-panel w-sheet-sm bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-[80]"
                             >
                               <h4 className="font-bold text-gray-900 mb-3">Sort By</h4>
                               <div className="space-y-2">

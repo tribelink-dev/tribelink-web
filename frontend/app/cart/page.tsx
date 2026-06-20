@@ -23,8 +23,8 @@ export default function CartPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pt-24 pb-16">
-        <div className="max-w-7xl mx-auto px-6">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pt-24 pb-sos-clear">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-4 border-heritage-gold border-t-transparent"></div>
           </div>
@@ -69,8 +69,8 @@ export default function CartPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pt-24 pb-16">
-      <div className="max-w-7xl mx-auto px-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pt-20 sm:pt-24 pb-bottom-bar lg:pb-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -85,13 +85,13 @@ export default function CartPage() {
             <span className="font-medium">Back</span>
           </button>
 
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="bg-heritage-gold/10 p-4 rounded-2xl">
-                <ShoppingCart className="w-8 h-8 text-heritage-gold" />
+              <div className="bg-heritage-gold/10 p-3 sm:p-4 rounded-2xl shrink-0">
+                <ShoppingCart className="w-7 h-7 sm:w-8 sm:h-8 text-heritage-gold" />
               </div>
               <div>
-                <h1 className="text-4xl font-bold text-gray-900">My Bucket</h1>
+                <h1 className="text-2xl sm:text-4xl font-bold text-gray-900">My Bucket</h1>
                 <p className="text-gray-600 mt-1">
                   {itemCount} {itemCount === 1 ? 'item' : 'items'}
                 </p>
@@ -136,8 +136,8 @@ export default function CartPage() {
               ))}
             </div>
 
-            {/* Order Summary */}
-            <div className="lg:col-span-1">
+            {/* Order Summary (desktop) */}
+            <div className="hidden lg:block lg:col-span-1">
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -183,6 +183,29 @@ export default function CartPage() {
                   You will be redirected to complete your booking
                 </p>
               </motion.div>
+            </div>
+          </div>
+        )}
+
+        {itemCount > 0 && (
+          <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-white border-t-2 border-gray-200 shadow-2xl px-4 py-3 safe-area-bottom">
+            <div className="flex items-center justify-between gap-3 max-w-7xl mx-auto">
+              <div>
+                <p className="text-xs text-gray-500">{itemCount} {itemCount === 1 ? 'item' : 'items'}</p>
+                <p className="text-lg font-bold text-heritage-gold">{formatPrice(totalPrice, currency)}</p>
+              </div>
+              <motion.button
+                onClick={handleCheckout}
+                disabled={checkingOut}
+                whileTap={{ scale: 0.98 }}
+                className="shrink-0 px-5 py-3 bg-gradient-to-r from-heritage-gold to-heritage-gold-dark text-white font-bold rounded-xl shadow-lg disabled:opacity-50 flex items-center gap-2 touch-target"
+              >
+                {checkingOut ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
+                ) : (
+                  'Checkout'
+                )}
+              </motion.button>
             </div>
           </div>
         )}

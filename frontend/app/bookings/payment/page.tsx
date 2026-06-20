@@ -198,7 +198,7 @@ export default function BookingPaymentPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pt-24 pb-16">
-        <div className="max-w-4xl mx-auto px-6">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-4 border-heritage-gold border-t-transparent" />
           </div>
@@ -209,8 +209,8 @@ export default function BookingPaymentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pt-24 pb-16">
-      <div className="max-w-4xl mx-auto px-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pt-24 pb-sos-clear">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -229,7 +229,7 @@ export default function BookingPaymentPage() {
               <CreditCard className="w-8 h-8 text-heritage-gold" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold text-charcoal-700">Secure Payment</h1>
+              <h1 className="text-2xl sm:text-4xl font-bold text-charcoal-700">Secure Payment</h1>
               <p className="text-charcoal-600 mt-1">Pay with card or Triberoutes wallet</p>
             </div>
           </div>

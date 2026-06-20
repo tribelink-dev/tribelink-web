@@ -219,6 +219,15 @@ body {
     transition: transform 0.2s ease-out;
   }
 
+  @media (max-width: 767px) {
+    .sos-menu-item-expanded-top {
+      transform: translate(104px, -60px) scale(1);
+    }
+    .sos-menu-item-expanded-top:hover {
+      transform: translate(104px, -60px) scale(1.1);
+    }
+  }
+
   .sos-menu-item-expanded-top:hover {
     transform: translate(-104px, -60px) scale(1.1);
   }
@@ -591,6 +600,109 @@ body {
   /* Section container */
   .section-container {
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Luxury section container (trip/adobe flows) */
+  .section-container-luxury {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Fixed navbar offset — use on pages under platform Navbar (h-16) */
+  .page-offset-nav {
+    padding-top: calc(4rem + env(safe-area-inset-top, 0px));
+  }
+
+  /* Sticky/fixed elements below the navbar */
+  .top-below-nav {
+    top: calc(4rem + env(safe-area-inset-top, 0px));
+  }
+
+  /* Safe area insets for notched phones and bottom sticky bars */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .pb-safe {
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Pages with fixed bottom CTA bars (~4.5rem + safe area) */
+  .pb-bottom-bar {
+    padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  @media (min-width: 1024px) {
+    .pb-bottom-bar {
+      padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+    }
+  }
+
+  /* Clearance for floating SOS FAB on the right (mobile) */
+  .pb-sos-clear {
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .mb-safe {
+    margin-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Mobile-first dropdown / filter panel — bottom sheet on small screens */
+  .mobile-dropdown-panel {
+    position: fixed;
+    left: 1rem;
+    right: 1rem;
+    bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+    top: auto;
+    max-height: min(85vh, calc(100dvh - 6rem));
+    overflow-y: auto;
+    z-index: 80;
+  }
+
+  @media (min-width: 768px) {
+    .mobile-dropdown-panel {
+      position: absolute;
+      left: auto;
+      right: 0;
+      bottom: auto;
+      top: 100%;
+      margin-top: 0.5rem;
+      max-height: none;
+      overflow-y: visible;
+    }
+  }
+
+  .mobile-dropdown-panel.w-sheet {
+    width: auto;
+  }
+
+  @media (min-width: 768px) {
+    .mobile-dropdown-panel.w-sheet {
+      width: 20rem;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .mobile-dropdown-panel.w-sheet-sm {
+      width: 16rem;
+    }
+  }
+
+  /* Tap-friendly minimum touch target (44px) */
+  .touch-target {
+    @apply min-h-11 min-w-11;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 
   /* Professional page container - Enhanced */

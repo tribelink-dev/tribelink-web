@@ -256,8 +256,8 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 pt-24 pb-16">
-        <div className="max-w-6xl mx-auto px-6">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 pt-24 pb-sos-clear">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="text-center">
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-indigo-600 border-t-transparent mb-4"></div>
@@ -271,8 +271,8 @@ export default function ProfilePage() {
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 pt-24 pb-16">
-        <div className="max-w-6xl mx-auto px-6">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 pt-24 pb-sos-clear">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center py-16">
             <p className="text-gray-600">Failed to load profile</p>
           </div>
@@ -284,8 +284,8 @@ export default function ProfilePage() {
   const displayPicture = profilePicturePreview || profilePicture;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 pt-24 pb-16">
-      <div className="max-w-6xl mx-auto px-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 pt-24 pb-sos-clear">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -294,14 +294,15 @@ export default function ProfilePage() {
         >
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">Edit Profile</h1>
+              <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2">Edit Profile</h1>
               <p className="text-gray-600">Manage your account settings and preferences</p>
             </div>
             <button
               onClick={() => router.back()}
-              className="px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-white rounded-lg transition-colors"
+              className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-white rounded-lg transition-colors touch-target"
             >
               <X className="w-5 h-5" />
+              <span className="text-sm font-medium sm:hidden">Back</span>
             </button>
           </div>
         </motion.div>
@@ -313,11 +314,11 @@ export default function ProfilePage() {
             animate={{ opacity: 1, x: 0 }}
             className="lg:col-span-1"
           >
-            <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-24">
-              <nav className="space-y-2">
+            <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:sticky lg:top-24">
+              <nav className="flex lg:flex-col gap-2 overflow-x-auto pb-1 lg:pb-0 -mx-1 px-1 lg:mx-0 lg:px-0 scrollbar-hide">
                 <button
                   onClick={() => setActiveSection('basic')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                  className={`shrink-0 lg:w-full flex items-center gap-2 sm:gap-3 px-4 py-3 rounded-xl transition-all whitespace-nowrap ${
                     activeSection === 'basic'
                       ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-lg'
                       : 'text-gray-700 hover:bg-gray-50'
@@ -328,7 +329,7 @@ export default function ProfilePage() {
                 </button>
                 <button
                   onClick={() => setActiveSection('preferences')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                  className={`shrink-0 lg:w-full flex items-center gap-2 sm:gap-3 px-4 py-3 rounded-xl transition-all whitespace-nowrap ${
                     activeSection === 'preferences'
                       ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-lg'
                       : 'text-gray-700 hover:bg-gray-50'
@@ -339,7 +340,7 @@ export default function ProfilePage() {
                 </button>
                 <button
                   onClick={() => setActiveSection('settings')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                  className={`shrink-0 lg:w-full flex items-center gap-2 sm:gap-3 px-4 py-3 rounded-xl transition-all whitespace-nowrap ${
                     activeSection === 'settings'
                       ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-lg'
                       : 'text-gray-700 hover:bg-gray-50'
@@ -361,7 +362,7 @@ export default function ProfilePage() {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  className="bg-white rounded-2xl shadow-lg p-8"
+                  className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:p-8"
                 >
                   <h2 className="text-2xl font-bold text-gray-900 mb-6">Basic Information</h2>
                   
@@ -484,7 +485,7 @@ export default function ProfilePage() {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  className="bg-white rounded-2xl shadow-lg p-8"
+                  className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:p-8"
                 >
                   <h2 className="text-2xl font-bold text-gray-900 mb-6">Travel Preferences</h2>
                   
@@ -604,7 +605,7 @@ export default function ProfilePage() {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  className="bg-white rounded-2xl shadow-lg p-8"
+                  className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:p-8"
                 >
                   <h2 className="text-2xl font-bold text-gray-900 mb-6">Settings</h2>
                   

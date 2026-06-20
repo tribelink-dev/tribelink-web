@@ -1,16 +1,23 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import SOSModal from './SOSModal';
+import { cn } from '@/lib/utils';
 
 export default function EmergencySOS() {
   const { user } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [isExpanded, setIsExpanded] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const hasBottomCta =
+    pathname === '/cart' ||
+    pathname === '/trips/schedule' ||
+    Boolean(pathname?.match(/^\/adobes\/[^/]+$/));
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -43,7 +50,15 @@ export default function EmergencySOS() {
 
   return (
     <>
-      <div ref={menuRef} className="fixed bottom-6 right-6 z-50">
+      <div
+        ref={menuRef}
+        className={cn(
+          'fixed z-[45] left-4 md:left-auto md:right-6',
+          hasBottomCta
+            ? 'bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] lg:bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))]'
+            : 'bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))]'
+        )}
+      >
         {/* Expanded Menu Circles */}
         {isExpanded && (
           <>
@@ -55,7 +70,7 @@ export default function EmergencySOS() {
             
             {/* Activate SOS Circle - Top Left */}
             <div
-              className={`absolute bottom-0 right-0 w-20 h-20 bg-gradient-to-br from-red-600 to-red-700 rounded-full shadow-2xl flex items-center justify-center cursor-pointer z-50 ${
+              className={`absolute bottom-0 right-0 w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-red-600 to-red-700 rounded-full shadow-2xl flex items-center justify-center cursor-pointer z-50 ${
                 isExpanded ? 'sos-menu-item-expanded-top' : 'sos-menu-item-collapsed'
               }`}
               onClick={handleActivateSOS}
@@ -70,7 +85,7 @@ export default function EmergencySOS() {
 
             {/* Safety Settings Circle - Top Right */}
             <div
-              className={`absolute bottom-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full shadow-2xl flex items-center justify-center cursor-pointer z-50 ${
+              className={`absolute bottom-0 right-0 w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full shadow-2xl flex items-center justify-center cursor-pointer z-50 ${
                 isExpanded ? 'sos-menu-item-expanded-bottom' : 'sos-menu-item-collapsed'
               }`}
               onClick={handleSafetySettings}
@@ -103,16 +118,16 @@ export default function EmergencySOS() {
             )}
             
             {/* Main button */}
-            <div className={`relative w-20 h-20 bg-gradient-to-br from-red-600 via-red-600 to-red-700 hover:from-red-700 hover:via-red-600 hover:to-red-800 text-white rounded-full shadow-2xl shadow-red-500/50 flex items-center justify-center font-bold text-sm transition-all duration-300 transform hover:scale-110 active:scale-95 border-2 border-white/20 ${isExpanded ? 'rotate-45' : ''}`}>
+            <div className={`relative w-14 h-14 md:w-20 md:h-20 bg-gradient-to-br from-red-600 via-red-600 to-red-700 hover:from-red-700 hover:via-red-600 hover:to-red-800 text-white rounded-full shadow-2xl shadow-red-500/50 flex items-center justify-center font-bold text-sm transition-all duration-300 transform hover:scale-110 active:scale-95 border-2 border-white/20 touch-target ${isExpanded ? 'rotate-45' : ''}`}>
               <div className="flex flex-col items-center relative z-10">
                 {isExpanded ? (
-                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 ) : (
                   <>
                     <svg 
-                      className="w-8 h-8 mb-0.5 drop-shadow-lg" 
+                      className="w-6 h-6 md:w-8 md:h-8 mb-0.5 drop-shadow-lg" 
                       fill="none" 
                       stroke="currentColor" 
                       viewBox="0 0 24 24"

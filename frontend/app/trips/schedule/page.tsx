@@ -1071,7 +1071,7 @@ export default function SchedulePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+    <div className={`min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 page-offset-nav ${tripData ? 'pb-bottom-bar md:pb-0' : 'pb-sos-clear'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
         {/* Modern Hero Header with Glassmorphism */}
         <div className="relative mb-12">
@@ -2118,6 +2118,27 @@ export default function SchedulePage() {
           </React.Fragment>
         )}
       </div>
+
+      {/* Mobile sticky proceed CTA */}
+      {tripData && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-white border-t-2 border-gray-200 shadow-2xl px-4 py-3 safe-area-bottom">
+          <div className="flex items-center justify-between gap-3 max-w-7xl mx-auto">
+            <div className="min-w-0">
+              <p className="text-xs text-gray-500">Trip total</p>
+              <p className="text-lg font-bold text-gray-900 truncate">
+                ${tripData.totalPrice.toFixed(2)}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleProceedToPayment}
+              className="shrink-0 px-5 py-3 bg-gradient-to-r from-primary-500 to-accent-500 text-white font-bold rounded-xl shadow-lg touch-target"
+            >
+              Proceed to Payment
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Preference Modal */}
       <PreferenceModal

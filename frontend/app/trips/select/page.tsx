@@ -212,7 +212,7 @@ export default function TripSelectPage() {
         <div className="absolute top-20 right-20 w-96 h-96 bg-heritage-gold/5 rounded-full blur-3xl"></div>
         <div className="absolute bottom-20 left-20 w-96 h-96 bg-heritage-gold/5 rounded-full blur-3xl"></div>
         
-        <div className="section-container-luxury relative z-10 pt-32 pb-20">
+        <div className="section-container-luxury relative z-10 pt-24 sm:pt-32 pb-12 sm:pb-20">
           <div className="max-w-4xl mx-auto text-center">
             {/* Step Indicator */}
             <div className="inline-flex items-center gap-3 mb-8 px-5 py-2.5 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
@@ -222,7 +222,7 @@ export default function TripSelectPage() {
               </div>
             </div>
             
-            <h1 className="heading-display text-5xl md:text-6xl lg:text-7xl text-white mb-6 animate-fade-in-up">
+            <h1 className="heading-display text-3xl sm:text-5xl md:text-6xl lg:text-7xl text-white mb-6 animate-fade-in-up">
               Plan Your Journey
             </h1>
             <p className="text-xl md:text-2xl text-white/80 font-light mb-12 max-w-2xl mx-auto leading-relaxed animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
@@ -233,7 +233,7 @@ export default function TripSelectPage() {
       </div>
 
       {/* Main Form Section */}
-      <div className="section-container-luxury -mt-16 relative z-20">
+      <div className="section-container-luxury -mt-10 sm:-mt-16 relative z-20 pb-safe">
         <div className="max-w-5xl mx-auto">
 
           <div className="content-card shadow-luxury-lg border-charcoal-100/50 mb-8">

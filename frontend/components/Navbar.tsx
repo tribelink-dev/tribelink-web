@@ -8,9 +8,10 @@ import { useEffect, useState } from 'react';
 import { LOGO_PATH, LOGO_ALT_TEXT } from '@/lib/constants';
 import SearchBar from './SearchBar';
 import CurrencySelectorButton from './CurrencySelectorButton';
+import MobileNavDrawer from './MobileNavDrawer';
 import { useCart } from '@/lib/CartContext';
 import api from '@/lib/api';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, Search } from 'lucide-react';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -22,6 +23,8 @@ export default function Navbar() {
   const [hostName, setHostName] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [isViewingOwnAbode, setIsViewingOwnAbode] = useState(false);
 
   const cartItemCount = cart?.items?.length ?? 0;
@@ -132,21 +135,26 @@ export default function Navbar() {
     !isAbodeDetailPage &&
     !isViewingOwnAbode;
 
+  const closeMobileMenu = () => setShowMobileMenu(false);
+
+  const mobileNavLinkClass =
+    'w-full text-left px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-50 font-medium transition-colors';
+
   return (
     <nav 
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 safe-area-top ${
         scrolled || !isHomepage
           ? 'bg-white shadow-md border-b border-gray-200' 
           : 'bg-transparent'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="flex justify-between items-center h-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="flex justify-between items-center h-16 gap-2">
           {/* Logo */}
           <a
             href={isHost ? hostDashboard : "/explore"}
             onClick={handleLogoClick}
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0"
           >
             <div className="flex items-center justify-center w-8 h-8">
               <Image 
@@ -157,28 +165,38 @@ export default function Navbar() {
                 className="w-8 h-8"
               />
             </div>
-            <span className="text-lg font-semibold text-gray-900">
+            <span className="hidden sm:inline text-lg font-semibold text-gray-900">
                 TRIBEROUTES
               </span>
           </a>
 
-          {/* Search Bar (only on pages where it makes sense) */}
+          {/* Search Bar (desktop) */}
           {shouldShowSearchBar && (
-            <div className="flex-1 max-w-xl mx-8 hidden lg:block">
+            <div className="flex-1 max-w-xl mx-4 hidden lg:block">
               <SearchBar variant="navbar" />
-                </div>
-              )}
+            </div>
+          )}
 
           {/* Right Side */}
-          <div className="flex items-center gap-3">
-            {/* Currency Selector */}
+          <div className="flex items-center gap-1 sm:gap-2 md:gap-3">
+            {shouldShowSearchBar && (
+              <button
+                type="button"
+                onClick={() => setShowMobileSearch(!showMobileSearch)}
+                className="lg:hidden touch-target p-2 rounded-full text-gray-600 hover:bg-gray-100 transition-colors"
+                aria-label="Toggle search"
+              >
+                <Search className="w-5 h-5" />
+              </button>
+            )}
+
             <CurrencySelectorButton />
 
             {/* Bucket (cart) - travelers can access from anywhere */}
             {showCart && (
               <button
                 onClick={() => router.push('/cart')}
-                className="relative p-2 rounded-full text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                className="relative touch-target p-2 rounded-full text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
                 title="Your bucket"
                 aria-label={`Bucket${cartItemCount > 0 ? ` (${cartItemCount} items)` : ''}`}
               >
@@ -205,13 +223,13 @@ export default function Navbar() {
                 )}
                 <button
                   onClick={() => router.push('/login?returnTo=/explore')}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+                  className="hidden sm:inline px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
                 >
                   Sign In
                 </button>
                 <button
                   onClick={() => router.push('/signup?returnTo=/explore')}
-                  className="px-5 py-2 text-sm font-semibold text-white bg-gradient-to-r from-heritage-gold via-heritage-gold-dark to-heritage-gold hover:from-heritage-gold-dark hover:to-heritage-gold-dark rounded-full transition-all shadow-md hover:shadow-lg transform hover:scale-105"
+                  className="px-3 sm:px-5 py-2 text-sm font-semibold text-white bg-gradient-to-r from-heritage-gold via-heritage-gold-dark to-heritage-gold hover:from-heritage-gold-dark hover:to-heritage-gold-dark rounded-full transition-all shadow-md hover:shadow-lg"
                 >
                   Sign Up
                 </button>
@@ -236,8 +254,8 @@ export default function Navbar() {
                   </button>
                 )}
                 
-                {/* User Menu */}
-                <div className="relative">
+                {/* User Menu (desktop) */}
+                <div className="relative hidden md:block">
                   <button
                     onClick={() => setShowUserMenu(!showUserMenu)}
                     className="flex items-center gap-3 px-3 py-2 border border-gray-300 rounded-full hover:shadow-md transition-all"
@@ -326,8 +344,145 @@ export default function Navbar() {
                 </div>
               </>
             )}
+
+            <MobileNavDrawer
+              isOpen={showMobileMenu}
+              onToggle={() => setShowMobileMenu(!showMobileMenu)}
+              onClose={closeMobileMenu}
+              title="Menu"
+            >
+              <div className="flex flex-col gap-1">
+                {!isExplorePage && (
+                  <button
+                    type="button"
+                    className={mobileNavLinkClass}
+                    onClick={() => {
+                      router.push('/explore');
+                      closeMobileMenu();
+                    }}
+                  >
+                    Explore
+                  </button>
+                )}
+                {!isTripPage && (
+                  <button
+                    type="button"
+                    className={mobileNavLinkClass}
+                    onClick={() => {
+                      router.push('/trips/select');
+                      closeMobileMenu();
+                    }}
+                  >
+                    Plan trip
+                  </button>
+                )}
+                {showCart && (
+                  <button
+                    type="button"
+                    className={mobileNavLinkClass}
+                    onClick={() => {
+                      router.push('/cart');
+                      closeMobileMenu();
+                    }}
+                  >
+                    Your bucket{cartItemCount > 0 ? ` (${cartItemCount})` : ''}
+                  </button>
+                )}
+                {!(user || isHost) ? (
+                  <>
+                    <button
+                      type="button"
+                      className={mobileNavLinkClass}
+                      onClick={() => {
+                        router.push('/login?returnTo=/explore');
+                        closeMobileMenu();
+                      }}
+                    >
+                      Sign In
+                    </button>
+                    <button
+                      type="button"
+                      className="w-full mt-2 px-4 py-3 rounded-xl text-white font-semibold bg-gradient-to-r from-heritage-gold to-heritage-gold-dark"
+                      onClick={() => {
+                        router.push('/signup?returnTo=/explore');
+                        closeMobileMenu();
+                      }}
+                    >
+                      Sign Up
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {user && !isHost && (
+                      <>
+                        <button
+                          type="button"
+                          className={mobileNavLinkClass}
+                          onClick={() => {
+                            router.push('/dashboard');
+                            closeMobileMenu();
+                          }}
+                        >
+                          Dashboard
+                        </button>
+                        <button
+                          type="button"
+                          className={mobileNavLinkClass}
+                          onClick={() => {
+                            router.push('/dashboard/profile');
+                            closeMobileMenu();
+                          }}
+                        >
+                          Profile
+                        </button>
+                      </>
+                    )}
+                    {isHost && (
+                      <>
+                        <button
+                          type="button"
+                          className={mobileNavLinkClass}
+                          onClick={() => {
+                            router.push(hostDashboard);
+                            closeMobileMenu();
+                          }}
+                        >
+                          Host Dashboard
+                        </button>
+                        <button
+                          type="button"
+                          className={mobileNavLinkClass}
+                          onClick={() => {
+                            router.push('/host/profile');
+                            closeMobileMenu();
+                          }}
+                        >
+                          Profile
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      className="w-full text-left px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 font-medium mt-2"
+                      onClick={() => {
+                        closeMobileMenu();
+                        handleLogout();
+                      }}
+                    >
+                      Sign out
+                    </button>
+                  </>
+                )}
+              </div>
+            </MobileNavDrawer>
           </div>
         </div>
+
+        {shouldShowSearchBar && showMobileSearch && (
+          <div className="lg:hidden pb-3 pt-1">
+            <SearchBar variant="navbar" />
+          </div>
+        )}
       </div>
 
       {/* Backdrop for menu */}

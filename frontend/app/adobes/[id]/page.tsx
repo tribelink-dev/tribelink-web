@@ -305,7 +305,7 @@ export default function AbodeDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pt-24 pb-16">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="animate-pulse space-y-6">
             <div className="h-96 bg-gray-200 rounded-3xl"></div>
             <div className="h-64 bg-gray-200 rounded-3xl"></div>
@@ -386,8 +386,8 @@ export default function AbodeDetailPage() {
     Math.max(...abode.roomVariants.map(v => v.pricePerNight));
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pt-20 pb-16">
-      <div className="max-w-7xl mx-auto px-6">
+    <div className={`min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pt-20 ${!isOwner ? 'pb-bottom-bar lg:pb-16' : 'pb-sos-clear lg:pb-16'}`}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
         {/* Back Button */}
         <motion.button
           initial={{ opacity: 0, x: -20 }}
@@ -401,14 +401,14 @@ export default function AbodeDetailPage() {
 
         <div className={`grid grid-cols-1 gap-8 ${!isOwner ? 'lg:grid-cols-3' : 'lg:grid-cols-1 max-w-5xl mx-auto'}`}>
           {/* Main Content */}
-          <div className={!isOwner ? 'lg:col-span-2 space-y-8' : 'space-y-8'}>
+          <div className={!isOwner ? 'lg:col-span-2 order-2 lg:order-1 space-y-8' : 'space-y-8'}>
             {/* Image Gallery */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100"
             >
-              <div className="relative w-full h-[500px] bg-gradient-to-br from-gray-200 to-gray-300 overflow-hidden">
+              <div className="relative w-full h-[280px] sm:h-[400px] lg:h-[500px] bg-gradient-to-br from-gray-200 to-gray-300 overflow-hidden">
                 {imageUrl ? (
                   <motion.img
                     key={selectedImageIndex}
@@ -456,7 +456,7 @@ export default function AbodeDetailPage() {
               </div>
               
               {abode.images.length > 1 && (
-                <div className="p-4 grid grid-cols-5 gap-3">
+                <div className="p-3 sm:p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
                   {abode.images.slice(0, 5).map((img, index) => (
                     <button
                       key={index}
@@ -731,12 +731,12 @@ export default function AbodeDetailPage() {
 
           {/* Booking Sidebar - Only show if user is not the owner */}
           {!isOwner && (
-            <div className="lg:col-span-1">
+            <div className="lg:col-span-1 order-1 lg:order-2">
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.2 }}
-                className="sticky top-24 bg-white rounded-3xl shadow-xl p-8 border border-gray-200"
+                className="lg:sticky lg:top-24 bg-white rounded-3xl shadow-xl p-6 sm:p-8 border border-gray-200"
               >
               {/* Room Variant Selector */}
               {abode.roomVariants && abode.roomVariants.length > 0 && (
@@ -942,6 +942,46 @@ export default function AbodeDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Mobile sticky booking bar */}
+      {!isOwner && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-white border-t-2 border-gray-200 shadow-2xl px-4 py-3 safe-area-bottom">
+          <div className="flex items-center justify-between gap-3 max-w-7xl mx-auto">
+            <div className="min-w-0">
+              <div className="flex items-baseline gap-1">
+                {showFromPrefix && (
+                  <span className="text-sm text-gray-600">from</span>
+                )}
+                <span className="text-xl font-bold text-gray-900 truncate">
+                  {formatPrice(pricePerNight, abode.pricing.currency || 'INR')}
+                </span>
+                <span className="text-sm text-gray-600 shrink-0">/night</span>
+              </div>
+              {nights > 0 && (
+                <p className="text-xs text-gray-500 truncate">
+                  {nights} night{nights !== 1 ? 's' : ''} · {formatPrice(totalPrice, abode.pricing.currency || 'INR')} total
+                </p>
+              )}
+            </div>
+            <motion.button
+              onClick={handleAddToCart}
+              disabled={!checkIn || !checkOut || addingToCart}
+              whileTap={{ scale: 0.98 }}
+              className="shrink-0 px-5 py-3 bg-gradient-to-r from-heritage-gold to-heritage-gold-dark text-white font-bold rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 touch-target"
+            >
+              {addingToCart ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
+              ) : (
+                <>
+                  <ShoppingCart className="w-5 h-5" />
+                  <span className="hidden sm:inline">Add to Bucket</span>
+                  <span className="sm:hidden">Book</span>
+                </>
+              )}
+            </motion.button>
+          </div>
+        </div>
+      )}
 
       {/* Cart Sidebar */}
       <CartSidebar isOpen={showCartSidebar} onClose={() => setShowCartSidebar(false)} />

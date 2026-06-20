@@ -33,6 +33,15 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
   const locationMenuRef = useRef<HTMLDivElement>(null);
   const dateMenuRef = useRef<HTMLDivElement>(null);
   const guestsMenuRef = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
 
   const handleSearch = () => {
     if (onSearch) {
@@ -56,6 +65,12 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
   };
 
   const isHomepage = variant === 'homepage';
+  const menuPositionClass = isMobile
+    ? 'fixed inset-x-4 bottom-4 top-auto max-h-[85vh] overflow-y-auto safe-area-bottom'
+    : 'absolute top-full left-0 mt-3';
+  const guestsMenuPositionClass = isMobile
+    ? 'fixed inset-x-4 bottom-4 top-auto safe-area-bottom'
+    : 'absolute top-full right-0 mt-3';
 
   // Popular destinations
   const popularDestinations = [
@@ -99,11 +114,11 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
         transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
         className={`
           ${isHomepage 
-            ? 'bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-100/50 p-2' 
+            ? 'bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-100/50 p-2 sm:p-2' 
             : 'bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-100/50 p-1.5'
           }
-          flex items-center gap-1
-          ${isHomepage ? 'h-20' : 'h-16'}
+          flex flex-col md:flex-row md:items-center gap-2 md:gap-1
+          ${isHomepage ? 'h-auto md:h-20' : 'h-auto md:h-16'}
         `}
       >
         {/* Location */}
@@ -117,12 +132,12 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
             setShowGuestsMenu(false);
           }}
           className={`
-            flex-1 px-6 py-4 text-left rounded-2xl transition-all duration-300 relative group
+            w-full md:flex-1 px-4 md:px-6 py-3 md:py-4 text-left rounded-2xl transition-all duration-300 relative group
             ${activeField === 'location' 
               ? 'bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-300 shadow-lg' 
               : 'hover:bg-gray-50 border-2 border-transparent'
             }
-            ${isHomepage ? 'min-w-[220px]' : 'min-w-[180px]'}
+            md:min-w-[180px] ${isHomepage ? 'md:min-w-[220px]' : ''}
           `}
         >
           <div className="flex items-center gap-2 mb-1">
@@ -154,12 +169,12 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
             setShowGuestsMenu(false);
           }}
           className={`
-            flex-1 px-6 py-4 text-left rounded-2xl transition-all duration-300 relative group
+            w-full md:flex-1 px-4 md:px-6 py-3 md:py-4 text-left rounded-2xl transition-all duration-300 relative group
             ${activeField === 'checkIn' || activeField === 'checkOut'
               ? 'bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-300 shadow-lg' 
               : 'hover:bg-gray-50 border-2 border-transparent'
             }
-            ${isHomepage ? 'min-w-[160px]' : 'min-w-[140px]'}
+            md:min-w-[140px] ${isHomepage ? 'md:min-w-[160px]' : ''}
           `}
         >
           <div className="flex items-center gap-2 mb-1">
@@ -191,12 +206,12 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
             setShowGuestsMenu(false);
           }}
           className={`
-            flex-1 px-6 py-4 text-left rounded-2xl transition-all duration-300 relative group
+            w-full md:flex-1 px-4 md:px-6 py-3 md:py-4 text-left rounded-2xl transition-all duration-300 relative group
             ${activeField === 'checkIn' || activeField === 'checkOut'
               ? 'bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-300 shadow-lg' 
               : 'hover:bg-gray-50 border-2 border-transparent'
             }
-            ${isHomepage ? 'min-w-[160px]' : 'min-w-[140px]'}
+            md:min-w-[140px] ${isHomepage ? 'md:min-w-[160px]' : ''}
           `}
         >
           <div className="flex items-center gap-2 mb-1">
@@ -228,12 +243,12 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
             setShowDateMenu(false);
           }}
           className={`
-            flex-1 px-6 py-4 text-left rounded-2xl transition-all duration-300 relative group
+            w-full md:flex-1 px-4 md:px-6 py-3 md:py-4 text-left rounded-2xl transition-all duration-300 relative group
             ${activeField === 'guests' 
               ? 'bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-300 shadow-lg' 
               : 'hover:bg-gray-50 border-2 border-transparent'
             }
-            ${isHomepage ? 'min-w-[160px]' : 'min-w-[140px]'}
+            md:min-w-[140px] ${isHomepage ? 'md:min-w-[160px]' : ''}
           `}
         >
           <div className="flex items-center gap-2 mb-1">
@@ -260,11 +275,11 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
           whileTap={{ scale: 0.95 }}
           onClick={handleSearch}
           className={`
-            ml-2 rounded-2xl bg-gradient-to-r from-heritage-gold to-heritage-gold-dark
+            w-full md:w-auto md:ml-2 rounded-2xl bg-gradient-to-r from-heritage-gold to-heritage-gold-dark
             hover:from-heritage-gold-dark hover:to-heritage-gold
             text-white transition-all duration-300
-            ${isHomepage ? 'w-16 h-16' : 'w-14 h-14'}
-            flex items-center justify-center
+            ${isHomepage ? 'h-14 md:w-16 md:h-16' : 'h-12 md:w-14 md:h-14'}
+            flex items-center justify-center gap-2
             shadow-lg hover:shadow-xl
             relative overflow-hidden group
           `}
@@ -273,6 +288,7 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
             className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
           />
           <Search className="w-5 h-5 relative z-10" />
+          <span className="md:hidden relative z-10 font-bold text-sm">Search</span>
         </motion.button>
       </motion.div>
 
@@ -286,7 +302,7 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
               transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-              className="absolute top-full left-0 mt-3 w-96 bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden z-50"
+              className={`${menuPositionClass} w-full md:w-96 bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden z-[80]`}
             >
               {/* Search Input */}
               <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-indigo-50/50 to-purple-50/50">
@@ -365,7 +381,7 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className="absolute top-full left-0 mt-3 bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 z-50"
+            className={`${menuPositionClass} bg-white rounded-3xl shadow-2xl border border-gray-100 p-4 md:p-6 z-[80]`}
           >
             <div className="mb-4">
               <h3 className="text-lg font-bold text-gray-900 mb-1">Select dates</h3>
@@ -384,7 +400,7 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
                 }
               }}
               disabled={(date) => date < new Date()}
-              numberOfMonths={2}
+              numberOfMonths={isMobile ? 1 : 2}
                 className="custom-day-picker"
             />
             </div>
@@ -430,7 +446,7 @@ export default function SearchBar({ className = '', variant = 'homepage', onSear
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className="absolute top-full right-0 mt-3 w-80 bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 z-50"
+            className={`${guestsMenuPositionClass} w-full md:w-80 bg-white rounded-3xl shadow-2xl border border-gray-100 p-4 md:p-6 z-[80]`}
           >
             <div className="mb-4">
               <h3 className="text-lg font-bold text-gray-900 mb-1">Guests</h3>

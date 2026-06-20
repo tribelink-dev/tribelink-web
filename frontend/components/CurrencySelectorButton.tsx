@@ -10,6 +10,15 @@ export default function CurrencySelectorButton() {
   const { currency, currencyData, setCurrency, loading } = useCurrency();
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -43,7 +52,7 @@ export default function CurrencySelectorButton() {
         type="button"
         onClick={() => setShowDropdown(!showDropdown)}
         disabled={loading}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors border border-gray-200 bg-white"
+        className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors border border-gray-200 bg-white touch-target"
         aria-label="Select currency"
       >
         {currencyData && (
@@ -75,17 +84,17 @@ export default function CurrencySelectorButton() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40"
+              className="fixed inset-0 z-[60] bg-black/40 md:bg-transparent"
               onClick={() => setShowDropdown(false)}
             />
 
             {/* Dropdown */}
             <motion.div
-              initial={{ opacity: 0, y: -10, scale: 0.95 }}
+              initial={{ opacity: 0, y: isMobile ? 20 : -10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -10, scale: 0.95 }}
+              exit={{ opacity: 0, y: isMobile ? 20 : -10, scale: 0.95 }}
               transition={{ duration: 0.2 }}
-              className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden"
+              className="mobile-dropdown-panel w-sheet bg-white rounded-xl shadow-2xl border border-gray-200 z-[80] overflow-hidden md:rounded-xl"
             >
               <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
                 <h3 className="text-sm font-bold text-gray-900 mb-1">Select Currency</h3>
