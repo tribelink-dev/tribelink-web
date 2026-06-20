@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LOGO_PATH, LOGO_ALT_TEXT } from '@/lib/constants';
+import BrandLogo from '@/components/BrandLogo';
 
 const footerLinks = {
   Support: [
@@ -24,8 +24,9 @@ export default function PlatformFooter() {
       <div className="w-full px-page lg:px-page-lg py-12">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           <div className="col-span-2 md:col-span-1">
-            <Link href="/explore" className="inline-block mb-4">
-              <img src={LOGO_PATH} alt={LOGO_ALT_TEXT} className="h-8 w-auto" />
+            <Link href="/explore" className="inline-flex items-center gap-2 mb-4">
+              <BrandLogo size={32} />
+              <span className="text-lg font-semibold text-text-primary">Triberoutes</span>
             </Link>
             <p className="text-sm text-text-secondary max-w-xs">
               Authentic Kerala family homestays and cultural experiences guided by local hosts.

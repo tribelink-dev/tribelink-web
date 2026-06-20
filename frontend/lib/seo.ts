@@ -249,7 +249,7 @@ export function generateOrganizationSchema() {
     name: 'Triberoutes',
     alternateName: ['Triberoutes', 'Tribe Routes'],
     url: `${baseUrl}/explore`,
-    logo: getDefaultOgImage(),
+    logo: `${baseUrl}/triberoutes-logo.png`,
     description:
       'Kerala cultural homestays and local-guided traditional experiences. Live with a Keralite family and travel for cultural understanding.',
     foundingLocation: {

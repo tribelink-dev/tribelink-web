@@ -1,11 +1,10 @@
-'use client';
+﻿'use client';
 
-import Image from 'next/image';
+import BrandLogo from '@/components/BrandLogo';
 import { useAuth } from '@/lib/auth';
 import { useRouter, usePathname } from 'next/navigation';
 import { getProviderDashboard } from '@/lib/providerUtils';
 import { useEffect, useState } from 'react';
-import { LOGO_PATH, LOGO_ALT_TEXT } from '@/lib/constants';
 import ExploreSectionTabs from './ExploreSectionTabs';
 import { useExploreNavOptional } from '@/lib/ExploreNavContext';
 import CurrencySelectorButton from './CurrencySelectorButton';
@@ -474,7 +473,7 @@ export default function Navbar() {
                 className="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0 justify-self-start"
               >
                 <div className="flex items-center justify-center w-8 h-8">
-                  <Image src={LOGO_PATH} alt={LOGO_ALT_TEXT} width={32} height={32} className="w-8 h-8" />
+                  <BrandLogo size={32} />
                 </div>
                 <span className="text-lg font-semibold text-gray-900">TRIBEROUTES</span>
               </a>
@@ -498,7 +497,7 @@ export default function Navbar() {
                   className="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0"
                 >
                   <div className="flex items-center justify-center w-8 h-8">
-                    <Image src={LOGO_PATH} alt={LOGO_ALT_TEXT} width={32} height={32} className="w-8 h-8" />
+                    <BrandLogo size={32} />
                   </div>
                   <span className="hidden sm:inline text-lg font-semibold text-gray-900">TRIBEROUTES</span>
                 </a>
@@ -523,15 +522,7 @@ export default function Navbar() {
             onClick={handleLogoClick}
             className="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0"
           >
-            <div className="flex items-center justify-center w-8 h-8">
-              <Image 
-                src={LOGO_PATH} 
-                alt={LOGO_ALT_TEXT} 
-                width={32} 
-                height={32}
-                className="w-8 h-8"
-              />
-            </div>
+            <BrandLogo size={32} />
             <span className="hidden sm:inline text-lg font-semibold text-gray-900">
                 TRIBEROUTES
               </span>

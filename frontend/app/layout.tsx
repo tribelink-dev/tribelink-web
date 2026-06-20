@@ -100,6 +100,10 @@ export const metadata: Metadata = {
   alternates: {
     canonical: `${baseUrl}/explore`,
   },
+  icons: {
+    icon: '/triberoutes-logo.png',
+    apple: '/triberoutes-logo.png',
+  },
   category: "Travel",
 };
 

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import BrandLogo from '@/components/BrandLogo';
 import { hostLogout } from '@/lib/providerUtils';
 
 interface NavItem {
@@ -99,11 +100,7 @@ export default function AbodeSidebar() {
           {/* Logo Section - Professional Theme */}
           <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-slate-800 via-indigo-700 to-slate-800">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/30">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                </svg>
-              </div>
+              <BrandLogo size={40} />
               <div>
                 <h2 className="text-xl font-bold text-white">Triberoutes</h2>
                 <p className="text-white/80 text-xs font-medium">Abode Host Portal</p>

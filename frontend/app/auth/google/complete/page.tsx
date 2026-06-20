@@ -5,9 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { getProviderDashboard } from '@/lib/providerUtils';
 import api from '@/lib/api';
-import Image from 'next/image';
+import BrandLogo from '@/components/BrandLogo';
 import PhoneInput from '@/components/PhoneInput';
-import { LOGO_PATH, LOGO_ALT_TEXT } from '@/lib/constants';
 import { Phone, Mail, User, Home, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function GoogleAuthComplete() {
@@ -129,15 +128,9 @@ export default function GoogleAuthComplete() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: "spring" }}
-              className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-2xl mb-4 shadow-lg"
+              className="inline-flex mb-4"
             >
-              <Image 
-                src={LOGO_PATH} 
-                alt={LOGO_ALT_TEXT} 
-                width={64} 
-                height={64}
-                className="w-full h-full object-contain p-2"
-              />
+              <BrandLogo size={64} priority />
             </motion.div>
             <motion.h1
               initial={{ opacity: 0, y: -10 }}

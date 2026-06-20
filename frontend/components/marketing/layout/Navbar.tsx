@@ -5,6 +5,7 @@ import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-
 import { Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import BrandLogo from '@/components/BrandLogo';
 import { useAuth } from '@/lib/auth';
 
 const Navbar = () => {
@@ -61,8 +62,9 @@ const Navbar = () => {
                     >
                         <Link 
                             href="/" 
-                            className="flex items-center gap-2 group"
+                            className="flex items-center gap-2.5 group"
                         >
+                            <BrandLogo size={36} priority />
                             <div className="text-white font-serif text-2xl font-bold tracking-wider relative">
                                 Triberoutes
                                 <motion.div

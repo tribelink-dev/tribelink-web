@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { Mail, Instagram, Facebook, Twitter, Heart, MapPin, Phone } from 'lucide-react';
 import Link from 'next/link';
+import BrandLogo from '@/components/BrandLogo';
 
 const Footer = () => {
     const currentYear = new Date().getFullYear();
@@ -45,8 +46,11 @@ const Footer = () => {
                         transition={{ duration: 0.6 }}
                         className="md:col-span-2 max-w-md"
                     >
-                        <div className="font-serif text-4xl font-bold mb-6 bg-gradient-to-r from-white to-terracotta bg-clip-text text-transparent">
-                            Triberoutes
+                        <div className="flex items-center gap-3 mb-6">
+                            <BrandLogo size={48} />
+                            <div className="font-serif text-3xl font-bold bg-gradient-to-r from-white to-terracotta bg-clip-text text-transparent">
+                                Triberoutes
+                            </div>
                         </div>
                         <p className="text-xl mb-6 text-white/90 font-light">Connect Deeply. Travel Authentically.</p>
                         <p className="text-white/70 leading-relaxed mb-6">

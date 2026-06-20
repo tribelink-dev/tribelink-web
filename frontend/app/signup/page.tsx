@@ -8,7 +8,7 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import api from '@/lib/api';
 import PhoneInput from '@/components/PhoneInput';
-import { LOGO_PATH, LOGO_ALT_TEXT } from '@/lib/constants';
+import BrandLogo from '@/components/BrandLogo';
 import { Sparkles, Lock, Mail, Phone, User, CheckCircle } from 'lucide-react';
 
 type SignupStep = 'phone' | 'phone-otp' | 'email' | 'email-otp' | 'password';
@@ -644,9 +644,7 @@ export default function SignupPage(): JSX.Element {
                 transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
                 className="inline-block mb-6"
               >
-                <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-heritage-gold to-heritage-gold-dark flex items-center justify-center shadow-2xl">
-                  <Sparkles className="w-10 h-10 text-white" />
-                </div>
+                <BrandLogo size={80} priority />
               </motion.div>
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
