@@ -12,14 +12,22 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#FEFDFB',
     icons: [
       {
-        src: '/triberoutes-logo.png',
-        sizes: '512x512',
+        src: '/icons/pwa-192.png',
+        sizes: '192x192',
         type: 'image/png',
+        purpose: 'any',
       },
       {
-        src: '/triberoutes-logo.svg',
-        sizes: 'any',
-        type: 'image/svg+xml',
+        src: '/icons/pwa-512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/icons/pwa-512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
       },
     ],
   };

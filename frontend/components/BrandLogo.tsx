@@ -16,7 +16,7 @@ export default function BrandLogo({ size = 32, className, priority }: BrandLogoP
       width={size}
       height={size}
       priority={priority}
-      className={cn('rounded-[22%] object-cover shrink-0', className)}
+      className={cn('rounded-[22%] object-contain shrink-0', className)}
       style={{ width: size, height: size }}
     />
   );
