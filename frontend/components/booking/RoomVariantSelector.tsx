@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bed, Bath, Users, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Bed, Bath, Users, Check, ChevronLeft, ChevronRight, ImageIcon } from 'lucide-react';
 import { getImageUrl } from '@/lib/imageUtils';
 import { useCurrency } from '@/lib/CurrencyContext';
+import { cn } from '@/lib/utils';
 
 interface RoomVariant {
   variantId: string;
@@ -28,6 +29,7 @@ interface RoomVariantSelectorProps {
   selectedVariantId: string | null;
   onSelect: (variantId: string) => void;
   currency?: string;
+  nights?: number;
 }
 
 export default function RoomVariantSelector({
@@ -35,29 +37,21 @@ export default function RoomVariantSelector({
   defaultVariantId,
   selectedVariantId,
   onSelect,
-  currency = 'USD'
+  currency = 'USD',
+  nights = 0,
 }: RoomVariantSelectorProps) {
   const { formatPrice } = useCurrency();
-  const [selectedImageIndex, setSelectedImageIndex] = useState<{ [key: string]: number }>({});
+  const [imageIndexByVariant, setImageIndexByVariant] = useState<Record<string, number>>({});
 
-  // If no variants, return null (backward compatibility)
-  if (!variants || variants.length === 0) {
-    return null;
-  }
+  if (!variants || variants.length === 0) return null;
 
-  // Determine which variant to show as selected
   const currentVariantId = selectedVariantId || defaultVariantId || variants[0]?.variantId;
-  const selectedVariant = variants.find(v => v.variantId === currentVariantId) || variants[0];
+  const selectedVariant = variants.find((v) => v.variantId === currentVariantId) || variants[0];
 
-  const getImageIndex = (variantId: string) => {
-    return selectedImageIndex[variantId] || 0;
-  };
+  const getImageIndex = (variantId: string) => imageIndexByVariant[variantId] || 0;
 
   const setImageIndex = (variantId: string, index: number) => {
-    setSelectedImageIndex(prev => ({
-      ...prev,
-      [variantId]: index
-    }));
+    setImageIndexByVariant((prev) => ({ ...prev, [variantId]: index }));
   };
 
   const currentImageIndex = getImageIndex(selectedVariant.variantId);
@@ -65,91 +59,110 @@ export default function RoomVariantSelector({
   const currentImage = currentImages[currentImageIndex] || currentImages[0];
 
   return (
-    <div className="space-y-6">
-      {/* Variant Selection Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
+    <div className="space-y-4">
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold text-text-primary">Choose your room</h2>
+          <p className="text-sm text-text-secondary mt-1">
+            {variants.length} room type{variants.length !== 1 ? 's' : ''} available
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-3">
         {variants.map((variant) => {
           const isSelected = variant.variantId === currentVariantId;
-          const variantImage = variant.images?.[0] || null;
+          const variantImage = variant.images?.find((img) => img.isMain) || variant.images?.[0];
+          const photoCount = variant.images?.length ?? 0;
+          const stayTotal = nights > 0 ? variant.pricePerNight * nights : null;
 
           return (
             <motion.button
               key={variant.variantId}
+              type="button"
               onClick={() => onSelect(variant.variantId)}
-              whileHover={{ scale: 1.01, y: -2 }}
-              whileTap={{ scale: 0.99 }}
-              className={`relative flex flex-col rounded-2xl border-2 transition-all text-left overflow-hidden h-full ${
+              whileTap={{ scale: 0.995 }}
+              className={cn(
+                'w-full text-left rounded-2xl border transition-all overflow-hidden',
                 isSelected
-                  ? 'border-heritage-gold bg-gradient-to-br from-heritage-gold/10 to-cream-500/20 shadow-xl ring-2 ring-heritage-gold/20'
-                  : 'border-gray-200 bg-white hover:border-heritage-gold/50 hover:shadow-lg'
-              }`}
-            >
-              {/* Selection Badge */}
-              {isSelected && (
-                <div className="absolute top-3 right-3 z-10 bg-heritage-gold text-white rounded-full p-1.5 shadow-lg">
-                  <CheckCircle2 className="w-4 h-4" />
-                </div>
+                  ? 'border-text-primary shadow-medium ring-1 ring-text-primary/10'
+                  : 'border-border bg-surface hover:border-text-secondary/40 hover:shadow-soft'
               )}
-
-              {/* Variant Image */}
-              {variantImage && (
-                <div className="relative w-full h-40 rounded-t-2xl overflow-hidden flex-shrink-0">
-                  <img
-                    src={getImageUrl(variantImage.url) ?? undefined}
-                    alt={variant.name}
-                    className="w-full h-full object-cover"
-                  />
-                  {isSelected && (
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
+            >
+              <div className="flex flex-col sm:flex-row">
+                {/* Thumbnail */}
+                <div className="relative sm:w-44 md:w-52 shrink-0 aspect-[4/3] sm:aspect-auto sm:min-h-[140px] bg-surface-muted">
+                  {variantImage ? (
+                    <img
+                      src={getImageUrl(variantImage.url) ?? undefined}
+                      alt={variant.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-text-secondary">
+                      <ImageIcon className="w-8 h-8 opacity-40" />
+                    </div>
+                  )}
+                  {photoCount > 1 && (
+                    <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/60 text-white text-xs font-medium">
+                      {photoCount} photos
+                    </span>
                   )}
                 </div>
-              )}
 
-              {/* Variant Info - Fixed height container with proper spacing */}
-              <div className="flex flex-col flex-1 p-4 min-h-[200px]">
-                {/* Room Name - Fixed height to prevent layout shifts */}
-                <div className="mb-3 min-h-[3rem] flex items-start">
-                  <h3 className="font-bold text-base text-gray-900 line-clamp-2 leading-tight">
-                    {variant.name}
-                  </h3>
-                </div>
+                {/* Details */}
+                <div className="flex-1 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4 min-w-0">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="font-semibold text-text-primary text-base sm:text-lg leading-snug">
+                        {variant.name}
+                      </h3>
+                      {isSelected && (
+                        <span className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-text-primary text-white text-xs font-semibold">
+                          <Check className="w-3 h-3" />
+                          Selected
+                        </span>
+                      )}
+                    </div>
 
-                {/* Price - Always visible with proper width */}
-                <div className="mb-4 flex-shrink-0">
-                  <div className="flex items-baseline gap-1.5 flex-wrap">
-                    <span className="text-xl font-bold text-heritage-gold break-words">
-                      {formatPrice(variant.pricePerNight, currency)}
-                    </span>
-                    <span className="text-xs text-gray-600 whitespace-nowrap">/night</span>
+                    {variant.description && (
+                      <p className="text-sm text-text-secondary mt-1 line-clamp-2">{variant.description}</p>
+                    )}
+
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-sm text-text-secondary">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Users className="w-4 h-4" />
+                        {variant.capacity} guest{variant.capacity !== 1 ? 's' : ''}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <Bed className="w-4 h-4" />
+                        {variant.bedrooms} bed{variant.bedrooms !== 1 ? 's' : ''}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <Bath className="w-4 h-4" />
+                        {variant.bathrooms} bath{variant.bathrooms !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+
+                    {variant.amenities.length > 0 && (
+                      <p className="text-xs text-text-secondary mt-2 line-clamp-1">
+                        {variant.amenities.slice(0, 4).join(' · ')}
+                        {variant.amenities.length > 4 && ` · +${variant.amenities.length - 4} more`}
+                      </p>
+                    )}
                   </div>
-                </div>
 
-                {/* Description - Optional, shown if available, before features */}
-                {variant.description && (
-                  <p className="text-xs text-gray-500 mb-3 line-clamp-2 leading-relaxed">{variant.description}</p>
-                )}
-
-                {/* Capacity & Features - Always consistent layout at bottom */}
-                <div className="mt-auto pt-3 border-t border-gray-200">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                      <Users className="w-4 h-4 flex-shrink-0 text-gray-500" />
-                      <span className="text-xs text-gray-600 truncate" title={`${variant.capacity} guest${variant.capacity !== 1 ? 's' : ''}`}>
-                        {variant.capacity}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                      <Bed className="w-4 h-4 flex-shrink-0 text-gray-500" />
-                      <span className="text-xs text-gray-600 truncate" title={`${variant.bedrooms} bed${variant.bedrooms !== 1 ? 's' : ''}`}>
-                        {variant.bedrooms}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                      <Bath className="w-4 h-4 flex-shrink-0 text-gray-500" />
-                      <span className="text-xs text-gray-600 truncate" title={`${variant.bathrooms} bath${variant.bathrooms !== 1 ? 's' : ''}`}>
-                        {variant.bathrooms}
-                      </span>
-                    </div>
+                  {/* Price */}
+                  <div className="sm:text-right shrink-0 sm:pl-2 border-t sm:border-t-0 border-border pt-3 sm:pt-0">
+                    <p className="text-lg font-semibold text-text-primary">
+                      {formatPrice(variant.pricePerNight, currency)}
+                    </p>
+                    <p className="text-xs text-text-secondary">per night</p>
+                    {stayTotal !== null && (
+                      <p className="text-sm font-medium text-brand mt-1">
+                        {formatPrice(stayTotal, currency)} total
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -158,110 +171,122 @@ export default function RoomVariantSelector({
         })}
       </div>
 
-      {/* Selected Variant Details */}
-      {selectedVariant && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-3xl shadow-xl p-6 border border-gray-100"
-        >
-          <h3 className="text-2xl font-bold text-gray-900 mb-4">{selectedVariant.name}</h3>
+      {/* Selected room gallery & amenities */}
+      <AnimatePresence mode="wait">
+        {selectedVariant && (currentImages.length > 0 || selectedVariant.amenities.length > 0) && (
+          <motion.div
+            key={selectedVariant.variantId}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="rounded-2xl border border-border bg-surface p-4 sm:p-5 space-y-5">
+              <h3 className="font-semibold text-text-primary">{selectedVariant.name}</h3>
 
-          {/* Image Gallery */}
-          {currentImages.length > 0 && (
-            <div className="mb-6">
-              <div className="relative w-full h-64 rounded-xl overflow-hidden bg-gray-200 mb-3">
-                <img
-                  src={getImageUrl(currentImage.url) ?? undefined}
-                  alt={currentImage.caption || selectedVariant.name}
-                  className="w-full h-full object-cover"
-                />
+              {currentImages.length > 0 && (
+                <div>
+                  <div className="relative w-full aspect-[16/9] max-h-72 rounded-xl overflow-hidden bg-surface-muted">
+                    <img
+                      src={getImageUrl(currentImage.url) ?? undefined}
+                      alt={currentImage.caption || selectedVariant.name}
+                      className="w-full h-full object-cover"
+                    />
+                    {currentImages.length > 1 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const newIndex =
+                              (currentImageIndex - 1 + currentImages.length) % currentImages.length;
+                            setImageIndex(selectedVariant.variantId, newIndex);
+                          }}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 touch-target w-9 h-9 rounded-full bg-white/95 shadow-md flex items-center justify-center hover:scale-105 transition-transform"
+                        >
+                          <ChevronLeft className="w-5 h-5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const newIndex = (currentImageIndex + 1) % currentImages.length;
+                            setImageIndex(selectedVariant.variantId, newIndex);
+                          }}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 touch-target w-9 h-9 rounded-full bg-white/95 shadow-md flex items-center justify-center hover:scale-105 transition-transform"
+                        >
+                          <ChevronRight className="w-5 h-5" />
+                        </button>
+                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                          {currentImages.map((_, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setImageIndex(selectedVariant.variantId, idx);
+                              }}
+                              className={cn(
+                                'h-1.5 rounded-full transition-all',
+                                currentImageIndex === idx ? 'w-6 bg-white' : 'w-1.5 bg-white/50'
+                              )}
+                            />
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
 
-                {/* Image Navigation */}
-                {currentImages.length > 1 && (
-                  <>
-                    <button
-                      onClick={() => {
-                        const newIndex = (currentImageIndex - 1 + currentImages.length) % currentImages.length;
-                        setImageIndex(selectedVariant.variantId, newIndex);
-                      }}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center shadow-lg hover:scale-110 transition-all"
-                    >
-                      <ChevronLeft className="w-5 h-5 text-gray-700" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        const newIndex = (currentImageIndex + 1) % currentImages.length;
-                        setImageIndex(selectedVariant.variantId, newIndex);
-                      }}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center shadow-lg hover:scale-110 transition-all"
-                    >
-                      <ChevronRight className="w-5 h-5 text-gray-700" />
-                    </button>
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                      {currentImages.map((_, idx) => (
+                  {currentImages.length > 1 && (
+                    <div className="flex gap-2 mt-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-1 sm:grid sm:grid-cols-5 sm:overflow-visible">
+                      {currentImages.slice(0, 5).map((img, idx) => (
                         <button
                           key={idx}
-                          onClick={() => setImageIndex(selectedVariant.variantId, idx)}
-                          className={`h-2 rounded-full transition-all ${
-                            currentImageIndex === idx ? 'w-8 bg-white' : 'w-2 bg-white/50'
-                          }`}
-                        />
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setImageIndex(selectedVariant.variantId, idx);
+                          }}
+                          className={cn(
+                            'relative shrink-0 w-16 h-16 sm:w-auto sm:h-auto aspect-square rounded-lg overflow-hidden border-2 transition-all snap-start',
+                            currentImageIndex === idx
+                              ? 'border-text-primary'
+                              : 'border-transparent hover:border-border'
+                          )}
+                        >
+                          <img
+                            src={getImageUrl(img.url) ?? undefined}
+                            alt={img.caption || `Photo ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
                       ))}
                     </div>
-                  </>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
 
-              {/* Thumbnail Strip */}
-              {currentImages.length > 1 && (
-                <div className="grid grid-cols-5 gap-2">
-                  {currentImages.slice(0, 5).map((img, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setImageIndex(selectedVariant.variantId, idx)}
-                      className={`relative h-16 rounded-lg overflow-hidden border-2 transition-all ${
-                        currentImageIndex === idx
-                          ? 'border-heritage-gold shadow-lg'
-                          : 'border-transparent hover:border-gray-300'
-                      }`}
-                    >
-                      <img
-                        src={getImageUrl(img.url) ?? undefined}
-                        alt={img.caption || `Image ${idx + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </button>
-                  ))}
+              {selectedVariant.description && (
+                <p className="text-sm text-text-secondary leading-relaxed">{selectedVariant.description}</p>
+              )}
+
+              {selectedVariant.amenities.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-text-primary mb-3">Room amenities</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {selectedVariant.amenities.map((amenity, idx) => (
+                      <div key={idx} className="flex items-center gap-2 text-sm text-text-secondary">
+                        <Check className="w-4 h-4 text-brand shrink-0" />
+                        {amenity}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
-          )}
-
-          {/* Description */}
-          {selectedVariant.description && (
-            <p className="text-gray-700 leading-relaxed mb-4">{selectedVariant.description}</p>
-          )}
-
-          {/* Amenities */}
-          {selectedVariant.amenities && selectedVariant.amenities.length > 0 && (
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-3">Amenities</h4>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {selectedVariant.amenities.map((amenity, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-sm text-gray-600">
-                    <svg className="w-4 h-4 text-heritage-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    {amenity}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </motion.div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
-

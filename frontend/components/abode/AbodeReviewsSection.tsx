@@ -10,8 +10,8 @@ interface AbodeReviewsSectionProps {
 export default function AbodeReviewsSection({ rating, ratingCount }: AbodeReviewsSectionProps) {
   if (rating <= 0) {
     return (
-      <section className="py-8 border-t border-border">
-        <h2 className="text-xl font-semibold text-text-primary mb-2">Reviews</h2>
+      <section className="py-6 sm:py-8 border-t border-border">
+        <h2 className="text-lg sm:text-xl font-semibold text-text-primary mb-2">Reviews</h2>
         <p className="text-sm text-text-secondary">No reviews yet. Be the first to stay with this family.</p>
       </section>
     );
@@ -25,10 +25,10 @@ export default function AbodeReviewsSection({ rating, ratingCount }: AbodeReview
   ];
 
   return (
-    <section className="py-8 border-t border-border">
-      <div className="flex items-center gap-2 mb-6">
-        <Star className="w-5 h-5 fill-text-primary text-text-primary" />
-        <h2 className="text-xl font-semibold text-text-primary">
+    <section className="py-6 sm:py-8 border-t border-border">
+      <div className="flex items-center gap-2 mb-4 sm:mb-6">
+        <Star className="w-5 h-5 fill-text-primary text-text-primary shrink-0" />
+        <h2 className="text-lg sm:text-xl font-semibold text-text-primary">
           {rating.toFixed(2)} · {ratingCount} review{ratingCount !== 1 ? 's' : ''}
         </h2>
       </div>

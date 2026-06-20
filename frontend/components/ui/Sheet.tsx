@@ -59,14 +59,14 @@ export function Sheet({
         )}
       >
         {title && (
-          <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-border sticky top-0 bg-surface z-10">
+          <div className="flex items-center justify-between gap-4 px-4 sm:px-6 py-4 border-b border-border sticky top-0 bg-surface z-10">
             <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
             <Button variant="icon" size="icon" onClick={onClose} aria-label="Close">
               <X className="w-5 h-5" />
             </Button>
           </div>
         )}
-        <div className="p-6">{children}</div>
+        <div className="p-4 sm:p-6">{children}</div>
       </div>
     </div>
   );

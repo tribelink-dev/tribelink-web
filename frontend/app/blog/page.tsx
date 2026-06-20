@@ -20,7 +20,7 @@ const posts = [
     slug: 'what-is-a-kerala-homestay',
     title: 'What is a Kerala Homestay?',
     excerpt:
-      'Learn how staying with a Keralite family differs from hotels and Airbnb — and why it matters for cultural travel.',
+      'Learn how staying with a Keralite family differs from hotels and typical short-term rentals — and why it matters for cultural travel.',
     href: '/kerala/homestays',
   },
   {

@@ -27,10 +27,10 @@ export default function AbodeHostProfile({
   isVerified,
 }: AbodeHostProfileProps) {
   return (
-    <section className="py-8 border-t border-border">
+    <section className="py-6 sm:py-8 border-t border-border">
       <h2 className="text-xl font-semibold text-text-primary mb-6">Meet your host</h2>
       <div className="flex items-start gap-4">
-        <div className="relative w-16 h-16 rounded-full overflow-hidden bg-surface-muted shrink-0">
+        <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden bg-surface-muted shrink-0">
           {host.profilePicture ? (
             <Image
               src={getImageUrl(host.profilePicture) || ''}

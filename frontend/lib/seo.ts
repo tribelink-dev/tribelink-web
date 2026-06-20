@@ -210,7 +210,7 @@ export const KERALA_FAQ_ITEMS = [
       'A Kerala homestay is an authentic stay with a verified local family in Kerala, India. On Triberoutes, you live with a Keralite host, share meals, and experience daily life — not a hotel or generic rental.',
   },
   {
-    question: 'How is Triberoutes different from Airbnb?',
+    question: 'How is Triberoutes different from other homestay platforms?',
     answer:
       'Triberoutes focuses on cultural immersion in Kerala. Every homestay is a family home verified for authenticity, and cultural experiences are curated and guided by your local host — not self-guided tourist activities.',
   },

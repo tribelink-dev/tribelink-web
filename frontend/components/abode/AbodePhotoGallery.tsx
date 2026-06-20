@@ -185,7 +185,7 @@ export default function AbodePhotoGallery({ images, title }: AbodePhotoGalleryPr
         )}
       </div>
 
-      {/* Desktop: Airbnb-style mosaic */}
+      {/* Desktop: mosaic photo grid */}
       <div className="relative hidden sm:grid grid-cols-4 grid-rows-2 gap-2 h-[400px] lg:h-[480px] rounded-xl overflow-hidden">
         <button
           type="button"

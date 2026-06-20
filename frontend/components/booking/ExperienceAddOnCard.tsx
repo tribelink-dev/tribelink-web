@@ -65,102 +65,96 @@ export default function ExperienceAddOnCard({
       <motion.div
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
-        whileHover={{ y: -1 }}
-        className={`relative bg-white rounded-lg shadow-sm border transition-all overflow-hidden flex flex-row items-center group min-w-0 w-full ${
+        className={`relative bg-surface rounded-xl shadow-sm border transition-all overflow-hidden flex flex-col sm:flex-row sm:items-center min-w-0 w-full ${
           isAdded
-            ? 'border-heritage-gold/40 bg-gradient-to-r from-heritage-gold/5 to-transparent shadow-md ring-1 ring-heritage-gold/20'
-            : 'border-gray-200/60 hover:border-heritage-gold/30 hover:shadow-md'
+            ? 'border-brand/40 bg-brand/5 shadow-md ring-1 ring-brand/20'
+            : 'border-border hover:border-brand/30 hover:shadow-md'
         }`}
       >
-        {/* Small Image Section - Left Side - Clickable */}
         {imageSrc ? (
           <button
             type="button"
             onClick={() => setShowImageModal(true)}
-            className="relative w-16 h-16 flex-shrink-0 overflow-hidden rounded-l-lg cursor-pointer group/image"
+            className="relative w-full sm:w-20 sm:h-20 aspect-[16/9] sm:aspect-auto flex-shrink-0 overflow-hidden sm:rounded-l-xl cursor-pointer group/image"
           >
             <motion.img
               src={imageSrc}
               alt={experience.title}
               className="w-full h-full object-cover"
-              whileHover={{ scale: 1.1 }}
+              whileHover={{ scale: 1.05 }}
               transition={{ duration: 0.3 }}
             />
             <div className="absolute inset-0 bg-black/0 group-hover/image:bg-black/20 transition-colors flex items-center justify-center">
               <ZoomIn className="w-4 h-4 text-white opacity-0 group-hover/image:opacity-100 transition-opacity" />
             </div>
             {experience.isAddOn && experience.addOnPricing?.discount && (
-              <div className="absolute top-1 left-1 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-1 py-0.5 rounded text-[10px] font-bold shadow-sm">
+              <div className="absolute top-2 left-2 sm:top-1 sm:left-1 bg-success text-white px-1.5 py-0.5 rounded text-[10px] font-bold shadow-sm">
                 {experience.addOnPricing.discount}%
               </div>
             )}
           </button>
         ) : (
-          <div className="relative w-16 h-16 flex-shrink-0 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center rounded-l-lg">
-            <Sparkles className="w-4 h-4 text-gray-400" />
+          <div className="relative w-full sm:w-20 sm:h-20 aspect-[16/9] sm:aspect-auto flex-shrink-0 bg-surface-muted flex items-center justify-center sm:rounded-l-xl">
+            <Sparkles className="w-5 h-5 text-text-secondary" />
           </div>
         )}
 
-        {/* Content Section - Compact Horizontal Layout */}
-        <div className="flex flex-1 items-center gap-3 px-3 py-2.5 min-w-0">
-          {/* Title & Meta Info */}
+        <div className="flex flex-col sm:flex-row flex-1 sm:items-center gap-3 px-4 py-3 sm:py-2.5 min-w-0">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-0.5">
-              <h3 className="text-sm font-semibold text-gray-900 truncate group-hover:text-heritage-gold transition-colors">
+              <h3 className="text-sm font-semibold text-text-primary line-clamp-2 sm:truncate">
                 {experience.title}
               </h3>
               {isAdded && (
-                <CheckCircle2 className="w-3.5 h-3.5 text-heritage-gold flex-shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-brand flex-shrink-0" />
               )}
             </div>
-            <div className="flex items-center gap-2 text-xs text-gray-500">
+            <div className="flex items-center gap-3 text-xs text-text-secondary">
               <span className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
                 {experience.duration}h
               </span>
               <span className="flex items-center gap-1">
                 <Users className="w-3 h-3" />
-                {experience.maxParticipants}
+                Up to {experience.maxParticipants}
               </span>
             </div>
           </div>
 
-          {/* Price */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {experience.isAddOn && experience.addOnPricing?.discount && (
-              <span className="text-xs text-gray-400 line-through">
-                {formatPrice(experience.price, experience.currency)}
+          <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-border shrink-0">
+            <div className="flex items-center gap-2">
+              {experience.isAddOn && experience.addOnPricing?.discount && (
+                <span className="text-xs text-text-secondary line-through">
+                  {formatPrice(experience.price, experience.currency)}
+                </span>
+              )}
+              <span className="text-base font-bold text-brand whitespace-nowrap">
+                {formatPrice(displayPrice, experience.currency || experience.addOnPricing?.currency || 'USD')}
               </span>
-            )}
-            <span className="text-base font-bold bg-gradient-to-r from-heritage-gold to-amber-600 bg-clip-text text-transparent whitespace-nowrap">
-              {formatPrice(displayPrice, experience.currency || experience.addOnPricing?.currency || 'USD')}
-            </span>
-          </div>
+            </div>
 
-          {/* Action Button - Compact */}
-          {!isAdded ? (
-            <motion.button
-              type="button"
-              onClick={handleAdd}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-3 py-1.5 bg-gradient-to-r from-heritage-gold to-amber-500 text-white font-medium rounded-md shadow-sm hover:shadow transition-all flex items-center gap-1 text-xs flex-shrink-0"
-            >
-              <Plus className="w-3 h-3" />
-              <span>Add</span>
-            </motion.button>
-          ) : (
-            <motion.button
-              type="button"
-              onClick={onRemove}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white font-medium rounded-md shadow-sm hover:shadow transition-all flex items-center gap-1 text-xs flex-shrink-0"
-            >
-              <X className="w-3 h-3" />
-              <span>Remove</span>
-            </motion.button>
-          )}
+            {!isAdded ? (
+              <motion.button
+                type="button"
+                onClick={handleAdd}
+                whileTap={{ scale: 0.95 }}
+                className="touch-target px-4 py-2 bg-brand text-white font-medium rounded-lg shadow-sm flex items-center gap-1.5 text-sm flex-shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add</span>
+              </motion.button>
+            ) : (
+              <motion.button
+                type="button"
+                onClick={onRemove}
+                whileTap={{ scale: 0.95 }}
+                className="touch-target px-4 py-2 bg-destructive text-white font-medium rounded-lg shadow-sm flex items-center gap-1.5 text-sm flex-shrink-0"
+              >
+                <X className="w-4 h-4" />
+                <span>Remove</span>
+              </motion.button>
+            )}
+          </div>
         </div>
       </motion.div>
 
@@ -173,7 +167,7 @@ export default function ExperienceAddOnCard({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setShowImageModal(false)}
-            className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/90 backdrop-blur-md z-[100] flex items-center justify-center p-4 safe-area-top safe-area-bottom"
           >
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
@@ -191,7 +185,7 @@ export default function ExperienceAddOnCard({
               <button
                 type="button"
                 onClick={() => setShowImageModal(false)}
-                className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-full w-10 h-10 flex items-center justify-center shadow-lg hover:bg-white transition-colors z-10"
+                className="absolute top-4 right-4 touch-target bg-white/90 backdrop-blur-sm rounded-full w-10 h-10 flex items-center justify-center shadow-lg hover:bg-white transition-colors z-10"
               >
                 <X className="w-5 h-5 text-gray-700" />
               </button>
