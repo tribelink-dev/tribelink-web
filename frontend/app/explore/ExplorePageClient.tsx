@@ -120,29 +120,12 @@ function ExplorePageContent({
     router.replace(`/explore?${params.toString()}`, { scroll: false });
   }, [router, searchParams]);
 
-  // Fetch all abodes when abodes section is toggled (only if no search filters are active)
+  // Always fetch full listing from API — SSR seed (initialAbodes) is for SEO only
   useEffect(() => {
-    if (
-      activeSection === 'abodes' &&
-      allAbodes.length === 0 &&
-      !loadingAbodes &&
-      !searchFilters.location &&
-      initialAbodes.length === 0
-    ) {
+    if (searchFilters.location) return;
+    if (activeSection === 'abodes') {
       fetchAllAbodes();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSection]);
-
-  // Fetch all experiences when experiences section is toggled (only if no search filters are active)
-  useEffect(() => {
-    if (
-      activeSection === 'experiences' &&
-      allExperiences.length === 0 &&
-      !loadingExperiences &&
-      !searchFilters.location &&
-      initialExperiences.length === 0
-    ) {
+    } else if (activeSection === 'experiences') {
       fetchAllExperiences();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

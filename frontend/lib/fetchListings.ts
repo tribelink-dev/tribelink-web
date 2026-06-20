@@ -43,7 +43,7 @@ export async function fetchPublicAbodes(limit = 12): Promise<ListingAbode[]> {
     });
     if (!response.ok) return [];
     const data = await response.json();
-    return (data.localHosts || []).filter((a: ListingAbode) => a.isVerified !== false);
+    return (data.localHosts || []);
   } catch {
     return [];
   }
