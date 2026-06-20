@@ -28,8 +28,14 @@ export default function PlatformFooter() {
               <img src={LOGO_PATH} alt={LOGO_ALT_TEXT} className="h-8 w-auto" />
             </Link>
             <p className="text-sm text-text-secondary max-w-xs">
-              Authentic family homestays and cultural experiences across India.
+              Authentic Kerala family homestays and cultural experiences guided by local hosts.
             </p>
+            <a
+              href="/llms.txt"
+              className="text-xs text-text-secondary hover:text-text-primary mt-2 inline-block"
+            >
+              llms.txt
+            </a>
           </div>
           {Object.entries(footerLinks).map(([title, links]) => (
             <div key={title}>

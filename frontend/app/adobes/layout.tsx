@@ -1,39 +1,33 @@
 import type { Metadata } from 'next';
-import { getBaseUrl, validateImageUrl } from '@/lib/seo';
+import { getBaseUrl, getDefaultOgImage } from '@/lib/seo';
 
 export const metadata: Metadata = {
-  title: "Discover Authentic Local Stays | Triberoutes",
-  description: "Discover authentic local stays, homestays, and cultural accommodations. Experience real local living with Triberoutes.",
-  keywords: [
-    "authentic stays",
-    "local homestays",
-    "cultural accommodations",
-    "local hosts",
-    "authentic travel stays",
-  ],
+  title: 'Kerala Homestays',
+  description:
+    'Browse verified Kerala homestays on Triberoutes. Stay with local families and live like a Keralite.',
   openGraph: {
-    title: "Discover Authentic Local Stays | Triberoutes",
-    description: "Discover authentic local stays, homestays, and cultural accommodations. Experience real local living.",
-    url: `${getBaseUrl()}/adobes`,
-    siteName: "Triberoutes",
+    title: 'Kerala Homestays | Triberoutes',
+    description: 'Stay with verified Kerala families. Live like a Keralite.',
+    url: `${getBaseUrl()}/explore?section=abodes`,
+    siteName: 'Triberoutes',
     images: [
       {
-        url: validateImageUrl('/assets/logo.jpg') || `${getBaseUrl()}/assets/logo.jpg`,
+        url: getDefaultOgImage(),
         width: 1200,
         height: 630,
-        alt: "Discover Authentic Stays - Triberoutes",
+        alt: 'Kerala Homestays on Triberoutes',
       },
     ],
-    type: "website",
+    type: 'website',
   },
   twitter: {
-    card: "summary_large_image",
-    title: "Discover Authentic Local Stays | Triberoutes",
-    description: "Discover authentic local stays, homestays, and cultural accommodations.",
-    images: [validateImageUrl('/assets/logo.jpg') || `${getBaseUrl()}/assets/logo.jpg`],
+    card: 'summary_large_image',
+    title: 'Kerala Homestays | Triberoutes',
+    description: 'Stay with verified Kerala families. Live like a Keralite.',
+    images: [getDefaultOgImage()],
   },
   alternates: {
-    canonical: `${getBaseUrl()}/adobes`,
+    canonical: `${getBaseUrl()}/explore?section=abodes`,
   },
 };
 
@@ -44,4 +38,3 @@ export default function AbodesLayout({
 }) {
   return <>{children}</>;
 }
-

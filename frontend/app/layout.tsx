@@ -1,4 +1,7 @@
 import type { Metadata, Viewport } from "next";
+import { Inter, Montserrat } from "next/font/google";
+import { GoogleAnalytics } from "@next/third-parties/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import { CurrencyProvider } from "@/lib/CurrencyContext";
@@ -7,29 +10,45 @@ import { SavedProvider } from "@/lib/SavedContext";
 import ConditionalLayout from "@/components/ConditionalLayout";
 import EmergencySOS from "@/components/EmergencySOS";
 import StructuredData from "@/components/StructuredData";
-import { getBaseUrl, validateImageUrl } from "@/lib/seo";
+import { getBaseUrl, getDefaultOgImage } from "@/lib/seo";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  variable: "--font-montserrat",
+  display: "swap",
+});
 
 const baseUrl = getBaseUrl();
-const defaultImage = validateImageUrl('/assets/logo.jpg') || `${baseUrl}/assets/logo.jpg`;
+const defaultImage = getDefaultOgImage();
+const googleVerification =
+  process.env.GOOGLE_SITE_VERIFICATION || 'Vm6JYc-k5KbC_rxdhImNEkqOGot2R9psJDzJ7-ULVr0';
+const gaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default: "Triberoutes - Authentic Local Experiences & Cultural Stays",
+    default: "Triberoutes - Kerala Homestays & Cultural Experiences",
     template: "%s | Triberoutes",
   },
-  description: "Discover authentic local experiences, book unique cultural stays, and connect with local hosts for your perfect journey. Experience real travel with Triberoutes.",
+  description:
+    "Live with a Keralite family. Book verified Kerala homestays and traditional cultural experiences curated and guided by local hosts. For international and Indian travelers seeking cultural understanding.",
   keywords: [
-    "authentic travel experiences",
-    "local homestays",
-    "cultural tourism",
-    "tribe routes",
+    "Kerala homestay",
+    "stay with local family Kerala",
+    "live like a Keralite",
+    "Kerala cultural experiences",
+    "traditional Kerala activities",
+    "authentic Kerala homestay",
+    "cultural tourism Kerala",
     "triberoutes",
-    "authentic local experiences",
-    "cultural homestays",
-    "local hosts",
-    "cultural immersion",
-    "authentic travel",
+    "guided by local host Kerala",
+    "Kerala cultural immersion",
   ],
   authors: [{ name: "Triberoutes" }],
   creator: "Triberoutes",
@@ -42,23 +61,25 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: baseUrl,
+    url: `${baseUrl}/explore`,
     siteName: "Triberoutes",
-    title: "Triberoutes - Authentic Local Experiences & Cultural Stays",
-    description: "Discover authentic local experiences, book unique cultural stays, and connect with local hosts for your perfect journey.",
+    title: "Triberoutes - Kerala Homestays & Cultural Experiences",
+    description:
+      "Live with a Keralite family. Book verified Kerala homestays and traditional cultural experiences guided by local hosts.",
     images: [
       {
         url: defaultImage,
         width: 1200,
         height: 630,
-        alt: "Triberoutes - Authentic Travel Experiences",
+        alt: "Triberoutes - Kerala Homestays & Cultural Experiences",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Triberoutes - Authentic Local Experiences & Cultural Stays",
-    description: "Discover authentic local experiences, book unique cultural stays, and connect with local hosts for your perfect journey.",
+    title: "Triberoutes - Kerala Homestays & Cultural Experiences",
+    description:
+      "Live with a Keralite family. Book verified Kerala homestays and traditional cultural experiences guided by local hosts.",
     images: [defaultImage],
     creator: "@triberoutes",
   },
@@ -74,13 +95,10 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    // Add verification codes when available
-    // google: "your-google-verification-code",
-    // yandex: "your-yandex-verification-code",
-    // yahoo: "your-yahoo-verification-code",
+    google: googleVerification,
   },
   alternates: {
-    canonical: baseUrl,
+    canonical: `${baseUrl}/explore`,
   },
   category: "Travel",
 };
@@ -100,7 +118,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${inter.variable} ${montserrat.variable}`}>
       <body>
         <StructuredData />
         <AuthProvider>
@@ -115,6 +133,8 @@ export default function RootLayout({
             </CartProvider>
           </CurrencyProvider>
         </AuthProvider>
+        <SpeedInsights />
+        {gaId ? <GoogleAnalytics gaId={gaId} /> : null}
       </body>
     </html>
   );

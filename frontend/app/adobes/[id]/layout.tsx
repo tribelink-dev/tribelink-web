@@ -1,163 +1,105 @@
 import type { Metadata } from 'next';
-import { getBaseUrl, validateImageUrl, sanitizeMetadata, generateMetadataTitle, generateMetadataDescription, isValidObjectId } from '@/lib/seo';
+import {
+  getBaseUrl,
+  validateImageUrl,
+  sanitizeMetadata,
+  generateMetadataTitle,
+  generateMetadataDescription,
+  isValidObjectId,
+  generateBreadcrumbSchema,
+} from '@/lib/seo';
+import { fetchAbodeById } from '@/lib/fetchAbode';
 
-interface AbodeData {
-  _id: string;
-  abodeDetails: {
-    title?: string;
-    description: string;
-  };
-  location: {
-    country: string;
-    state: string;
-    district: string;
-    address?: string;
-  };
-  images: Array<{
-    url: string;
-    isMain: boolean;
-  }>;
-  rating: number;
-  ratingCount: number;
-  pricing: {
-    pricePerNight: number;
-    currency: string;
-  };
-  isVerified: boolean;
-}
-
-/**
- * Fetch abode data for metadata generation
- * Security: Validates ID before fetching
- */
-async function fetchAbodeData(id: string): Promise<AbodeData | null> {
-  // Validate ID format to prevent NoSQL injection
-  if (!isValidObjectId(id)) {
-    return null;
-  }
-
-  try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-    const response = await fetch(`${apiUrl}/abodes/${id}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      // Cache for 1 hour
-      next: { revalidate: 3600 },
-      signal: AbortSignal.timeout(5000), // 5 second timeout
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const data = await response.json();
-    const abode = data.localHost;
-
-    // Only return if abode is verified (published)
-    if (!abode || !abode.isVerified) {
-      return null;
-    }
-
-    return abode;
-  } catch (error) {
-    // Silently fail - return null for error cases
-    return null;
-  }
-}
-
-/**
- * Generate LodgingBusiness structured data
- */
-function generateLodgingBusinessSchema(abode: AbodeData, baseUrl: string) {
-  const mainImage = abode.images?.find(img => img.isMain) || abode.images?.[0];
+function generateLodgingBusinessSchema(
+  abode: NonNullable<Awaited<ReturnType<typeof fetchAbodeById>>>['abode'],
+  baseUrl: string
+) {
+  const mainImage = abode.images?.find((img) => img.isMain) || abode.images?.[0];
   const imageUrl = mainImage ? validateImageUrl(mainImage.url) : null;
 
   return {
     '@context': 'https://schema.org',
     '@type': 'LodgingBusiness',
-    name: sanitizeMetadata(abode.abodeDetails?.title || 'Authentic Local Stay'),
+    name: sanitizeMetadata(abode.abodeDetails?.title || 'Kerala Homestay'),
     description: sanitizeMetadata(abode.abodeDetails?.description, 500),
     image: imageUrl ? [imageUrl] : undefined,
     address: {
       '@type': 'PostalAddress',
-      addressCountry: abode.location?.country || '',
-      addressRegion: abode.location?.state || '',
+      addressCountry: abode.location?.country || 'India',
+      addressRegion: abode.location?.state || 'Kerala',
       addressLocality: abode.location?.district || '',
       streetAddress: abode.location?.address || '',
     },
-    aggregateRating: abode.ratingCount > 0 ? {
-      '@type': 'AggregateRating',
-      ratingValue: abode.rating || 0,
-      reviewCount: abode.ratingCount || 0,
-    } : undefined,
-    priceRange: abode.pricing?.pricePerNight 
-      ? `${abode.pricing.currency}${abode.pricing.pricePerNight}` 
+    aggregateRating:
+      abode.ratingCount > 0
+        ? {
+            '@type': 'AggregateRating',
+            ratingValue: abode.rating || 0,
+            reviewCount: abode.ratingCount || 0,
+          }
+        : undefined,
+    priceRange: abode.pricing?.pricePerNight
+      ? `${abode.pricing.currency}${abode.pricing.pricePerNight}`
       : undefined,
   };
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
   const { id } = await params;
   const baseUrl = getBaseUrl();
-  
-  // Validate ID
+
   if (!id || !isValidObjectId(id)) {
-    // Return generic metadata for invalid IDs
     return {
-      title: 'Abode Not Found | Triberoutes',
+      title: 'Abode Not Found',
       description: 'The requested abode could not be found.',
-      robots: {
-        index: false,
-        follow: false,
-      },
+      robots: { index: false, follow: false },
     };
   }
 
-  const abode = await fetchAbodeData(id);
+  const result = await fetchAbodeById(id);
 
-  // If abode not found or not verified, return noindex metadata
-  if (!abode) {
+  if (!result) {
     return {
-      title: 'Abode Not Found | Triberoutes',
+      title: 'Abode Not Found',
       description: 'The requested abode could not be found.',
-      robots: {
-        index: false,
-        follow: false,
-      },
+      robots: { index: false, follow: false },
     };
   }
 
-  // Generate safe metadata
-  const title = abode.abodeDetails?.title || 'Authentic Local Stay';
-  const location = [abode.location?.district, abode.location?.state, abode.location?.country]
+  const { abode } = result;
+  const title = abode.abodeDetails?.title || 'Kerala Homestay';
+  const location = [abode.location?.district, abode.location?.state || 'Kerala', abode.location?.country || 'India']
     .filter(Boolean)
     .join(', ');
-  
+
   const metadataTitle = generateMetadataTitle(
-    `${sanitizeMetadata(title)} - Authentic Stay in ${sanitizeMetadata(location)}`,
+    `${sanitizeMetadata(title)} - Kerala Homestay in ${sanitizeMetadata(location)}`,
     'Triberoutes'
   );
-  
+
   const description = generateMetadataDescription(
     abode.abodeDetails?.description,
-    `Experience authentic local living in ${location}. Book your stay with Triberoutes.`
+    `Live with a Keralite family in ${location}. Book this verified Kerala homestay on Triberoutes.`
   );
 
-  const mainImage = abode.images?.find(img => img.isMain) || abode.images?.[0];
-  const ogImage = mainImage ? validateImageUrl(mainImage.url) : validateImageUrl('/assets/logo.jpg') || `${baseUrl}/assets/logo.jpg`;
+  const mainImage = abode.images?.find((img) => img.isMain) || abode.images?.[0];
+  const ogImage =
+    mainImage ? validateImageUrl(mainImage.url) : `${baseUrl}/opengraph-image`;
   const canonicalUrl = `${baseUrl}/adobes/${id}`;
 
   return {
     title: metadataTitle,
     description,
     keywords: [
-      'authentic stay',
-      'local homestay',
+      'Kerala homestay',
+      'stay with local family',
       abode.location?.district,
-      abode.location?.state,
-      'cultural accommodation',
+      'live like a Keralite',
+      'authentic Kerala homestay',
     ].filter(Boolean) as string[],
     openGraph: {
       title: metadataTitle,
@@ -166,7 +108,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       siteName: 'Triberoutes',
       images: [
         {
-          url: ogImage || `${baseUrl}/assets/logo.jpg`,
+          url: ogImage || `${baseUrl}/opengraph-image`,
           width: 1200,
           height: 630,
           alt: sanitizeMetadata(title, 100),
@@ -178,15 +120,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       card: 'summary_large_image',
       title: metadataTitle,
       description,
-      images: [ogImage || `${baseUrl}/assets/logo.jpg`],
+      images: [ogImage || `${baseUrl}/opengraph-image`],
     },
-    alternates: {
-      canonical: canonicalUrl,
-    },
-    robots: {
-      index: true,
-      follow: true,
-    },
+    alternates: { canonical: canonicalUrl },
+    robots: { index: true, follow: true },
   };
 }
 
@@ -199,29 +136,40 @@ export default async function AbodeDetailLayout({
 }) {
   const { id } = await params;
   const baseUrl = getBaseUrl();
-  
-  // Generate structured data for this specific abode
-  let structuredData = null;
-  
+
+  let lodgingSchema: object | null = null;
+  let breadcrumbSchema: object | null = null;
+
   if (isValidObjectId(id)) {
-    const abode = await fetchAbodeData(id);
-    if (abode) {
-      structuredData = generateLodgingBusinessSchema(abode, baseUrl);
+    const result = await fetchAbodeById(id);
+    if (result) {
+      lodgingSchema = generateLodgingBusinessSchema(result.abode, baseUrl);
+      breadcrumbSchema = generateBreadcrumbSchema([
+        { name: 'Explore', path: '/explore' },
+        { name: 'Kerala Homestays', path: '/explore?section=abodes' },
+        {
+          name: sanitizeMetadata(result.abode.abodeDetails?.title || 'Kerala Homestay'),
+          path: `/adobes/${id}`,
+        },
+      ]);
     }
   }
 
   return (
     <>
-      {structuredData && (
+      {lodgingSchema && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(structuredData),
-          }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(lodgingSchema) }}
+        />
+      )}
+      {breadcrumbSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
         />
       )}
       {children}
     </>
   );
 }
-

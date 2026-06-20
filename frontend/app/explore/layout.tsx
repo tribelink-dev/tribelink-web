@@ -1,47 +1,85 @@
 import type { Metadata } from 'next';
-import { getBaseUrl, validateImageUrl } from '@/lib/seo';
+import { getBaseUrl, getDefaultOgImage } from '@/lib/seo';
+import { fetchInitialListings } from '@/lib/fetchListings';
+import { generateFAQPageSchema, generateItemListSchema } from '@/lib/seo';
 
 export const metadata: Metadata = {
-  title: "Explore Authentic Experiences & Stays | Triberoutes",
-  description: "Explore and discover authentic local experiences, cultural stays, and unique accommodations. Find your perfect travel experience with Triberoutes.",
+  title: 'Kerala Homestays & Cultural Experiences',
+  description:
+    'Live with a Keralite family. Browse verified Kerala homestays and book traditional cultural experiences guided by local hosts on Triberoutes.',
   keywords: [
-    "explore experiences",
-    "authentic travel",
-    "cultural stays",
-    "local accommodations",
-    "travel experiences",
+    'Kerala homestay',
+    'stay with local family Kerala',
+    'Kerala cultural experiences',
+    'live like a Keralite',
+    'traditional Kerala activities',
+    'authentic Kerala homestay',
   ],
   openGraph: {
-    title: "Explore Authentic Experiences & Stays | Triberoutes",
-    description: "Explore and discover authentic local experiences, cultural stays, and unique accommodations.",
+    title: 'Kerala Homestays & Cultural Experiences | Triberoutes',
+    description:
+      'Live with a Keralite family. Browse verified Kerala homestays and traditional cultural experiences guided by local hosts.',
     url: `${getBaseUrl()}/explore`,
-    siteName: "Triberoutes",
+    siteName: 'Triberoutes',
     images: [
       {
-        url: validateImageUrl('/assets/logo.jpg') || `${getBaseUrl()}/assets/logo.jpg`,
+        url: getDefaultOgImage(),
         width: 1200,
         height: 630,
-        alt: "Explore Triberoutes - Authentic Travel Experiences",
+        alt: 'Triberoutes - Kerala Homestays & Cultural Experiences',
       },
     ],
-    type: "website",
+    type: 'website',
   },
   twitter: {
-    card: "summary_large_image",
-    title: "Explore Authentic Experiences & Stays | Triberoutes",
-    description: "Explore and discover authentic local experiences, cultural stays, and unique accommodations.",
-    images: [validateImageUrl('/assets/logo.jpg') || `${getBaseUrl()}/assets/logo.jpg`],
+    card: 'summary_large_image',
+    title: 'Kerala Homestays & Cultural Experiences | Triberoutes',
+    description:
+      'Live with a Keralite family. Browse verified Kerala homestays and traditional cultural experiences guided by local hosts.',
+    images: [getDefaultOgImage()],
   },
   alternates: {
     canonical: `${getBaseUrl()}/explore`,
   },
 };
 
-export default function ExploreLayout({
+export default async function ExploreLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
-}
+  const { abodes, experiences } = await fetchInitialListings();
+  const baseUrl = getBaseUrl();
 
+  const itemListItems = [
+    ...abodes.slice(0, 6).map((abode) => ({
+      name: abode.abodeDetails?.title || 'Kerala Homestay',
+      url: `${baseUrl}/adobes/${abode._id}`,
+      description: abode.abodeDetails?.description,
+    })),
+    ...experiences.slice(0, 6).map((exp) => ({
+      name: exp.title || 'Kerala Cultural Experience',
+      url: `${baseUrl}/experiences/${exp._id}`,
+      description: exp.description,
+    })),
+  ];
+
+  const itemListSchema = itemListItems.length > 0 ? generateItemListSchema(itemListItems) : null;
+  const faqSchema = generateFAQPageSchema();
+
+  return (
+    <>
+      {itemListSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }}
+        />
+      )}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
+      {children}
+    </>
+  );
+}

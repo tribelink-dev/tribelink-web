@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Host Portal',
+  title: 'Know Your Traveler',
   robots: { index: false, follow: false },
 };
 
-export default function HostLayout({ children }: { children: React.ReactNode }) {
+export default function KytLayout({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }

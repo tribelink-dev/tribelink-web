@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Host Portal',
+  title: 'Bookings',
   robots: { index: false, follow: false },
 };
 
-export default function HostLayout({ children }: { children: React.ReactNode }) {
+export default function BookingsLayout({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }

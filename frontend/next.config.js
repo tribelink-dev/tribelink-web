@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  poweredByHeader: false,
   
   // Image domain whitelist for security (prevents SSRF)
   images: {
@@ -71,7 +72,7 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // unsafe-eval needed for Next.js, unsafe-inline for structured data
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // Allow Google Fonts
               "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com", // Allow Google Fonts in style elements
               "img-src 'self' data: https://res.cloudinary.com https://triberoutes.com https://www.triberoutes.com https://triberoutes-app.vercel.app",
@@ -79,7 +80,7 @@ const nextConfig = {
               "media-src 'self' https://cdn.coverr.co", // Allow Coverr videos
               // api.cloudinary.com: direct browser->Cloudinary uploads for abode photos
               // res.cloudinary.com: image fetches (already in img-src; here so XHR-based loads work too)
-              "connect-src 'self' https://api.triberoutes.com http://localhost:5000 https://api.cloudinary.com https://res.cloudinary.com",
+              "connect-src 'self' https://api.triberoutes.com http://localhost:5000 https://api.cloudinary.com https://res.cloudinary.com https://www.google-analytics.com https://region1.google-analytics.com https://www.googletagmanager.com https://vitals.vercel-insights.com",
               "frame-ancestors 'self'",
               "base-uri 'self'",
               "form-action 'self'",

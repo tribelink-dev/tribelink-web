@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShoppingCart, ArrowLeft, Trash2 } from 'lucide-react';
 import { useCart } from '@/lib/CartContext';
@@ -16,15 +16,21 @@ import MobileStickyBar from '@/components/ui/MobileStickyBar';
 
 export default function CartPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { cart, loading, checkout, clearCart } = useCart();
   const { formatPrice } = useCurrency();
   const [checkingOut, setCheckingOut] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
   const { toasts, removeToast, error: showError } = useToast();
 
-  if (!user) {
-    router.push(`/login?redirect=${encodeURIComponent('/cart')}`);
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      router.replace(`/login?redirect=${encodeURIComponent('/cart')}`);
+    }
+  }, [user, authLoading, router]);
+
+  if (authLoading || !user) {
     return null;
   }
 

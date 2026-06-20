@@ -3,37 +3,68 @@ import { getBaseUrl } from '@/lib/seo';
 
 /**
  * Robots.txt configuration
- * Security-focused: Only lists intentionally public paths
+ * Public indexable routes + explicit AI crawler allowances for AEO
+ * See also: /llms.txt for LLM discovery
  */
+
+const PUBLIC_ALLOW = [
+  '/explore',
+  '/adobes',
+  '/adobes/*',
+  '/experiences/*',
+  '/kerala',
+  '/kerala/*',
+  '/about',
+  '/stories',
+  '/contact',
+  '/blog',
+  '/llms.txt',
+];
+
+const PRIVATE_DISALLOW = [
+  '/host/*',
+  '/provider/*',
+  '/dashboard/*',
+  '/auth/*',
+  '/login',
+  '/signup',
+  '/admin/*',
+  '/api/*',
+  '/trips/*',
+  '/cart',
+  '/bookings/*',
+  '/kyt',
+  '/_next/*',
+  '/static/*',
+];
+
+const AI_CRAWLERS = [
+  'GPTBot',
+  'ChatGPT-User',
+  'PerplexityBot',
+  'ClaudeBot',
+  'Google-Extended',
+  'anthropic-ai',
+  'Bytespider',
+];
 
 export default function robots(): MetadataRoute.Robots {
   const baseUrl = getBaseUrl();
-  
+
   return {
     rules: [
       {
         userAgent: '*',
-        allow: [
-          '/',
-          '/explore',
-          '/adobes',
-          '/adobes/*', // Individual abode pages
-        ],
-        disallow: [
-          '/host/*',      // Host dashboard and management
-          '/provider/*',  // Provider dashboard
-          '/dashboard/*', // User dashboard
-          '/auth/*',      // Authentication routes
-          '/login',       // Login pages
-          '/signup',      // Signup pages
-          '/admin/*',     // Admin routes (if any)
-          '/api/*',       // API endpoints
-          '/_next/*',     // Next.js internal
-          '/static/*',    // Static files (if needed)
-        ],
+        allow: PUBLIC_ALLOW,
+        disallow: PRIVATE_DISALLOW,
       },
+      ...AI_CRAWLERS.map((userAgent) => ({
+        userAgent,
+        allow: PUBLIC_ALLOW,
+        disallow: PRIVATE_DISALLOW,
+      })),
     ],
     sitemap: `${baseUrl}/sitemap.xml`,
+    host: baseUrl.replace(/^https?:\/\//, ''),
   };
 }
-
