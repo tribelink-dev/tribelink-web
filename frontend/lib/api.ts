@@ -1,4 +1,5 @@
 import axios, { type AxiosError } from 'axios';
+import { TRIBEROUTES_CLIENT_HEADER } from './serverApi';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 const isHostSidePath = (path: string) =>
@@ -29,6 +30,7 @@ const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
+    'X-Triberoutes-Client': TRIBEROUTES_CLIENT_HEADER,
   },
   // 60s default — covers Render free-tier cold starts (typically 30–60s for the
   // first request to wake the dyno). FormData uploads override this to 15min

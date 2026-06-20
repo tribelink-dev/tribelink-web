@@ -4,7 +4,9 @@ import { fetchInitialListings } from '@/lib/fetchListings';
 import { generateFAQPageSchema, generateItemListSchema } from '@/lib/seo';
 
 export const metadata: Metadata = {
-  title: 'Kerala Homestays & Cultural Experiences',
+  title: {
+    absolute: 'Triberoutes',
+  },
   description:
     'Live with a Keralite family. Browse verified Kerala homestays and book traditional cultural experiences guided by local hosts on Triberoutes.',
   keywords: [

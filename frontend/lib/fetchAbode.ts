@@ -6,6 +6,7 @@
 import { cache } from 'react';
 import { isValidObjectId } from './seo';
 import { SERVER_FETCH_TIMEOUT_MS } from './fetchListings';
+import { getServerFetchHeaders } from './serverApi';
 
 function getApiUrl(): string {
   return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -71,7 +72,7 @@ async function fetchAbodeByIdUncached(id: string): Promise<{
     const apiUrl = getApiUrl();
     const response = await fetch(`${apiUrl}/abodes/${id}`, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getServerFetchHeaders(),
       next: { revalidate: 3600 },
       signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
     });

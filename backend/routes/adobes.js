@@ -11,6 +11,10 @@ const Booking = require('../models/Booking');
 const { authenticate, requireUser, requireHost } = require('../middleware/auth');
 const upload = require('../middleware/uploadCloudinary');
 const { getBaseUrlFromRequest } = require('../utils/imageUtils');
+const { publicListingLimiter, anonymousListingLimiter } = require('../middleware/rateLimitPublic');
+const clientFingerprint = require('../middleware/clientFingerprint');
+
+const publicReadLimiter = [clientFingerprint, anonymousListingLimiter, publicListingLimiter];
 
 const router = express.Router();
 
@@ -72,7 +76,7 @@ function isTrustedAbodeImageUrl(url) {
 }
 
 // List all local hosts (abodes) with filters
-router.get('/', async (req, res) => {
+router.get('/', publicReadLimiter, async (req, res) => {
   try {
     const {
       country,
@@ -86,9 +90,12 @@ router.get('/', async (req, res) => {
       capacity,
       languages,
       page = 1,
-      limit = 20,
+      limit: limitQuery,
       sort = 'rating' // rating, price, newest
     } = req.query;
+
+    const pageNum = Math.max(1, Number(page) || 1);
+    const limitNum = Math.min(Math.max(1, Number(limitQuery) || 20), 50);
 
     // Build query
     const query = {};
@@ -138,12 +145,12 @@ router.get('/', async (req, res) => {
     }
 
     // Execute query with pagination
-    const skip = (Number(page) - 1) * Number(limit);
+    const skip = (pageNum - 1) * limitNum;
     const localHosts = await LocalHost.find(query)
       .populate('providerId', 'name email phoneNumber profilePicture rating')
       .sort(sortOption)
       .skip(skip)
-      .limit(Number(limit));
+      .limit(limitNum);
 
     const total = await LocalHost.countDocuments(query);
 
@@ -216,10 +223,10 @@ router.get('/', async (req, res) => {
       success: true,
       localHosts: normalizedHosts,
       pagination: {
-        page: Number(page),
-        limit: Number(limit),
+        page: pageNum,
+        limit: limitNum,
         total,
-        pages: Math.ceil(total / Number(limit))
+        pages: Math.ceil(total / limitNum)
       }
     });
   } catch (error) {
@@ -247,7 +254,7 @@ router.post('/upload-photo', authenticate, requireHost, upload.single('image'), 
 });
 
 // Get abode details by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', publicReadLimiter, async (req, res) => {
   try {
     const Experience = require('../models/Experience');
     const localHost = await LocalHost.findById(req.params.id)

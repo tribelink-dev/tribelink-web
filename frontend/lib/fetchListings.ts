@@ -5,11 +5,18 @@
 
 import { cache } from 'react';
 import { isValidObjectId } from './seo';
+import { getServerFetchHeaders } from './serverApi';
 
 export const SERVER_FETCH_TIMEOUT_MS = 15000;
+const SITEMAP_PAGE_LIMIT = 50;
+const MAX_SITEMAP_PAGES = 100;
 
 function getApiUrl(): string {
   return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+}
+
+function isProductionApiUrl(apiUrl: string): boolean {
+  return Boolean(apiUrl) && !apiUrl.includes('localhost') && !apiUrl.includes('127.0.0.1');
 }
 
 export interface ListingAbode {
@@ -22,6 +29,8 @@ export interface ListingAbode {
   pricing?: { pricePerNight?: number; currency?: string };
   isVerified?: boolean;
   isArchived?: boolean;
+  updatedAt?: string;
+  createdAt?: string;
 }
 
 export interface ListingExperience {
@@ -37,6 +46,8 @@ export interface ListingExperience {
   duration?: number;
   provider?: { name?: string };
   isArchived?: boolean;
+  updatedAt?: string;
+  createdAt?: string;
 }
 
 async function fetchPublicAbodesUncached(limit = 12): Promise<ListingAbode[]> {
@@ -44,6 +55,7 @@ async function fetchPublicAbodesUncached(limit = 12): Promise<ListingAbode[]> {
 
   try {
     const response = await fetch(`${apiUrl}/abodes?limit=${limit}&page=1`, {
+      headers: getServerFetchHeaders(),
       next: { revalidate: 3600 },
       signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
     });
@@ -61,6 +73,7 @@ async function fetchPublicExperiencesUncached(limit = 12): Promise<ListingExperi
   try {
     const params = new URLSearchParams({ limit: String(limit), page: '1' });
     const response = await fetch(`${apiUrl}/experiences?${params}`, {
+      headers: getServerFetchHeaders(),
       next: { revalidate: 3600 },
       signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
     });
@@ -72,6 +85,85 @@ async function fetchPublicExperiencesUncached(limit = 12): Promise<ListingExperi
   }
 }
 
+async function fetchAllPublicAbodesPaginated(): Promise<ListingAbode[]> {
+  const apiUrl = getApiUrl();
+  if (!isProductionApiUrl(apiUrl)) {
+    return [];
+  }
+
+  const all: ListingAbode[] = [];
+  let page = 1;
+
+  try {
+    while (page <= MAX_SITEMAP_PAGES) {
+      const response = await fetch(
+        `${apiUrl}/abodes?limit=${SITEMAP_PAGE_LIMIT}&page=${page}`,
+        {
+          headers: getServerFetchHeaders(),
+          next: { revalidate: 3600 },
+          signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
+        }
+      );
+
+      if (!response.ok) break;
+
+      const data = await response.json();
+      const batch = (data.localHosts || []).filter((a: ListingAbode) => !a.isArchived);
+      if (batch.length === 0) break;
+
+      all.push(...batch);
+
+      const totalPages = data.pagination?.pages ?? 1;
+      if (page >= totalPages) break;
+      page += 1;
+    }
+  } catch {
+    return all;
+  }
+
+  return all;
+}
+
+async function fetchAllPublicExperiencesPaginated(): Promise<ListingExperience[]> {
+  const apiUrl = getApiUrl();
+  if (!isProductionApiUrl(apiUrl)) {
+    return [];
+  }
+
+  const all: ListingExperience[] = [];
+  let page = 1;
+
+  try {
+    while (page <= MAX_SITEMAP_PAGES) {
+      const params = new URLSearchParams({
+        limit: String(SITEMAP_PAGE_LIMIT),
+        page: String(page),
+      });
+      const response = await fetch(`${apiUrl}/experiences?${params}`, {
+        headers: getServerFetchHeaders(),
+        next: { revalidate: 3600 },
+        signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
+      });
+
+      if (!response.ok) break;
+
+      const data = await response.json();
+      const batch = (data.experiences || []).filter((e: ListingExperience) => !e.isArchived);
+      if (batch.length === 0) break;
+
+      all.push(...batch);
+
+      const totalPages = data.pagination?.pages ?? 1;
+      if (page >= totalPages) break;
+      page += 1;
+    }
+  } catch {
+    return all;
+  }
+
+  return all;
+}
+
 export const fetchInitialListings = cache(async () => {
   const [abodes, experiences] = await Promise.all([
     fetchPublicAbodesUncached(12),
@@ -80,31 +172,28 @@ export const fetchInitialListings = cache(async () => {
   return { abodes, experiences };
 });
 
+export async function fetchAllPublicAbodesForSitemap(): Promise<
+  Array<{ id: string; updatedAt?: string }>
+> {
+  const abodes = await fetchAllPublicAbodesPaginated();
+
+  return abodes
+    .filter((abode) => abode._id && isValidObjectId(abode._id))
+    .map((abode) => ({
+      id: abode._id,
+      updatedAt: abode.updatedAt || abode.createdAt,
+    }));
+}
+
 export async function fetchAllPublicExperiencesForSitemap(): Promise<
   Array<{ id: string; updatedAt?: string }>
 > {
-  const apiUrl = getApiUrl();
-  if (!apiUrl || apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1')) {
-    return [];
-  }
+  const experiences = await fetchAllPublicExperiencesPaginated();
 
-  try {
-    const response = await fetch(`${apiUrl}/experiences?limit=1000&page=1`, {
-      next: { revalidate: 3600 },
-      signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
-    });
-    if (!response.ok) return [];
-    const data = await response.json();
-    return (data.experiences || [])
-      .filter(
-        (exp: { _id?: string; isArchived?: boolean }) =>
-          exp._id && isValidObjectId(exp._id) && !exp.isArchived
-      )
-      .map((exp: { _id: string; updatedAt?: string; createdAt?: string }) => ({
-        id: exp._id,
-        updatedAt: exp.updatedAt || exp.createdAt,
-      }));
-  } catch {
-    return [];
-  }
+  return experiences
+    .filter((exp) => exp._id && isValidObjectId(exp._id))
+    .map((exp) => ({
+      id: exp._id,
+      updatedAt: exp.updatedAt || exp.createdAt,
+    }));
 }

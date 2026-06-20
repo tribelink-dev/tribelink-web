@@ -139,6 +139,7 @@ app.use(cors({
     'X-Requested-With',
     'Accept',
     'Origin',
+    'X-Triberoutes-Client',
     'Access-Control-Request-Method',
     'Access-Control-Request-Headers'
   ],
@@ -179,7 +180,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.options('*', (req, res) => {
   res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, X-Triberoutes-Client');
   res.header('Access-Control-Allow-Credentials', 'true');
   res.sendStatus(204);
 });

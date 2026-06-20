@@ -1,6 +1,9 @@
 import { MetadataRoute } from 'next';
 import { getBaseUrl, isValidObjectId } from '@/lib/seo';
-import { fetchAllPublicExperiencesForSitemap, SERVER_FETCH_TIMEOUT_MS } from '@/lib/fetchListings';
+import {
+  fetchAllPublicAbodesForSitemap,
+  fetchAllPublicExperiencesForSitemap,
+} from '@/lib/fetchListings';
 
 /**
  * Sitemap generation with security validation
@@ -37,45 +40,6 @@ function isBlockedRoute(path: string): boolean {
   return BLOCKED_ROUTES.some((blocked) => path.startsWith(blocked));
 }
 
-async function fetchPublicAbodes(): Promise<Array<{ id: string; updatedAt?: string }>> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-
-  if (!apiUrl || apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1')) {
-    return [];
-  }
-
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), SERVER_FETCH_TIMEOUT_MS);
-
-    const response = await fetch(`${apiUrl}/abodes?limit=1000&page=1`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-      signal: controller.signal,
-      next: { revalidate: 3600 },
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) return [];
-
-    const data = await response.json();
-    const abodes = data.localHosts || [];
-
-    return abodes
-      .filter((abode: { _id?: string; isArchived?: boolean }) => {
-        if (!abode._id || !isValidObjectId(abode._id)) return false;
-        return !abode.isArchived;
-      })
-      .map((abode: { _id: string; updatedAt?: string; createdAt?: string }) => ({
-        id: abode._id,
-        updatedAt: abode.updatedAt || abode.createdAt,
-      }));
-  } catch {
-    return [];
-  }
-}
-
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = getBaseUrl();
   const now = new Date().toISOString();
@@ -89,7 +53,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   try {
     const [abodes, experiences] = await Promise.all([
-      fetchPublicAbodes(),
+      fetchAllPublicAbodesForSitemap(),
       fetchAllPublicExperiencesForSitemap(),
     ]);
 

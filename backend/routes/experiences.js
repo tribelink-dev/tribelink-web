@@ -7,20 +7,27 @@ const express = require('express');
 const Experience = require('../models/Experience');
 const Host = require('../models/Host');
 const { getBaseUrlFromRequest, normalizeExperiences } = require('../utils/imageUtils');
+const { publicListingLimiter, anonymousListingLimiter } = require('../middleware/rateLimitPublic');
+const clientFingerprint = require('../middleware/clientFingerprint');
+
+const publicReadLimiter = [clientFingerprint, anonymousListingLimiter, publicListingLimiter];
 
 const router = express.Router();
 
 // Get all experiences with optional filters
-router.get('/', async (req, res) => {
+router.get('/', publicReadLimiter, async (req, res) => {
   try {
     const {
-      limit = 20,
+      limit: limitQuery,
       sort = 'rating', // rating, newest, price
       category,
       state,
       district,
       page = 1
     } = req.query;
+
+    const pageNum = Math.max(1, Number(page) || 1);
+    const limitNum = Math.min(Math.max(1, Number(limitQuery) || 20), 50);
 
     // Build query
     const query = {};
@@ -56,12 +63,12 @@ router.get('/', async (req, res) => {
 
     // Execute query with pagination
     // First get experiences without populate to get raw provider IDs
-    const skip = (Number(page) - 1) * Number(limit);
+    const skip = (pageNum - 1) * limitNum;
     const experiencesRaw = await Experience.find(query)
       .select('provider')
       .sort(sortOption)
       .skip(skip)
-      .limit(Number(limit))
+      .limit(limitNum)
       .lean();
     
     // Get full experiences with populate
@@ -73,7 +80,7 @@ router.get('/', async (req, res) => {
       })
       .sort(sortOption)
       .skip(skip)
-      .limit(Number(limit))
+      .limit(limitNum)
       .lean();
 
     const total = await Experience.countDocuments(query);
@@ -164,10 +171,10 @@ router.get('/', async (req, res) => {
       success: true,
       experiences: formattedExperiences,
       pagination: {
-        page: Number(page),
-        limit: Number(limit),
+        page: pageNum,
+        limit: limitNum,
         total,
-        pages: Math.ceil(total / Number(limit))
+        pages: Math.ceil(total / limitNum)
       }
     });
   } catch (error) {
@@ -181,7 +188,7 @@ router.get('/', async (req, res) => {
 });
 
 // Get experience by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', publicReadLimiter, async (req, res) => {
   try {
     // First get raw experience to get provider ID
     const experienceRaw = await Experience.findById(req.params.id)

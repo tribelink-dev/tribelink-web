@@ -33,7 +33,7 @@ const gaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default: "Triberoutes - Kerala Homestays & Cultural Experiences",
+    default: "Triberoutes",
     template: "%s | Triberoutes",
   },
   description:
