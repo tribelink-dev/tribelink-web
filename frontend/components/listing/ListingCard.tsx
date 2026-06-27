@@ -93,22 +93,24 @@ export function ListingCardShell({
       </div>
 
       <div className="space-y-1">
+        <h3 className="text-[15px] sm:text-base font-semibold text-text-primary line-clamp-2 leading-snug group-hover:text-brand transition-colors">
+          {title}
+        </h3>
+
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[15px] font-semibold text-text-primary truncate">{location}</p>
+          <p className="text-[13px] sm:text-sm text-text-secondary truncate">{location}</p>
           {rating > 0 && (
             <div className="flex items-center gap-1 shrink-0">
               <Star className="w-3 h-3 fill-text-primary text-text-primary" />
-              <span className="text-[15px] font-semibold text-text-primary">
+              <span className="text-[13px] sm:text-sm font-medium text-text-primary">
                 {rating.toFixed(1)}
               </span>
               {ratingCount > 0 && (
-                <span className="text-[15px] text-text-secondary">({ratingCount})</span>
+                <span className="text-[13px] text-text-secondary">({ratingCount})</span>
               )}
             </div>
           )}
         </div>
-
-        <h3 className="text-[15px] text-text-secondary line-clamp-2 leading-snug">{title}</h3>
 
         {subtitle && (
           <p className="text-[13px] text-text-secondary line-clamp-1">{subtitle}</p>
