@@ -44,7 +44,7 @@ export default function ExploreHeroSlideshow() {
 
   return (
     <div
-      className="relative h-28 sm:h-32 md:h-36 w-full overflow-hidden"
+      className="relative h-36 sm:h-40 md:h-44 w-full overflow-hidden"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onTouchStart={handleTouchStart}

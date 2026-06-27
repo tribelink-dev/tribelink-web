@@ -71,36 +71,22 @@ export default function ExploreDifferentiator() {
           <ChevronUp className="w-4 h-4" />
         </button>
 
-        <div className="px-4 sm:px-5 py-4 sm:py-5 text-center">
+        <div className="px-4 sm:px-5 py-3 sm:py-4 text-center">
           <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-text-primary leading-tight max-w-2xl mx-auto">
             {EXPLORE_HERO.headline}{' '}
             <span className="text-brand">{EXPLORE_HERO.headlineEmphasis}</span>
           </h2>
-          <p className="mt-2.5 text-sm sm:text-base text-text-primary max-w-2xl mx-auto leading-relaxed">
-            {EXPLORE_HERO.subline}
+          <p className="mt-2 text-sm sm:text-base text-text-primary max-w-2xl mx-auto leading-snug">
+            {EXPLORE_HERO.body}
           </p>
-          <p className="mt-2 text-sm sm:text-base text-text-primary max-w-2xl mx-auto leading-relaxed">
-            {EXPLORE_HERO.description}
-          </p>
-          <p className="mt-2 text-sm text-text-secondary max-w-2xl mx-auto leading-relaxed">
+          <p className="mt-1.5 text-sm text-text-secondary max-w-2xl mx-auto leading-snug">
             {EXPLORE_HERO.tagline}
           </p>
-
-          <div className="mt-3 sm:mt-4 hidden sm:flex flex-wrap items-center justify-center gap-2">
-            {EXPLORE_HERO.chips.map((chip) => (
-              <span
-                key={chip}
-                className="inline-flex items-center rounded-full border border-border bg-background px-2.5 py-1 text-[11px] sm:text-xs text-text-secondary"
-              >
-                {chip}
-              </span>
-            ))}
-          </div>
 
           <Link
             href="/about"
             onClick={() => trackExploreEvent('explore_differentiator_our_story_click')}
-            className="mt-3 inline-block text-xs sm:text-sm font-medium text-brand hover:text-brand-hover underline-offset-2 hover:underline"
+            className="mt-2.5 inline-block text-xs sm:text-sm font-medium text-brand hover:text-brand-hover underline-offset-2 hover:underline"
           >
             Our story
           </Link>

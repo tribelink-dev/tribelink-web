@@ -4,15 +4,8 @@ export const BRAND_BADGE = 'Rooted in Reality';
 export const EXPLORE_HERO = {
   headline: "Don't visit Kerala.",
   headlineEmphasis: 'Live in it.',
-  subline: 'Stay with a real family. Wake up to their rhythms. Leave with their stories.',
-  description:
-    'Triberoutes lists only family-run homestays where the experience is the family, their food, their festivals, their mornings.',
+  body: 'Stay with a real family. Wake up to their rhythms. Leave with their stories. Triberoutes lists only family-run homestays where the experience is the family, their food, their festivals, their mornings.',
   tagline: 'Experiences curated for those who travel to belong, not just to arrive.',
-  chips: [
-    'Live-in, not check-in',
-    'Family table, not hotel buffet',
-    'Their real life, your real trip',
-  ],
 } as const;
 
 export const BRAND_HEADLINE = {
