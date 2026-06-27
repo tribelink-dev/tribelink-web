@@ -86,7 +86,7 @@ export default function ExploreDifferentiator() {
             {EXPLORE_HERO.tagline}
           </p>
 
-          <div className="mt-3 sm:mt-4 flex flex-wrap items-center justify-center gap-2">
+          <div className="mt-3 sm:mt-4 hidden sm:flex flex-wrap items-center justify-center gap-2">
             {EXPLORE_HERO.chips.map((chip) => (
               <span
                 key={chip}
