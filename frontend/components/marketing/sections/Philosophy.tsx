@@ -3,6 +3,16 @@
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useRef } from 'react';
 import { Sparkles, Heart, Users, MapPin } from 'lucide-react';
+import {
+    BRAND_BADGE,
+    BRAND_HEADLINE,
+    BRAND_PHILOSOPHY_INTRO,
+    BRAND_PHILOSOPHY_INTRO_EMPHASIS,
+    BRAND_PILLARS,
+    BRAND_QUOTE,
+} from '@/lib/brand';
+
+const PILLAR_ICONS = [<Sparkles size={24} key="sparkles" />, <MapPin size={24} key="mappin" />, <Users size={24} key="users" />];
 
 const PhilosophyFeature = ({ number, title, text, image, reverse = false, icon }: { number: string; title: string; text: string; image: string; reverse?: boolean; icon: React.ReactNode }) => {
     const ref = useRef<HTMLDivElement>(null);
@@ -116,45 +126,31 @@ const Philosophy = () => {
                             viewport={{ once: true }}
                             className="text-terracotta tracking-wide sm:tracking-widest text-xs sm:text-sm font-medium uppercase mb-4 sm:mb-6 inline-block px-3 sm:px-4 py-1.5 sm:py-2 bg-terracotta/10 rounded-full"
                         >
-                            Rooted in Reality
+                            {BRAND_BADGE}
                         </motion.p>
                         <h2 className="text-3xl sm:text-5xl md:text-7xl font-serif text-deep-jungle mb-4 sm:mb-8 leading-tight px-2">
-                            High Tech.
+                            {BRAND_HEADLINE.line1}
                             <br />
-                            <span className="text-terracotta italic">Deep Touch.</span>
+                            <span className="text-terracotta italic">{BRAND_HEADLINE.line2}</span>
                         </h2>
                         <p className="text-base sm:text-xl md:text-2xl text-deep-jungle/80 leading-relaxed font-light px-2">
-                            We live in a miraculous era. Artificial Intelligence helps us solve problems and social media keeps us informed.
-                            But amidst the speed of the digital age,{' '}
-                            <span className="text-terracotta italic font-medium">the human heart still beats at the rhythm of nature.</span>
+                            {BRAND_PHILOSOPHY_INTRO.split(BRAND_PHILOSOPHY_INTRO_EMPHASIS)[0]}
+                            <span className="text-terracotta italic font-medium">{BRAND_PHILOSOPHY_INTRO_EMPHASIS}</span>
                         </p>
                     </motion.div>
                 </div>
 
-                <PhilosophyFeature
-                    number="01"
-                    title="Authentic, Not Staged"
-                    text="You won't find performances put on for tourists. You will find daily rhythms, local crafts, and genuine conversations. Real life, unfolding in real time."
-                    image="/assets/theyyam_main.jpg"
-                    icon={<Sparkles size={24} />}
-                />
-
-                <PhilosophyFeature
-                    number="02"
-                    title="Regional, Not Generic"
-                    text="Every region has a soul. We connect you with the guardians of that soul—the elders, the artisans, and the locals who know the land best."
-                    image="/assets/pottery_main.jpg"
-                    reverse
-                    icon={<MapPin size={24} />}
-                />
-
-                <PhilosophyFeature
-                    number="03"
-                    title="Community, Not Crowd"
-                    text="Walk with a tribe that values presence. Share your stories later, but live them fully now. This is about depth, not breadth—connection, not consumption."
-                    image="/assets/community1.jpg"
-                    icon={<Users size={24} />}
-                />
+                {BRAND_PILLARS.map((pillar, index) => (
+                    <PhilosophyFeature
+                        key={pillar.number}
+                        number={pillar.number}
+                        title={pillar.title}
+                        text={pillar.text}
+                        image={pillar.image}
+                        reverse={index === 1}
+                        icon={PILLAR_ICONS[index]}
+                    />
+                ))}
 
                 {/* Philosophy Quote Section */}
                 <motion.div
@@ -169,7 +165,7 @@ const Philosophy = () => {
                         <div className="relative z-10">
                             <Heart className="w-8 h-8 sm:w-12 sm:h-12 text-terracotta mx-auto mb-4 sm:mb-6" />
                             <blockquote className="font-serif text-lg sm:text-2xl md:text-3xl text-white leading-relaxed italic mb-4 sm:mb-6">
-                                "Travel is not about the destination. It's about the people you meet, the stories you hear, and the wisdom you carry home."
+                                {BRAND_QUOTE}
                             </blockquote>
                             <p className="text-white/80 text-sm sm:text-lg">— The Triberoutes Philosophy</p>
                         </div>

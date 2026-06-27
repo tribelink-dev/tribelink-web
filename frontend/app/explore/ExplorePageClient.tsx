@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -17,6 +17,7 @@ import { useExploreNavRegistration } from '@/lib/ExploreNavContext';
 import { Button } from '@/components/ui/Button';
 import ToastContainer, { useToast } from '@/components/Toast';
 import type { ListingAbode, ListingExperience } from '@/lib/fetchListings';
+import { trackExploreEvent } from '@/lib/explore-analytics';
 
 interface ExplorePageClientProps {
   /** @deprecated SSR seed no longer passed — listings always load client-side */
@@ -134,10 +135,12 @@ function ExplorePageContent(_props: ExplorePageClientProps = {}) {
   };
 
   const handleExperienceClick = (experienceId: string) => {
+    trackExploreEvent('explore_listing_click', { listing_type: 'experience', listing_id: experienceId });
     router.push(`/experiences/${experienceId}`);
   };
 
   const handleAbodeClick = (abode: any) => {
+    trackExploreEvent('explore_listing_click', { listing_type: 'abode', listing_id: abode._id });
     router.push(`/adobes/${abode._id}`);
   };
 
