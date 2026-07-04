@@ -40,22 +40,24 @@ export default function ExploreDifferentiator() {
   if (collapsed) {
     return (
       <div
-        className="relative z-10 w-full max-w-4xl mx-auto mb-2 lg:mb-5 flex items-center justify-between gap-2 rounded-full lg:rounded-xl border border-border bg-surface-muted/60 px-3 py-2 lg:px-4 lg:py-2.5"
+        className="relative z-10 w-full max-w-4xl mx-auto mb-2 lg:mb-5 rounded-2xl lg:rounded-xl border border-border bg-surface-muted/60 px-3 py-2.5 lg:px-4 lg:py-2.5"
         data-analytics="explore-differentiator-collapsed"
       >
-        <p className="text-xs sm:text-sm text-text-primary truncate">
-          <span className="font-medium">{EXPLORE_HERO.headline}</span>{' '}
-          <span className="text-brand">{EXPLORE_HERO.headlineEmphasis}</span>
-        </p>
-        <button
-          type="button"
-          onClick={toggleCollapsed}
-          className="shrink-0 text-xs font-medium text-text-secondary hover:text-text-primary inline-flex items-center gap-1"
-          aria-expanded={false}
-        >
-          Why us
-          <ChevronDown className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-sm text-text-primary text-left leading-snug min-w-0 flex-1">
+            <span className="font-medium">{EXPLORE_HERO.headline}</span>{' '}
+            <span className="text-brand">{EXPLORE_HERO.headlineEmphasis}</span>
+          </p>
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            className="shrink-0 text-xs font-medium text-text-secondary hover:text-text-primary inline-flex items-center gap-1 pt-0.5 touch-target"
+            aria-expanded={false}
+          >
+            Why us
+            <ChevronDown className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
     );
   }
@@ -81,22 +83,22 @@ export default function ExploreDifferentiator() {
           <ChevronUp className="w-4 h-4" />
         </button>
 
-        <div className="px-3 sm:px-5 py-2.5 sm:py-4 text-center">
-          <h2 className="text-base sm:text-2xl md:text-3xl font-semibold text-text-primary leading-tight max-w-2xl mx-auto">
+        <div className="px-3 sm:px-5 py-3 sm:py-4 text-center">
+          <h2 className="text-lg sm:text-2xl md:text-3xl font-semibold text-text-primary leading-snug max-w-2xl mx-auto">
             {EXPLORE_HERO.headline}{' '}
             <span className="text-brand">{EXPLORE_HERO.headlineEmphasis}</span>
           </h2>
-          <p className="mt-1.5 text-xs sm:text-base text-text-primary max-w-2xl mx-auto leading-snug line-clamp-2 sm:line-clamp-none">
+          <p className="mt-2 text-sm sm:text-base text-text-primary max-w-2xl mx-auto leading-relaxed">
             {EXPLORE_HERO.body}
           </p>
-          <p className="mt-1 text-xs sm:text-sm text-text-secondary max-w-2xl mx-auto leading-snug hidden sm:block">
+          <p className="mt-2 text-xs sm:text-sm text-text-secondary max-w-2xl mx-auto leading-relaxed">
             {EXPLORE_HERO.tagline}
           </p>
 
           <Link
             href="/about"
             onClick={() => trackExploreEvent('explore_differentiator_our_story_click')}
-            className="mt-2.5 inline-block text-xs sm:text-sm font-medium text-brand hover:text-brand-hover underline-offset-2 hover:underline"
+            className="mt-3 inline-block text-sm font-medium text-brand hover:text-brand-hover underline-offset-2 hover:underline touch-target"
           >
             Our story
           </Link>

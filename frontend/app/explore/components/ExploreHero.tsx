@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AnimatePresence, motion, useScroll, useTransform, useMotionValueEvent } from 'framer-motion';
 import SearchBar from '@/components/SearchBar';
 import ExploreDifferentiator from './ExploreDifferentiator';
@@ -21,6 +21,15 @@ export default function ExploreHero({ activeSection, onSearch }: ExploreHeroProp
   const { scrollY } = useScroll();
   const sectionCopy = EXPLORE_SECTION_COPY[activeSection];
   const [stickySearchVisible, setStickySearchVisible] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
 
   useMotionValueEvent(scrollY, 'change', (latest) => {
     setStickySearchVisible(latest > 140);
@@ -50,7 +59,7 @@ export default function ExploreHero({ activeSection, onSearch }: ExploreHeroProp
   return (
     <>
       <motion.section
-        style={{ opacity: heroOpacity, scale: heroScale }}
+        style={isMobile ? undefined : { opacity: heroOpacity, scale: heroScale }}
         className="bg-background border-b border-border pt-below-nav-explore lg:pt-below-nav pb-3 lg:pb-5"
       >
         <div className="w-full px-page lg:px-page-lg pt-2 lg:pt-4 flex flex-col items-center text-center">
@@ -67,10 +76,14 @@ export default function ExploreHero({ activeSection, onSearch }: ExploreHeroProp
 
           <motion.div
             className="w-full max-w-3xl mx-auto mt-3 lg:mt-6"
-            style={{
-              opacity: searchBarHeroOpacity,
-              y: searchBarHeroY,
-            }}
+            style={
+              isMobile
+                ? undefined
+                : {
+                    opacity: searchBarHeroOpacity,
+                    y: searchBarHeroY,
+                  }
+            }
             data-analytics="explore-search-hero"
           >
             <SearchBar variant="homepage" onSearch={handleSearch} />
