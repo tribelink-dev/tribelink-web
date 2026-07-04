@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useCurrency } from '@/lib/CurrencyContext';
 import { useSaved } from '@/lib/SavedContext';
-import { ListingCardShell } from './ListingCard';
+import { ListingCardShell, HostVerifiedIcon } from './ListingCard';
 
 interface RoomVariant {
   variantId: string;
@@ -106,6 +106,7 @@ export default function AbodeListingCard({ abode, imageUrl, onClick }: AbodeList
         toggleAbode(abode._id);
       }}
       onClick={onClick}
+      topLeftBadge={<HostVerifiedIcon />}
     />
   );
 }

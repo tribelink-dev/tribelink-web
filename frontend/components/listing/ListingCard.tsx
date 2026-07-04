@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Heart, Star, Home } from 'lucide-react';
+import { Heart, Star, Home, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/Badge';
 
@@ -128,3 +128,18 @@ export function ListingCardShell({
 }
 
 export { Badge as ListingBadge };
+
+export function HostVerifiedIcon({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white/90 backdrop-blur-sm border border-emerald-200 text-emerald-700 shadow-sm',
+        className
+      )}
+      aria-label="Verified host"
+      title="Verified host"
+    >
+      <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+    </span>
+  );
+}

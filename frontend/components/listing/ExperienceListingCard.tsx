@@ -2,7 +2,7 @@
 
 import { useCurrency } from '@/lib/CurrencyContext';
 import { useSaved } from '@/lib/SavedContext';
-import { ListingCardShell } from './ListingCard';
+import { ListingCardShell, HostVerifiedIcon } from './ListingCard';
 
 interface ExperienceListingCardProps {
   experience: {
@@ -72,6 +72,7 @@ export default function ExperienceListingCard({
         toggleExperience(experience._id, onAddToBucketlist);
       }}
       onClick={onClick}
+      topLeftBadge={<HostVerifiedIcon />}
     />
   );
 }
