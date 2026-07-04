@@ -42,18 +42,6 @@ export const EXPLORE_HERO_SLIDES = [
     src: '/assets/pottery_main.jpg',
     alt: 'Local artisan craft in Kerala',
   },
-  {
-    src: '/assets/nandhu-kumar-TwYX-EQRXQQ-unsplash.jpg',
-    alt: 'Kerala village and backwater landscape',
-  },
-  {
-    src: '/assets/spices.jpg',
-    alt: 'Kerala family kitchen and spices',
-  },
-  {
-    src: '/assets/kadhakali.jpg',
-    alt: 'Kathakali cultural performance in Kerala',
-  },
 ] as const;
 
 export const BRAND_PILLARS = [
