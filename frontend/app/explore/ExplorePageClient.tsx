@@ -577,7 +577,7 @@ function ExplorePageContent(_props: ExplorePageClientProps = {}) {
 
       <ExploreHero activeSection={activeSection} onSearch={handleSearch} />
 
-      <div id="results-section" className="w-full px-page lg:px-page-lg pt-4 pb-6">
+      <div id="results-section" className="w-full px-page lg:px-page-lg pt-2 md:pt-4 pb-4 md:pb-6">
         {activeSection === 'abodes' && (
           <div>
             <ExploreFilterBar
@@ -599,8 +599,8 @@ function ExplorePageContent(_props: ExplorePageClientProps = {}) {
               open={showAbodeRefine && allAbodes.length > 0}
               value={abodePrompt}
               applied={abodePromptApplied}
-              placeholder="e.g. quiet, near nature, strong Wiâ€‘Fiâ€¦"
-              suggestions={['Quiet & nature', 'Strong Wiâ€‘Fi', 'Family-friendly']}
+              placeholder="e.g. quiet, near nature, strong Wi-Fi…"
+              suggestions={['Quiet & nature', 'Strong Wi-Fi', 'Family-friendly']}
               onChange={setAbodePrompt}
               onApply={applyAbodeRefine}
               onClear={() => {
@@ -611,7 +611,7 @@ function ExplorePageContent(_props: ExplorePageClientProps = {}) {
                 fetchAllAbodes(1, searchFilters);
               }}
               title="Refine these stays"
-              subtitle="Reorder by vibe â€” dates & location stay the same"
+              subtitle="Reorder by vibe — dates & location stay the same"
             />
 
             <ExploreGrid
@@ -635,7 +635,7 @@ function ExplorePageContent(_props: ExplorePageClientProps = {}) {
 
         {activeSection === 'experiences' && (
           <div>
-            <div className="mb-4">
+            <div className="mb-2 md:mb-4">
               <CategoryIcons section="experiences" />
             </div>
 
@@ -658,7 +658,7 @@ function ExplorePageContent(_props: ExplorePageClientProps = {}) {
               open={showExperienceRefine && allExperiences.length > 0}
               value={experiencePrompt}
               applied={experiencePromptApplied}
-              placeholder="e.g. evening music, small groups, cultural workshopsâ€¦"
+              placeholder="e.g. evening music, small groups, cultural workshops…"
               suggestions={['Evening events', 'Small groups', 'Cultural workshops']}
               onChange={setExperiencePrompt}
               onApply={applyExperienceRefine}
@@ -670,7 +670,7 @@ function ExplorePageContent(_props: ExplorePageClientProps = {}) {
                 fetchAllExperiences(1, searchFilters);
               }}
               title="Refine these experiences"
-              subtitle="Reorder by what you want â€” location & filters stay the same"
+              subtitle="Reorder by what you want — location & filters stay the same"
             />
 
             <ExploreGrid
@@ -695,10 +695,10 @@ function ExplorePageContent(_props: ExplorePageClientProps = {}) {
         )}
       </div>
 
-      <section className="w-full px-page lg:px-page-lg py-12">
-        <div className="rounded-xl border border-border bg-surface p-8 md:p-12 text-center">
-          <Home className="w-10 h-10 text-brand mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-text-primary mb-2">Try hosting</h2>
+      <section className="w-full px-page lg:px-page-lg py-8 md:py-12">
+        <div className="rounded-xl border border-border bg-surface p-6 md:p-12 text-center">
+          <Home className="w-9 h-9 md:w-10 md:h-10 text-brand mx-auto mb-3 md:mb-4" />
+          <h2 className="text-lg md:text-xl font-semibold text-text-primary mb-2">Try hosting</h2>
           <p className="text-sm text-text-secondary mb-6 max-w-lg mx-auto">
             Earn extra income by sharing your home and culture with travelers.
           </p>

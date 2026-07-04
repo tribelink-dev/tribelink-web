@@ -505,7 +505,7 @@ export default function Navbar() {
                   {renderRightActions()}
                 </div>
               </div>
-              <div className="flex justify-center pb-2 border-b border-gray-100">
+              <div className="flex justify-center px-page pb-2 border-b border-gray-100">
                 <ExploreSectionTabs
                   activeSection={exploreNav.activeSection}
                   onSectionChange={exploreNav.onSectionChange}

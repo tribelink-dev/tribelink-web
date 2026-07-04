@@ -16,7 +16,12 @@ export default function ExploreDifferentiator() {
 
   useEffect(() => {
     const stored = window.localStorage.getItem(EXPLORE_BELIEF_COLLAPSED_KEY);
-    setCollapsed(stored === 'true');
+    if (stored !== null) {
+      setCollapsed(stored === 'true');
+    } else {
+      // Mobile: collapsed by default so search + listings are above the fold
+      setCollapsed(window.matchMedia('(max-width: 767px)').matches);
+    }
     setReady(true);
     trackExploreEvent('explore_differentiator_view');
   }, []);
@@ -29,16 +34,16 @@ export default function ExploreDifferentiator() {
   };
 
   if (!ready) {
-    return <div className="w-full max-w-4xl mx-auto mb-4 sm:mb-5" aria-hidden />;
+    return <div className="w-full max-w-4xl mx-auto mb-2 lg:mb-5" aria-hidden />;
   }
 
   if (collapsed) {
     return (
       <div
-        className="w-full max-w-4xl mx-auto mb-4 sm:mb-5 flex items-center justify-between gap-3 rounded-xl border border-border bg-surface-muted/50 px-4 py-2.5"
+        className="w-full max-w-4xl mx-auto mb-2 lg:mb-5 flex items-center justify-between gap-2 rounded-full lg:rounded-xl border border-border bg-surface-muted/60 px-3 py-2 lg:px-4 lg:py-2.5"
         data-analytics="explore-differentiator-collapsed"
       >
-        <p className="text-sm text-text-primary truncate">
+        <p className="text-xs sm:text-sm text-text-primary truncate">
           <span className="font-medium">{EXPLORE_HERO.headline}</span>{' '}
           <span className="text-brand">{EXPLORE_HERO.headlineEmphasis}</span>
         </p>
@@ -57,11 +62,16 @@ export default function ExploreDifferentiator() {
 
   return (
     <div
-      className="w-full max-w-4xl mx-auto mb-5 sm:mb-6"
+      className="w-full max-w-4xl mx-auto mb-3 lg:mb-6"
       data-analytics="explore-differentiator"
     >
       <div className="rounded-2xl border border-border bg-surface overflow-hidden relative">
-        <ExploreHeroSlideshow />
+        <div className="hidden md:block">
+          <ExploreHeroSlideshow />
+        </div>
+        <div className="md:hidden">
+          <ExploreHeroSlideshow compact />
+        </div>
         <button
           type="button"
           onClick={toggleCollapsed}
@@ -71,15 +81,15 @@ export default function ExploreDifferentiator() {
           <ChevronUp className="w-4 h-4" />
         </button>
 
-        <div className="px-4 sm:px-5 py-3 sm:py-4 text-center">
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-text-primary leading-tight max-w-2xl mx-auto">
+        <div className="px-3 sm:px-5 py-2.5 sm:py-4 text-center">
+          <h2 className="text-base sm:text-2xl md:text-3xl font-semibold text-text-primary leading-tight max-w-2xl mx-auto">
             {EXPLORE_HERO.headline}{' '}
             <span className="text-brand">{EXPLORE_HERO.headlineEmphasis}</span>
           </h2>
-          <p className="mt-2 text-sm sm:text-base text-text-primary max-w-2xl mx-auto leading-snug">
+          <p className="mt-1.5 text-xs sm:text-base text-text-primary max-w-2xl mx-auto leading-snug line-clamp-2 sm:line-clamp-none">
             {EXPLORE_HERO.body}
           </p>
-          <p className="mt-1.5 text-sm text-text-secondary max-w-2xl mx-auto leading-snug">
+          <p className="mt-1 text-xs sm:text-sm text-text-secondary max-w-2xl mx-auto leading-snug hidden sm:block">
             {EXPLORE_HERO.tagline}
           </p>
 

@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 
 const SLIDE_INTERVAL_MS = 4500;
 
-export default function ExploreHeroSlideshow() {
+export default function ExploreHeroSlideshow({ compact = false }: { compact?: boolean }) {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const touchStartX = useRef(0);
@@ -44,7 +44,10 @@ export default function ExploreHeroSlideshow() {
 
   return (
     <div
-      className="relative h-36 sm:h-40 md:h-44 w-full overflow-hidden"
+      className={cn(
+        'relative w-full overflow-hidden',
+        compact ? 'h-24' : 'h-36 sm:h-40 md:h-44'
+      )}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onTouchStart={handleTouchStart}

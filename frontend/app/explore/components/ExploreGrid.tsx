@@ -64,7 +64,7 @@ export default function ExploreGrid({
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-6 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-x-3 gap-y-5 sm:gap-6 mb-6 sm:mb-8">
         {type === 'abodes'
           ? abodes.map((abode) => (
               <AbodeListingCard
