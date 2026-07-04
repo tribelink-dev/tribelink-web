@@ -853,8 +853,18 @@ router.get('/google', (req, res, next) => {
 });
 
 // Google OAuth callback for users
-router.get('/google/callback', 
-  passport.authenticate('google-user', { session: false, failureRedirect: '/login?error=oauth_failed' }),
+router.get('/google/callback',
+  (req, res, next) => {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    passport.authenticate('google-user', { session: false }, (err, user, info) => {
+      if (err || !user) {
+        console.error('[OAuth] Google user auth failed:', err || info);
+        return res.redirect(`${frontendUrl}/login?error=oauth_failed`);
+      }
+      req.user = user;
+      next();
+    })(req, res, next);
+  },
   async (req, res) => {
     try {
       const profile = req.user;
@@ -937,7 +947,17 @@ router.get('/google/host', (req, res, next) => {
 
 // Google OAuth callback for hosts
 router.get('/google/host/callback',
-  passport.authenticate('google-host', { session: false, failureRedirect: '/host/login?error=oauth_failed' }),
+  (req, res, next) => {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    passport.authenticate('google-host', { session: false }, (err, user, info) => {
+      if (err || !user) {
+        console.error('[OAuth] Google host auth failed:', err || info);
+        return res.redirect(`${frontendUrl}/host/login?error=oauth_failed`);
+      }
+      req.user = user;
+      next();
+    })(req, res, next);
+  },
   async (req, res) => {
     try {
       const profile = req.user;

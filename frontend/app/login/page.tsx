@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import PhoneInput from '@/components/PhoneInput';
 import BrandLogo from '@/components/BrandLogo';
+import { getGoogleOAuthHref } from '@/lib/oauth';
 import { Sparkles, Lock, Mail, Phone, ChevronLeft } from 'lucide-react';
 
 export default function LoginPage() {
@@ -21,6 +22,8 @@ export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const returnTo = searchParams.get('returnTo') || searchParams.get('redirect') || '/explore';
+  const googleOAuthHref = getGoogleOAuthHref('user', returnTo);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -318,7 +321,7 @@ export default function LoginPage() {
 
             {/* Google Sign In */}
             <motion.a
-              href={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000'}/api/auth/google`}
+              href={googleOAuthHref}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               className="w-full flex items-center justify-center gap-3 px-4 py-3.5 border-2 border-gray-200 rounded-xl font-semibold text-gray-700 bg-white hover:bg-gray-50 hover:border-heritage-gold/50 transition-all shadow-sm hover:shadow-md"

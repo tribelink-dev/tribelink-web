@@ -9,6 +9,7 @@ import { getProviderDashboard } from '@/lib/providerUtils';
 import api from '@/lib/api';
 import PhoneInput from '@/components/PhoneInput';
 import BrandLogo from '@/components/BrandLogo';
+import { getGoogleOAuthHref } from '@/lib/oauth';
 import { Home, Lock, Mail, Phone } from 'lucide-react';
 
 export default function HostLoginPage() {
@@ -341,7 +342,7 @@ export default function HostLoginPage() {
 
             {/* Google Sign In */}
             <motion.a
-              href={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000'}/api/auth/google/host`}
+              href={getGoogleOAuthHref('host', '/host/dashboard')}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               className="w-full flex items-center justify-center gap-3 px-4 py-3.5 border-2 border-gray-200 rounded-xl font-semibold text-gray-700 bg-white hover:bg-gray-50 hover:border-heritage-gold/50 transition-all shadow-sm hover:shadow-md"

@@ -388,7 +388,7 @@ function buildRedirectUrl(baseUrl, path, params = {}) {
   const url = new URL(path, baseUrl);
   Object.entries(params).forEach(([key, value]) => {
     if (value !== null && value !== undefined) {
-      url.searchParams.set(key, encodeURIComponent(String(value)));
+      url.searchParams.set(key, String(value));
     }
   });
   return url.toString();
