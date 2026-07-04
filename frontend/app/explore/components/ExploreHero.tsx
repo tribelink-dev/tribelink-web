@@ -62,11 +62,11 @@ export default function ExploreHero({ activeSection, onSearch }: ExploreHeroProp
         style={isMobile ? undefined : { opacity: heroOpacity, scale: heroScale }}
         className="bg-background border-b border-border pt-below-nav-explore lg:pt-below-nav pb-3 lg:pb-5"
       >
-        <div className="w-full px-page lg:px-page-lg pt-2 lg:pt-4 flex flex-col items-center text-center">
-          <ExploreDifferentiator />
+        <ExploreDifferentiator />
 
+        <div className="w-full px-page lg:px-page-lg flex flex-col items-center text-center">
           {activeSection === 'experiences' && (
-            <div className="hidden md:block">
+            <div className="hidden md:block mb-3">
               <h1 className="text-xl md:text-2xl font-semibold text-text-primary max-w-2xl">
                 {sectionCopy.title}
               </h1>
@@ -75,7 +75,7 @@ export default function ExploreHero({ activeSection, onSearch }: ExploreHeroProp
           )}
 
           <motion.div
-            className="w-full max-w-3xl mx-auto mt-3 lg:mt-6"
+            className="w-full max-w-3xl mx-auto"
             style={
               isMobile
                 ? undefined

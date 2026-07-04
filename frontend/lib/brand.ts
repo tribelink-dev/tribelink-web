@@ -28,19 +28,30 @@ export const BRAND_QUOTE =
 export const BRAND_HERO_IMAGE = '/assets/theyyam_main.jpg';
 export const BRAND_HERO_IMAGE_ALT = 'Traditional Kerala cultural performance';
 
-/** Explore differentiator banner — rotating Kerala / family-life imagery. */
+/** Explore differentiator — one headline + one subline per slide (split from EXPLORE_HERO). */
 export const EXPLORE_HERO_SLIDES = [
   {
     src: '/assets/theyyam_main.jpg',
     alt: 'Traditional Kerala festival performance',
+    title: EXPLORE_HERO.headline,
+    titleEmphasis: EXPLORE_HERO.headlineEmphasis,
+    subline: 'Stay with a real family. Wake up to their rhythms. Leave with their stories.',
   },
   {
     src: '/assets/community1.jpg',
     alt: 'Kerala family and community gathering',
+    title: 'Triberoutes lists only family-run homestays',
+    titleEmphasis: '',
+    subline:
+      'where the experience is the family, their food, their festivals, their mornings.',
   },
   {
     src: '/assets/pottery_main.jpg',
     alt: 'Local artisan craft in Kerala',
+    title: 'Experiences curated for those who travel to belong,',
+    titleEmphasis: 'not just to arrive.',
+    subline: '',
+    showOurStory: true,
   },
 ] as const;
 
