@@ -183,7 +183,7 @@ export default function ExploreFilterBar({
 
   return (
     <div className="mb-4">
-      {/* Mobile: Airbnb-style chip toolbar */}
+      {/* Mobile: scrollable filter chips */}
       <div className="md:hidden space-y-2.5">
         <p className="text-xs text-text-secondary">
           <span className="font-semibold text-text-primary">{showing}</span> of{' '}
