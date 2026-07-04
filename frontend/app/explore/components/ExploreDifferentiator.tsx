@@ -40,7 +40,7 @@ export default function ExploreDifferentiator() {
   if (collapsed) {
     return (
       <div
-        className="w-full max-w-4xl mx-auto mb-2 lg:mb-5 flex items-center justify-between gap-2 rounded-full lg:rounded-xl border border-border bg-surface-muted/60 px-3 py-2 lg:px-4 lg:py-2.5"
+        className="relative z-10 w-full max-w-4xl mx-auto mb-2 lg:mb-5 flex items-center justify-between gap-2 rounded-full lg:rounded-xl border border-border bg-surface-muted/60 px-3 py-2 lg:px-4 lg:py-2.5"
         data-analytics="explore-differentiator-collapsed"
       >
         <p className="text-xs sm:text-sm text-text-primary truncate">

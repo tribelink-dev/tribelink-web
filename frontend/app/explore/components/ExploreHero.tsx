@@ -1,10 +1,12 @@
 'use client';
 
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { useState } from 'react';
+import { motion, useScroll, useTransform, useMotionValueEvent } from 'framer-motion';
 import SearchBar from '@/components/SearchBar';
 import ExploreDifferentiator from './ExploreDifferentiator';
 import { EXPLORE_SECTION_COPY } from '@/lib/brand';
 import { trackExploreEvent } from '@/lib/explore-analytics';
+import { cn } from '@/lib/utils';
 
 interface ExploreHeroProps {
   activeSection: 'abodes' | 'experiences';
@@ -19,6 +21,11 @@ interface ExploreHeroProps {
 export default function ExploreHero({ activeSection, onSearch }: ExploreHeroProps) {
   const { scrollY } = useScroll();
   const sectionCopy = EXPLORE_SECTION_COPY[activeSection];
+  const [stickySearchActive, setStickySearchActive] = useState(false);
+
+  useMotionValueEvent(scrollY, 'change', (latest) => {
+    setStickySearchActive(latest > 110);
+  });
 
   const heroOpacity = useTransform(scrollY, [0, 280], [1, 0]);
   const heroScale = useTransform(scrollY, [0, 280], [1, 0.98]);
@@ -83,7 +90,12 @@ export default function ExploreHero({ activeSection, onSearch }: ExploreHeroProp
         }}
         data-analytics="explore-search-sticky"
       >
-        <div className="pointer-events-auto bg-background/95 backdrop-blur-md border-b border-border shadow-sm lg:bg-transparent lg:backdrop-blur-none lg:border-b-0 lg:shadow-none">
+        <div
+          className={cn(
+            'bg-background/95 backdrop-blur-md border-b border-border shadow-sm lg:bg-transparent lg:backdrop-blur-none lg:border-b-0 lg:shadow-none',
+            stickySearchActive ? 'pointer-events-auto' : 'pointer-events-none'
+          )}
+        >
           <div className="w-full max-w-3xl mx-auto px-page lg:px-page-lg py-2 lg:pt-3 lg:pb-2">
             <SearchBar variant="navbar" onSearch={handleSearch} />
           </div>
