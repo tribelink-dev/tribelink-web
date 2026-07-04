@@ -1,10 +1,9 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Shield } from 'lucide-react';
 import { useCurrency } from '@/lib/CurrencyContext';
 import { useSaved } from '@/lib/SavedContext';
-import { ListingCardShell, ListingBadge } from './ListingCard';
+import { ListingCardShell } from './ListingCard';
 
 interface RoomVariant {
   variantId: string;
@@ -33,7 +32,6 @@ interface AbodeListingCardProps {
     roomVariants?: RoomVariant[];
     rating?: number;
     ratingCount?: number;
-    isVerified?: boolean;
     culturalPractices?: Array<{ practice: string }>;
     linkedExperiences?: Array<{ _id: string }>;
   };
@@ -108,14 +106,6 @@ export default function AbodeListingCard({ abode, imageUrl, onClick }: AbodeList
         toggleAbode(abode._id);
       }}
       onClick={onClick}
-      topLeftBadge={
-        abode.isVerified ? (
-          <ListingBadge variant="success" className="gap-1">
-            <Shield className="w-3 h-3" />
-            Verified
-          </ListingBadge>
-        ) : undefined
-      }
     />
   );
 }
